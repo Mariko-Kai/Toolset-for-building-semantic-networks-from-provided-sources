@@ -1,0 +1,93 @@
+# Registry of Canonical Sources
+#
+# This file dictates the ranked reading lists for the content extraction agents.
+# Textbooks are grouped by discipline and strictly ordered by descending rigor/detail.
+# The `id` is used in the `% defined-in:` LaTeX metadata tag.
+
+disciplines:
+  logic_and_set_theory:
+    title: "Логика и теория множеств (Logic & Set Theory)"
+    description: "Базовые аксиомы, исчисление высказываний, теория множеств."
+    reading_list:
+      - id: "vereshchagin-shen"
+        author: "Верещагин Н.К., Шень А."
+        title: "Лекции по математической логике и теории алгоритмов"
+        language: "RU"
+        priority: 1
+      - id: "mendelson"
+        author: "Мендельсон Э."
+        title: "Введение в математическую логику (Introduction to Mathematical Logic)"
+        language: "RU/EN"
+        priority: 2
+      - id: "enderton"
+        author: "Enderton H.B."
+        title: "A Mathematical Introduction to Logic"
+        language: "EN"
+        priority: 3
+
+  mathematical_analysis:
+    title: "Математический анализ (Mathematical Analysis & Calculus)"
+    description: "Классический анализ одной и нескольких переменных, мера Лебега."
+    reading_list:
+      - id: "zorich-1"
+        author: "Зорич В.А."
+        title: "Математический анализ, Том 1"
+        language: "RU/EN"
+        priority: 1
+      - id: "zorich-2"
+        author: "Зорич В.А."
+        title: "Математический анализ, Том 2"
+        language: "RU/EN"
+        priority: 2
+      - id: "fichtenholz"
+        author: "Фихтенгольц Г.М."
+        title: "Курс дифференциального и интегрального исчисления"
+        language: "RU"
+        priority: 3
+      - id: "spivak-calculus"
+        author: "Spivak M."
+        title: "Calculus"
+        language: "EN"
+        priority: 4
+      - id: "rudin-baby"
+        author: "Rudin W."
+        title: "Основы математического анализа (Principles of Mathematical Analysis)"
+        language: "RU/EN"
+        priority: 5
+
+  complex_analysis:
+    title: "Комплексный анализ (Complex Analysis)"
+    reading_list:
+      - id: "shabat"
+        author: "Шабат Б.В."
+        title: "Введение в комплексный анализ"
+        language: "RU"
+        priority: 1
+      - id: "ahlfors"
+        author: "Ahlfors L.V."
+        title: "Complex Analysis"
+        language: "EN"
+        priority: 2
+
+  functional_analysis:
+    title: "Функциональный анализ (Functional Analysis)"
+    reading_list:
+      - id: "kolmogorov-fomin"
+        author: "Колмогоров А.Н., Фомин С.В."
+        title: "Элементы теории функций и функционального анализа"
+        language: "RU/EN"
+        priority: 1
+      - id: "kantorovich-akilov"
+        author: "Канторович Л.В., Акилов Г.П."
+        title: "Функциональный анализ"
+        language: "RU/EN"
+        priority: 2
+
+  differential_equations:
+    title: "Дифференциальные уравнения (Differential Equations)"
+    reading_list:
+      - id: "elsgolts"
+        author: "Elsgolts L.E."
+        title: "Differential Equations and the Calculus of Variations"
+        language: "EN"
+        priority: 1

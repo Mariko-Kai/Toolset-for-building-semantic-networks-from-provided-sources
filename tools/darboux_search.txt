@@ -1,0 +1,9 @@
+Book: zorich-1 (Zorich, V.A. - Mathematical Analysis Vol 1 - (RU) - [10th ed].pdf)
+Pages: [325, 326, 332, 360, 525, 566, 567, 571, 572]
+
+Book: zorich-2 (Zorich, V.A. - Mathematical Analysis Vol 2 - (RU) - [9th ed].pdf)
+Pages: [4, 119, 120, 121, 125, 134, 144, 381, 520, 610, 675, 676, 682, 683]
+
+Book: spivak-calculus (Spivak, M. - Calculus - (EN).pdf)
+Pages: [233, 690]
+

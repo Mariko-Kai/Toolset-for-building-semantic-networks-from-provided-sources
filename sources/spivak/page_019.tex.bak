@@ -1,0 +1,31 @@
+\section*{§1. The Field of Complex Numbers}
+
+The set of complex numbers is denoted by $\mathbb{C}$. A complex number is an expression of the form $a+bi$, where $a$ and $b$ are real numbers and $i$ is a symbol satisfying the relation $i^2 = -1$. The real number $a$ is called the \textbf{real part} of the complex number $a+bi$, and the real number $b$ is called the \textbf{imaginary part} of $a+bi$. We write
+\[
+a = \text{Re}(a+bi), \quad b = \text{Im}(a+bi).
+\]
+Two complex numbers are considered equal if and only if they have the same real and imaginary parts. Thus, $a+bi = c+di$ if and only if $a=c$ and $b=d$.
+
+The set of real numbers $\mathbb{R}$ can be considered as a subset of $\mathbb{C}$ by identifying the real number $a$ with the complex number $a+0i$. In other words, $\mathbb{R} = \{z \in \mathbb{C} : \text{Im}(z) = 0\}$.
+
+Addition and multiplication of complex numbers are defined by the formulas
+\begin{align*}
+(a+bi) + (c+di) &= (a+c) + (b+d)i, \\
+(a+bi)(c+di) &= (ac-bd) + (ad+bc)i.
+\end{align*}
+It is easy to verify that these operations satisfy the usual commutative, associative, and distributive laws. In other words, $\mathbb{C}$ is a field with $0 = 0+0i$ as the additive identity and $1 = 1+0i$ as the multiplicative identity. The additive inverse of $a+bi$ is $-a-bi$, and if $a+bi \neq 0$, then its multiplicative inverse is
+\[
+\frac{a}{a^2+b^2} - \frac{b}{a^2+b^2}i.
+\]
+The complex number $a-bi$ is called the \textbf{complex conjugate} of $a+bi$, and is denoted by $\overline{a+bi}$. Thus,
+\[
+\text{Re}(z) = \frac{z+\overline{z}}{2}, \quad \text{Im}(z) = \frac{z-\overline{z}}{2i}.
+\]
+The \textbf{absolute value} or \textbf{modulus} of the complex number $z = a+bi$ is defined to be the non-negative real number $\sqrt{a^2+b^2}$, and is denoted by $|z|$. Thus, $|z|^2 = z\overline{z}$.
+
+The field of complex numbers $\mathbb{C}$ can be identified with the Euclidean plane $\mathbb{R}^2$ by identifying the complex number $a+bi$ with the point $(a,b)$. The $x$-axis is then called the \textbf{real axis} and the $y$-axis is called the \textbf{imaginary axis}. The absolute value $|z|$ is just the distance from the point $z$ to the origin.
+% IMAGE: Complex plane with point z = a + bi, real axis, imaginary axis, and modulus |z|
+\begin{figure}
+\includegraphics[width=\linewidth]{images/PAGE_FIG_1.png}
+\caption{The complex plane}
+\end{figure}

@@ -1,0 +1,49 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{mathesis}[2026/02/19 Semantic entity cross-references and macros]
+
+% --- Dependencies ---
+\RequirePackage{amsmath, amssymb, mathtools, amsthm}
+\RequirePackage{xcolor}
+\RequirePackage[colorlinks=true, linkcolor=blue, urlcolor=blue, linktoc=all]{hyperref}
+
+\theoremstyle{definition}
+\newtheorem{object}{Объект}[chapter]
+\newtheorem{operation}{Операция}[chapter]
+\newtheorem{property}{Свойство}[chapter]
+\newtheorem{axiom}{Аксиома}[chapter]
+\newtheorem{theorem}{Теорема}[chapter]
+\newtheorem{lemma}{Лемма}[chapter]
+\newtheorem{corollary}{Следствие}[chapter]
+
+% --- Semantic Entity Reference ---
+\newcommand{\entityref}[2]{\hyperlink{#1}{#2}}
+
+% --- Semantic Macros ---
+% Quantifiers
+\newcommand{\mForall}{\forall}
+\newcommand{\mExists}{\exists}
+
+% Logic Connectives
+\newcommand{\mImplies}{\Rightarrow}
+\newcommand{\mIff}{\Leftrightarrow}
+\newcommand{\mAnd}{\land}
+\newcommand{\mOr}{\lor}
+\newcommand{\mNot}{\lnot}
+\newcommand{\mTurnstile}{\vdash}
+
+% Sets
+\newcommand{\mSet}[1]{\{#1\}}
+\newcommand{\mIn}{\in}
+\newcommand{\mSubset}{\subset}
+\newcommand{\mSubseteq}{\subseteq}
+\newcommand{\mReal}{\mathbb{R}}
+\newcommand{\mNat}{\mathbb{N}}
+\newcommand{\mInt}{\mathbb{Z}}
+\newcommand{\mRat}{\mathbb{Q}}
+
+% Maps and mappings
+\newcommand{\mTo}{\to}
+\newcommand{\mMap}[3]{#1 \colon #2 \mTo #3}
+
+% Limits
+\newcommand{\mLim}{\lim}
