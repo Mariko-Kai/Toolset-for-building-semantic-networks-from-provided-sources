@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 23.10.12) (preloaded format=pdflatex 2024.4.11)  6 MAY 2026 17:51
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 23.10.12) (preloaded format=pdflatex 2024.4.11)  13 MAY 2026 12:51
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -664,327 +664,55 @@ Package hyperref Info: Link coloring ON on input line 6.
 
 LaTeX Info: Redefining \th on input line 6.
 
-{\cyrillictext \CYRG \cyrl \cyra \cyrv \cyra } 1.
-
-Overfull \hbox (44.26942pt too wide) in paragraph at lines 12--12
-[]\T2A/cmr/bx/n/14.4 Теорема о дис-три-бу-тив-но-сти кван-то-ра (Quantifier
+Overfull \hbox (6.18591pt too wide) in paragraph at lines 9--10
+\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object  \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A
+/cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
  []
 
-LaTeX Font Info:    Trying to load font information for U+msa on input line 16.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 12.
 
 (C:\Users\Talgat\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 16.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 12.
 
 
 (C:\Users\Talgat\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-! Missing $ inserted.
-<inserted text> 
-                $
-l.17 
-     
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Display math should end with $$.
-<to be read again> 
-                   \tex_par:D 
-l.17 
-     
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.18 ...tyref{rule-modus-ponens}{\text{MP}} \colon
-                                                  
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.25 
-     
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
+! Undefined control sequence.
+l.13 ...tyref{obj-closed-interval}{[a,b]} \mDefIff
+                                                   \{ \entityref{obj-functio...
+The control sequence at the end of the top line
+of your error message was never \def'ed. If you have
+misspelled it (e.g., `\hobx'), type `I' and the correct
+spelling (e.g., `I\hbox'). Otherwise just continue,
+and I'll forget about whatever was undefined.
 
 
-! LaTeX Error: Bad math environment delimiter.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.26 \]
-       
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.26 \]
-       
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-! Display math should end with $$.
-<to be read again> 
-                   \endgroup 
-l.26 \]
-       
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-
-Overfull \hbox (10.80632pt too wide) in paragraph at lines 32--32
-[]\T2A/cmr/bx/n/14.4 Схема ак-си-ом 5: Рас-пре-де-ле-ние (Distribution
+Overfull \hbox (6.18591pt too wide) in paragraph at lines 21--22
+\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object  \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A
+/cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
  []
 
-! Missing $ inserted.
-<inserted text> 
-                $
-l.37 
-     
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
 
-! Display math should end with $$.
-<to be read again> 
-                   \tex_par:D 
-l.37 
-     
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.38 ...tityref{op-universal-quantifier}{\mForall}
-                                                   x (\entityref{obj-wff-fol...
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.38 ...tityref{op-universal-quantifier}{\mForall}
-                                                   x (\entityref{obj-wff-fol...
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
+Overfull \hbox (6.18591pt too wide) in paragraph at lines 39--40
+\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object  \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A
+/cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
+ []
 
 
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.38 ...l} x (\entityref{obj-wff-fol}{\mathcal{B}}
-                                                   \entityref{op-implication...
-
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.38 ...athcal{B}} \entityref{op-implication}{\to}
-                                                   \entityref{obj-wff-fol}{\...
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.38 ...athcal{B}} \entityref{op-implication}{\to}
-                                                   \entityref{obj-wff-fol}{\...
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.38 ...{\to} \entityref{obj-wff-fol}{\mathcal{C}}
-                                                  )) \entityref{op-implicati...
-
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.38 ...hcal{C}})) \entityref{op-implication}{\to}
-                                                   (\entityref{obj-wff-fol}{...
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.38 ...hcal{C}})) \entityref{op-implication}{\to}
-                                                   (\entityref{obj-wff-fol}{...
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.38 ...\to} (\entityref{obj-wff-fol}{\mathcal{B}}
-                                                   \entityref{op-implication...
-
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.38 ...athcal{B}} \entityref{op-implication}{\to}
-                                                   (\entityref{op-universal-...
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.38 ...athcal{B}} \entityref{op-implication}{\to}
-                                                   (\entityref{op-universal-...
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.38 ...tityref{op-universal-quantifier}{\mForall}
-                                                   x \entityref{obj-wff-fol}...
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.38 ...tityref{op-universal-quantifier}{\mForall}
-                                                   x \entityref{obj-wff-fol}...
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.38 ...ll} x \entityref{obj-wff-fol}{\mathcal{C}}
-                                                  ))
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-! LaTeX Error: Bad math environment delimiter.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.40 \]
-       
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.40 \]
-       
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-! Display math should end with $$.
-<to be read again> 
-                   \endgroup 
-l.40 \]
-       
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-
-Overfull \hbox (10.61632pt too wide) in paragraph at lines 46--46
-[]\T2A/cmr/bx/n/14.4 Правильно по-стро-ен-ная фор-му-ла FOL (Well-
+Overfull \hbox (6.18591pt too wide) in paragraph at lines 57--58
+\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object  \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A
+/cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
  []
 
 [1
 
-
 {C:/Users/Talgat/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
-! Missing $ inserted.
-<inserted text> 
-                $
-l.51 
-     
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Display math should end with $$.
-<to be read again> 
-                   \tex_par:D 
-l.51 
-     
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.52 \entityref{obj-wff-fol}{\mathcal{A}}
-                                          \mDefIff (\entityref{obj-predicate...
-
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
 ! Undefined control sequence.
-l.52 \entityref{obj-wff-fol}{\mathcal{A}} \mDefIff
-                                                   (\entityref{obj-predicate...
+l.61  [a,b] \mDefIff
+                     \{ x \in \entityref{obj-real-numbers}{\mathbb{R}} \mid ...
 The control sequence at the end of the top line
 of your error message was never \def'ed. If you have
 misspelled it (e.g., `\hobx'), type `I' and the correct
@@ -992,74 +720,23 @@ spelling (e.g., `I\hbox'). Otherwise just continue,
 and I'll forget about whatever was undefined.
 
 
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.52 ...tityref{obj-predicate}{\text{At}}(\mathcal
-                                                  {A})) \mOr
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.52 ...j-predicate}{\text{At}}(\mathcal{A})) \mOr
-                                                  
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.56 
-     
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
+Overfull \hbox (6.18591pt too wide) in paragraph at lines 69--70
+\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object  \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A
+/cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
+ []
 
 
-! LaTeX Error: Bad math environment delimiter.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.57 \]
-       
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.57 \]
-       
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-! Display math should end with $$.
-<to be read again> 
-                   \endgroup 
-l.57 \]
-       
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-
-Overfull \hbox (1.61432pt too wide) in paragraph at lines 63--63
-[]\T2A/cmr/bx/n/14.4 Квантор все-общ-но-сти (Universal Quantifier) 
+Overfull \hbox (474.39369pt too wide) detected at line 77
+[][]\OML/cmm/m/it/10 AxiomofExtensionality[][];[][] AxiomofPairing[][];[][] Axi
+omofUnion[][];[][] AxiomofPowerSet[][];[][] AxiomofInfinity[][];[][] AxiomofReg
+ularity[][];[][] AxiomofSpecification[][];[][] AxiomofReplacement[][];[][] Axio
+mofChoice[][]
  []
 
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.68 
+l.91 
      
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
@@ -1067,7 +744,7 @@ you left one out. Proceed, with fingers crossed.
 ! Display math should end with $$.
 <to be read again> 
                    \tex_par:D 
-l.68 
+l.91 
      
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
@@ -1075,56 +752,18 @@ So I shall assume that you typed `$$' both times.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.69 \entityref{op-universal-quantifier}{\mForall}
-                                                   x \entityref{obj-wff-fol}...
+l.92 \mForall
+             {\mathcal{F}}
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
 
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.69 \entityref{op-universal-quantifier}{\mForall}
-                                                   x \entityref{obj-wff-fol}...
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.69 ...ll} x \entityref{obj-wff-fol}{\mathcal{A}}
-                                                   \mDefIff (\text{СЃРІРѕР№С...
-
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-! Undefined control sequence.
-l.69 ...tityref{obj-wff-fol}{\mathcal{A}} \mDefIff
-                                                   (\text{СЃРІРѕР№СЃС‚РІРѕ }...
-The control sequence at the end of the top line
-of your error message was never \def'ed. If you have
-misspelled it (e.g., `\hobx'), type `I' and the correct
-spelling (e.g., `I\hbox'). Otherwise just continue,
-and I'll forget about whatever was undefined.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.69 ...ІРѕ } \entityref{obj-wff-fol}{\mathcal{A}}
-                                                   \text{ РІС‹РїРѕР»РЅСЏРµС‚...
-
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
+l.94 
+     
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
 
 
 ! LaTeX Error: Bad math environment delimiter.
@@ -1133,7 +772,7 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.71 \]
+l.95 \]
        
 Your command was ignored.
 Type  I <command> <return>  to replace it with another command,
@@ -1142,7 +781,7 @@ or  <return>  to continue without it.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.71 \]
+l.95 \]
        
 I've inserted something that you may have forgotten.
 (See the <inserted text> above.)
@@ -1153,227 +792,40 @@ my insertion and my current dilemma will both disappear.
 ! Display math should end with $$.
 <to be read again> 
                    \endgroup 
-l.71 \]
+l.95 \]
        
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
 
-
-Overfull \hbox (26.33067pt too wide) in paragraph at lines 77--77
-[]\T2A/cmr/bx/n/14.4 Схема ак-си-ом 4: Спе-ци-а-ли-за-ция (Specialization
- []
-
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.82 
-     
+l.106 
+      
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
 
 ! Display math should end with $$.
 <to be read again> 
                    \tex_par:D 
-l.82 
-     
+l.106 
+      
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
 
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.83 ...tityref{op-universal-quantifier}{\mForall}
-                                                   x \entityref{obj-wff-fol}...
+l.107 \mForall
+              {A, B}
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
 
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.83 ...tityref{op-universal-quantifier}{\mForall}
-                                                   x \entityref{obj-wff-fol}...
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.83 ...ll} x \entityref{obj-wff-fol}{\mathcal{B}}
-                                                  (x)) \entityref{op-implica...
-
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.83 ...al{B}}(x)) \entityref{op-implication}{\to}
-                                                   \entityref{obj-wff-fol}{\...
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.83 ...al{B}}(x)) \entityref{op-implication}{\to}
-                                                   \entityref{obj-wff-fol}{\...
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.83 ...{\to} \entityref{obj-wff-fol}{\mathcal{B}}
-                                                  (\entityref{obj-term}{t})
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-! LaTeX Error: Bad math environment delimiter.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.85 \]
-       
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.85 \]
-       
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-! Display math should end with $$.
-<to be read again> 
-                   \endgroup 
-l.85 \]
-       
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-
-Overfull \hbox (8.80841pt too wide) in paragraph at lines 91--91
-[]\T2A/cmr/bx/n/14.4 Правило Modus Ponens (Modus Ponens Rule) 
- []
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.96 
-     
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Display math should end with $$.
-<to be read again> 
-                   \tex_par:D 
-l.96 
-     
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.97 ...B}}}{\entityref{obj-wff-fol}{\mathcal{B}}}
-                                                  
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.97 ...B}}}{\entityref{obj-wff-fol}{\mathcal{B}}}
-                                                  
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.97 ...B}}}{\entityref{obj-wff-fol}{\mathcal{B}}}
-                                                  
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.97 ...B}}}{\entityref{obj-wff-fol}{\mathcal{B}}}
-                                                  
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.97 ...B}}}{\entityref{obj-wff-fol}{\mathcal{B}}}
-                                                  
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.97 ...B}}}{\entityref{obj-wff-fol}{\mathcal{B}}}
-                                                  
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Extra }, or forgotten $.
-\frac  #1#2->{\begingroup #1\endgroup \@@over #2}
-                                                 
-l.97 ...B}}}{\entityref{obj-wff-fol}{\mathcal{B}}}
-                                                  
-I've deleted a group-closing symbol because it seems to be
-spurious, as in `$x}$'. But perhaps the } is legitimate and
-you forgot something else, as in `\hbox{$x}'. In such cases
-the way to recover is to insert both the forgotten and the
-deleted material, e.g., by typing `I$}'.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.98 
-     
+l.109 
+      
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
 
@@ -1384,8 +836,8 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.99 \]
-       
+l.110 \]
+        
 Your command was ignored.
 Type  I <command> <return>  to replace it with another command,
 or  <return>  to continue without it.
@@ -1393,8 +845,8 @@ or  <return>  to continue without it.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.99 \]
-       
+l.110 \]
+        
 I've inserted something that you may have forgotten.
 (See the <inserted text> above.)
 With luck, this will get me unwedged. But if you
@@ -1404,27 +856,16 @@ my insertion and my current dilemma will both disappear.
 ! Display math should end with $$.
 <to be read again> 
                    \endgroup 
-l.99 \]
-       
+l.110 \]
+        
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
-
-! Missing } inserted.
-<inserted text> 
-                }
-l.99 \]
-       
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
 
 [2]
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.110 
+l.121 
       
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
@@ -1432,121 +873,18 @@ you left one out. Proceed, with fingers crossed.
 ! Display math should end with $$.
 <to be read again> 
                    \tex_par:D 
-l.110 
+l.121 
       
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
 
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.111 \entityref{obj-wff-fol}{\mathcal{A}}
-                                           \entityref{op-implication}{\to} \...
-
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.111 ...thcal{A}} \entityref{op-implication}{\to}
-                                                   \entityref{obj-wff-fol}{\...
+l.122 \mForall
+              {X}
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.111 ...thcal{A}} \entityref{op-implication}{\to}
-                                                   \entityref{obj-wff-fol}{\...
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.111 ...\to} \entityref{obj-wff-fol}{\mathcal{B}}
-                                                   \mDefIff (\text{Р»РѕРіРёС...
-
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-! Undefined control sequence.
-l.111 ...ityref{obj-wff-fol}{\mathcal{B}} \mDefIff
-                                                   (\text{Р»РѕРіРёС‡РµСЃРєРѕ...
-The control sequence at the end of the top line
-of your error message was never \def'ed. If you have
-misspelled it (e.g., `\hobx'), type `I' and the correct
-spelling (e.g., `I\hbox'). Otherwise just continue,
-and I'll forget about whatever was undefined.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.111 ...Рµ } \entityref{obj-wff-fol}{\mathcal{B}}
-                                                   \text{ РёР· } \entityref{...
-
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.111 ...Р· } \entityref{obj-wff-fol}{\mathcal{A}}
-                                                  )
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-! LaTeX Error: Bad math environment delimiter.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.113 \]
-        
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.113 \]
-        
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-! Display math should end with $$.
-<to be read again> 
-                   \endgroup 
-l.113 \]
-        
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
 
 ! Missing $ inserted.
 <inserted text> 
@@ -1556,67 +894,6 @@ l.124
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
 
-! Display math should end with $$.
-<to be read again> 
-                   \tex_par:D 
-l.124 
-      
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.125 \entityref{op-negation}{\neg}
-                                    \entityref{obj-wff-fol}{\mathcal{A}} \mD...
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.125 \entityref{op-negation}{\neg}
-                                    \entityref{obj-wff-fol}{\mathcal{A}} \mD...
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.125 ...neg} \entityref{obj-wff-fol}{\mathcal{A}}
-                                                   \mDefIff (\text{С„РѕСЂРјС...
-
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-! Undefined control sequence.
-l.125 ...ityref{obj-wff-fol}{\mathcal{A}} \mDefIff
-                                                   (\text{С„РѕСЂРјСѓР»Р°, Сѓ...
-The control sequence at the end of the top line
-of your error message was never \def'ed. If you have
-misspelled it (e.g., `\hobx'), type `I' and the correct
-spelling (e.g., `I\hbox'). Otherwise just continue,
-and I'll forget about whatever was undefined.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.125 ...СЊ } \entityref{obj-wff-fol}{\mathcal{A}}
-                                                  )
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
 
 ! LaTeX Error: Bad math environment delimiter.
 
@@ -1624,7 +901,7 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.127 \]
+l.125 \]
         
 Your command was ignored.
 Type  I <command> <return>  to replace it with another command,
@@ -1633,7 +910,7 @@ or  <return>  to continue without it.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.127 \]
+l.125 \]
         
 I've inserted something that you may have forgotten.
 (See the <inserted text> above.)
@@ -1644,7 +921,7 @@ my insertion and my current dilemma will both disappear.
 ! Display math should end with $$.
 <to be read again> 
                    \endgroup 
-l.127 \]
+l.125 \]
         
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
@@ -1652,7 +929,7 @@ So I shall assume that you typed `$$' both times.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.138 
+l.136 
       
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
@@ -1660,7 +937,7 @@ you left one out. Proceed, with fingers crossed.
 ! Display math should end with $$.
 <to be read again> 
                    \tex_par:D 
-l.138 
+l.136 
       
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
@@ -1668,56 +945,15 @@ So I shall assume that you typed `$$' both times.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.139 ...tyref{obj-predicate}{P(t_1, \ldots, t_n)}
-                                                   \mDefIff (\mathcal{A}^n \...
+l.137 \mForall
+              {S}
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
 
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.139 ...tyref{obj-predicate}{P(t_1, \ldots, t_n)}
-                                                   \mDefIff (\mathcal{A}^n \...
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-! Undefined control sequence.
-l.139 ...-predicate}{P(t_1, \ldots, t_n)} \mDefIff
-                                                   (\mathcal{A}^n \text{ ---...
-The control sequence at the end of the top line
-of your error message was never \def'ed. If you have
-misspelled it (e.g., `\hobx'), type `I' and the correct
-spelling (e.g., `I\hbox'). Otherwise just continue,
-and I'll forget about whatever was undefined.
-
-
-! LaTeX Error: \mathcal allowed only in math mode.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.139 ...}{P(t_1, \ldots, t_n)} \mDefIff (\mathcal
-                                                  {A}^n \text{ --- РїСЂРµРґР...
-
-You're in trouble here.  Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.139 ...t_1, \ldots, t_n)} \mDefIff (\mathcal{A}^
-                                                  n \text{ --- РїСЂРµРґРёРєР...
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.140 
+l.139 
       
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
@@ -1729,7 +965,7 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.141 \]
+l.140 \]
         
 Your command was ignored.
 Type  I <command> <return>  to replace it with another command,
@@ -1738,7 +974,7 @@ or  <return>  to continue without it.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.141 \]
+l.140 \]
         
 I've inserted something that you may have forgotten.
 (See the <inserted text> above.)
@@ -1749,7 +985,7 @@ my insertion and my current dilemma will both disappear.
 ! Display math should end with $$.
 <to be read again> 
                    \endgroup 
-l.141 \]
+l.140 \]
         
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
@@ -1757,7 +993,7 @@ So I shall assume that you typed `$$' both times.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.152 
+l.151 
       
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
@@ -1765,25 +1001,16 @@ you left one out. Proceed, with fingers crossed.
 ! Display math should end with $$.
 <to be read again> 
                    \tex_par:D 
-l.152 
+l.151 
       
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
 
-! Undefined control sequence.
-l.153 \entityref{obj-term}{t} \mDefIff
-                                       (t \in \mathcal{V}) \mOr (t \in \math...
-The control sequence at the end of the top line
-of your error message was never \def'ed. If you have
-misspelled it (e.g., `\hobx'), type `I' and the correct
-spelling (e.g., `I\hbox'). Otherwise just continue,
-and I'll forget about whatever was undefined.
-
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.153 \entityref{obj-term}{t} \mDefIff (t \in
-                                              \mathcal{V}) \mOr (t \in \math...
+l.152 \mExists
+              {I}
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
 
@@ -1827,89 +1054,349 @@ l.155 \]
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
 
-[3] [4] (result.aux)
+! Missing $ inserted.
+<inserted text> 
+                $
+l.166 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Display math should end with $$.
+<to be read again> 
+                   \tex_par:D 
+l.166 
+      
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.167 \mForall
+              {X}
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.169 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+! LaTeX Error: Bad math environment delimiter.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.170 \]
+        
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.170 \]
+        
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Display math should end with $$.
+<to be read again> 
+                   \endgroup 
+l.170 \]
+        
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+[3]
+! Missing $ inserted.
+<inserted text> 
+                $
+l.181 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Display math should end with $$.
+<to be read again> 
+                   \tex_par:D 
+l.181 
+      
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.182 \mForall
+              {\mathcal{F}}
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.189 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+Overfull \hbox (3.3252pt too wide) in paragraph at lines 182--189
+[]$\OMS/cmsy/m/n/10 8F [] )
+ []
+
+
+! LaTeX Error: Bad math environment delimiter.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.190 \]
+        
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.190 \]
+        
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Display math should end with $$.
+<to be read again> 
+                   \endgroup 
+l.190 \]
+        
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.201 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Display math should end with $$.
+<to be read again> 
+                   \tex_par:D 
+l.201 
+      
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.202 \mForall
+              {A, B}
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.204 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+! LaTeX Error: Bad math environment delimiter.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.205 \]
+        
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.205 \]
+        
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Display math should end with $$.
+<to be read again> 
+                   \endgroup 
+l.205 \]
+        
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.216 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Display math should end with $$.
+<to be read again> 
+                   \tex_par:D 
+l.216 
+      
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.217 \left
+           ( \mForall{x} \mExists{! y} \, \phi(x, y) \right)
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.220 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+! LaTeX Error: Bad math environment delimiter.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.221 \]
+        
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.221 \]
+        
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Display math should end with $$.
+<to be read again> 
+                   \endgroup 
+l.221 \]
+        
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+[4] (result.aux)
  ***********
 LaTeX2e <2023-11-01>
 L3 programming layer <2023-12-11>
  ***********
-
-
-Package rerunfilecheck Warning: File `result.out' has changed.
-(rerunfilecheck)                Rerun to get outlines right
-(rerunfilecheck)                or use package `bookmark'.
-
-Package rerunfilecheck Info: Checksums for `result.out':
-(rerunfilecheck)             Before: AEF53FE8E7B12FD4A23243B213AFFC5C;3449
-(rerunfilecheck)             After:  CBEB40D2BC34326B3A29C154E863ABEE;3308.
+Package rerunfilecheck Info: File `result.out' has not changed.
+(rerunfilecheck)             Checksum: 0CA928FFB4324DC6EBC15B56B3D055EF;2663.
  ) 
 Here is how much of TeX's memory you used:
- 12566 strings out of 474495
- 194523 string characters out of 5743463
- 1932460 words of memory out of 5000000
- 34652 multiletter control sequences out of 15000+600000
- 567064 words of font info for 53 fonts, out of 8000000 for 9000
+ 12579 strings out of 474495
+ 194914 string characters out of 5743463
+ 1934460 words of memory out of 5000000
+ 34663 multiletter control sequences out of 15000+600000
+ 564617 words of font info for 50 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 90i,6n,93p,545b,481s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 90i,6n,93p,570b,457s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-pdfTeX warning (dest): name{obj-term} has been referenced but does not exist, r
-eplaced by a fixed one
-
-
-pdfTeX warning (dest): name{op-negation} has been referenced but does not exist
-, replaced by a fixed one
-
-
-pdfTeX warning (dest): name{obj-predicate} has been referenced but does not exi
-st, replaced by a fixed one
-
-
-pdfTeX warning (dest): name{op-implication} has been referenced but does not ex
+pdfTeX warning (dest): name{axm-zfc-choice} has been referenced but does not ex
 ist, replaced by a fixed one
 
 
-pdfTeX warning (dest): name{obj-wff-fol} has been referenced but does not exist
-, replaced by a fixed one
+pdfTeX warning (dest): name{axm-zfc-replacement} has been referenced but does n
+ot exist, replaced by a fixed one
 
 
-pdfTeX warning (dest): name{op-universal-quantifier} has been referenced but do
-es not exist, replaced by a fixed one
+pdfTeX warning (dest): name{axm-zfc-specification} has been referenced but does
+ not exist, replaced by a fixed one
 
 
-pdfTeX warning (dest): name{ax-fol-4} has been referenced but does not exist, r
-eplaced by a fixed one
+pdfTeX warning (dest): name{axm-zfc-regularity} has been referenced but does no
+t exist, replaced by a fixed one
 
 
-pdfTeX warning (dest): name{ax-fol-5} has been referenced but does not exist, r
-eplaced by a fixed one
+pdfTeX warning (dest): name{axm-zfc-infinity} has been referenced but does not 
+exist, replaced by a fixed one
 
 
-pdfTeX warning (dest): name{rule-modus-ponens} has been referenced but does not
+pdfTeX warning (dest): name{axm-zfc-power-set} has been referenced but does not
  exist, replaced by a fixed one
 
 
-pdfTeX warning (dest): name{section.1.12} has been referenced but does not exis
+pdfTeX warning (dest): name{axm-zfc-union} has been referenced but does not exi
+st, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{axm-zfc-pairing} has been referenced but does not e
+xist, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{axm-zfc-extensionality} has been referenced but doe
+s not exist, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{obj-real-numbers} has been referenced but does not 
+exist, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{obj-set} has been referenced but does not exist, re
+placed by a fixed one
+
+
+pdfTeX warning (dest): name{obj-function} has been referenced but does not exis
 t, replaced by a fixed one
 
 
-pdfTeX warning (dest): name{section.1.11} has been referenced but does not exis
-t, replaced by a fixed one
+pdfTeX warning (dest): name{obj-closed-interval} has been referenced but does n
+ot exist, replaced by a fixed one
 
- <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\labx100
+ <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\larm100
 0.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\la
-bx1440.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi6
-00\larm1000.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a
-/dpi600\labx2488.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/l
-h-t2a/dpi600\labx2074.pk><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/t
+bx1000.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi6
+00\labx1440.pk><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/type1/publi
+c/amsfonts/cm/cmex10.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/t
 ype1/public/amsfonts/cm/cmmi10.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKT
 eX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/Talgat/AppData/Local/Prog
 rams/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/Talgat/AppData/L
-ocal/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/Talgat/A
-ppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/User
-s/Talgat/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb
->
-Output written on result.pdf (4 pages, 151264 bytes).
+ocal/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/Talgat
+/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
+Output written on result.pdf (4 pages, 140416 bytes).
 PDF statistics:
- 380 PDF objects out of 1000 (max. 8388607)
- 27 named destinations out of 1000 (max. 500000)
- 105 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 330 PDF objects out of 1000 (max. 8388607)
+ 32 named destinations out of 1000 (max. 500000)
+ 113 words of extra memory for PDF output out of 10000 (max. 10000000)
 

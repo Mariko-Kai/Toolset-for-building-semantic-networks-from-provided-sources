@@ -17,6 +17,9 @@ NL_DESCRIPTIONS = {
     "op-lower-darboux-sum": r"Нижней суммой Дарбу называется сумма произведений инфимумов функции $f$ на каждом отрезке разбиения $[x_{i-1}, x_i]$ на длину этого отрезка $\Delta x_i$.",
     "op-upper-darboux-sum": r"Верхней суммой Дарбу называется сумма произведений супремумов функции $f$ на каждом отрезке разбиения $[x_{i-1}, x_i]$ на длину этого отрезка $\Delta x_i$.",
     "obj-partition": r"Разбиением отрезка $[a,b]$ называется конечное множество точек $P = \{x_0, x_1, \ldots, x_n\}$, таких что $a = x_0 < x_1 < \cdots < x_n = b$.",
+    "obj-function": r"Функция $f$ из множества $X$ в множество $Y$ — это правило (или бинарное отношение), по которому каждому элементу $x \in X$ ставится в соответствие ровно один элемент $y \in Y$. Формально, это подмножество декартова произведения $X \times Y$, обладающее свойством однозначности.",
+    "obj-real-numbers": r"Множество вещественных чисел $\mathbb{R}$ — это непрерывная числовая прямая. Формально $\mathbb{R}$ задается как полное (непрерывное) архимедово упорядоченное поле. В нем можно складывать, умножать, сравнивать элементы, и в нем нет «дырок» (каждое ограниченное сверху подмножество имеет точную верхнюю грань).",
+    "obj-set": r"Множество — базовое, неопределяемое напрямую понятие математики. Множество представляет собой совокупность объектов произвольной природы, называемых его элементами. Все свойства множеств строго выводятся из аксиом системы Цермело-Френкеля (ZFC).",
 }
 
 TEMPLATE = r"""\documentclass{report}
@@ -25,10 +28,6 @@ TEMPLATE = r"""\documentclass{report}
 \usepackage[russian]{babel}
 
 \begin{document}
-
-\chapter{Интеграл по Дарбу}
-Ниже представлены все сущности, связанные с определением интеграла по Дарбу,
-в порядке BFS-обхода зависимостей.
 
 %(content)s
 
@@ -122,7 +121,7 @@ def main():
         
         nl = NL_DESCRIPTIONS.get(data["id"], "")
         
-        block = f"\\section{{{data['title']}}}\n"
+        block = f"\\section{{{data['title']}}}\\label{{entity:{data['id']}}}\n"
         block += f"\\textbf{{Тип:}} {data['type']} \\quad "
         block += f"\\textbf{{Источник:}} {citation} ({page_info})\n\n"
         
@@ -145,8 +144,14 @@ def main():
     if not (PROJECT_ROOT / "mathesis.sty").exists():
         shutil.copy(CONTENT_DIR / "mathesis.sty", PROJECT_ROOT / "mathesis.sty")
     
-    print("Compiling result.pdf...")
+    print("Compiling result.pdf (pass 1)...")
     os.chdir(PROJECT_ROOT)
+    subprocess.run(
+        ["pdflatex", "-interaction=nonstopmode", "result.tex"],
+        capture_output=True, text=True
+    )
+    
+    print("Compiling result.pdf (pass 2 for references)...")
     result = subprocess.run(
         ["pdflatex", "-interaction=nonstopmode", "result.tex"],
         capture_output=True, text=True

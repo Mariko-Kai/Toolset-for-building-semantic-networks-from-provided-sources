@@ -5,23 +5,187 @@
 
 \begin{document}
 
-\chapter{Интеграл по Дарбу}
-Ниже представлены все сущности, связанные с определением интеграла по Дарбу,
-в порядке BFS-обхода зависимостей.
+\section{Класс интегрируемых по Риману функций (Riemann Integrable Class)}\label{entity:obj-riemann-class}
+\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
 
-\section{Теорема о дистрибутивности квантора (Quantifier Distribution Theorem)}
-\textbf{Тип:} theorem \quad \textbf{Источник:} mendelson, p. 58 (mendelson, p. 58)
+\textbf{Каноническая запись:}
+\[
+ \mathcal{R}\entityref{obj-closed-interval}{[a,b]} \mDefIff \{ \entityref{obj-function}{f} \mid \mExists \int_a^b \entityref{obj-function}{f}(x) dx \} 
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Функция (Function)}\label{entity:obj-function}
+\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
+
+\textbf{Каноническая запись:}
+\[
+ f \subset \entityref{obj-set}{X} \times \entityref{obj-set}{Y} 
+\]
+\[
+ \mForall{x} (x \in X \mImplies \mExists{! y} (y \in Y \land (x, y) \in f)) 
+\]
+
+\textbf{Естественный язык:}
+Функция $f$ из множества $X$ в множество $Y$ — это правило (или бинарное отношение), по которому каждому элементу $x \in X$ ставится в соответствие ровно один элемент $y \in Y$. Формально, это подмножество декартова произведения $X \times Y$, обладающее свойством однозначности.
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Вещественные числа (Real Numbers)}\label{entity:obj-real-numbers}
+\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
+
+\textbf{Каноническая запись:}
+\[
+ \mathbb{R} = (\entityref{obj-set}{R}, +, \cdot, \leq) 
+\]
+\[
+ \text{Где } \mathbb{R} \text{ удовлетворяет аксиомам полного упорядоченного поля.} 
+\]
+
+\textbf{Естественный язык:}
+Множество вещественных чисел $\mathbb{R}$ — это непрерывная числовая прямая. Формально $\mathbb{R}$ задается как полное (непрерывное) архимедово упорядоченное поле. В нем можно складывать, умножать, сравнивать элементы, и в нем нет «дырок» (каждое ограниченное сверху подмножество имеет точную верхнюю грань).
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Замкнутый отрезок (Closed Interval)}\label{entity:obj-closed-interval}
+\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
+
+\textbf{Каноническая запись:}
+\[
+ [a,b] \mDefIff \{ x \in \entityref{obj-real-numbers}{\mathbb{R}} \mid a \le x \le b \} 
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Множество (Set)}\label{entity:obj-set}
+\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
+
+\textbf{Каноническая запись:}
+\[
+ \entityref{obj-set}{X} \text{ - базовое понятие ZFC, определяемое аксиомами:} 
+\]
+\[
+ \entityref{axm-zfc-extensionality}{Axiom of Extensionality}, \entityref{axm-zfc-pairing}{Axiom of Pairing}, \entityref{axm-zfc-union}{Axiom of Union}, \entityref{axm-zfc-power-set}{Axiom of Power Set}, \entityref{axm-zfc-infinity}{Axiom of Infinity}, \entityref{axm-zfc-regularity}{Axiom of Regularity}, \entityref{axm-zfc-specification}{Axiom of Specification}, \entityref{axm-zfc-replacement}{Axiom of Replacement}, \entityref{axm-zfc-choice}{Axiom of Choice} 
+\]
+
+\textbf{Естественный язык:}
+Множество — базовое, неопределяемое напрямую понятие математики. Множество представляет собой совокупность объектов произвольной природы, называемых его элементами. Все свойства множеств строго выводятся из аксиом системы Цермело-Френкеля (ZFC).
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Axiom of Union}\label{entity:axm-zfc-union}
+\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
 
 \textbf{Каноническая запись:}
 \[
 
-\entityref{rule-modus-ponens}{\text{MP}} \colon 
-(\entityref{ax-fol-5}{\text{Ax}_5} \mAnd \entityref{ax-fol-4}{\text{Ax}_4}) \mImplies 
-\left( 
-  \entityref{op-universal-quantifier}{\mForall} x (\entityref{obj-wff-fol}{\mathcal{B}}(x) \entityref{op-implication}{\to} \entityref{obj-wff-fol}{\mathcal{C}}(x)) 
-  \entityref{op-implication}{\to} 
-  (\entityref{op-universal-quantifier}{\mForall} x \entityref{obj-wff-fol}{\mathcal{B}}(x) \entityref{op-implication}{\to} \entityref{op-universal-quantifier}{\mForall} x \entityref{obj-wff-fol}{\mathcal{C}}(x)) 
+\mForall{\mathcal{F}}
+\mExists{U} \mForall{x} \left( x \in U \mIff \mExists{A} (A \in \mathcal{F} \land x \in A) \right)
+
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Axiom of Pairing}\label{entity:axm-zfc-pairing}
+\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
+
+\textbf{Каноническая запись:}
+\[
+
+\mForall{A, B}
+\mExists{C} \mForall{x} \left( x \in C \mIff (x = A \lor x = B) \right)
+
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Axiom of Power Set}\label{entity:axm-zfc-power-set}
+\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
+
+\textbf{Каноническая запись:}
+\[
+
+\mForall{X}
+\mExists{P} \mForall{A} (A \in P \mIff A \subset X)
+
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Axiom of Regularity}\label{entity:axm-zfc-regularity}
+\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
+
+\textbf{Каноническая запись:}
+\[
+
+\mForall{S}
+\left( (\mExists{y} y \in S) \mImplies \mExists{x} \left( x \in S \land \lnot \mExists{z} (z \in S \land z \in x) \right) \right)
+
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Axiom of Infinity}\label{entity:axm-zfc-infinity}
+\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
+
+\textbf{Каноническая запись:}
+\[
+
+\mExists{I}
+\left( \emptyset \in I \;\land\; \mForall{x} \left( x \in I \mImplies \mExists{y} (y \in I \land \mForall{z} (z \in y \mIff z \in x \lor z = x)) \right) \right)
+
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Axiom of Specification}\label{entity:axm-zfc-specification}
+\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
+
+\textbf{Каноническая запись:}
+\[
+
+\mForall{X}
+\mExists{Y} \mForall{z} \left( z \in Y \mIff (z \in X \land \phi(z)) \right)
+
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Axiom of Choice}\label{entity:axm-zfc-choice}
+\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
+
+\textbf{Каноническая запись:}
+\[
+
+\mForall{\mathcal{F}}
+\left(
+  \mForall{A, B} \left( A \in \mathcal{F} \land B \in \mathcal{F} \land A \neq B \mImplies \lnot \mExists{x} (x \in A \land x \in B) \right)
+  \land \lnot(\emptyset \in \mathcal{F})
 \right)
+\mImplies
+\mExists{C} \mForall{A} \left( A \in \mathcal{F} \mImplies \mExists{! x} (x \in A \land x \in C) \right)
 
 \]
 
@@ -29,13 +193,14 @@
 \hrule
 \vspace{1em}
 
-\section{Схема аксиом 5: Распределение (Distribution Axiom)}
-\textbf{Тип:} axiom \quad \textbf{Источник:} mendelson, p. 57 (mendelson, p. 57)
+\section{Axiom of Extensionality}\label{entity:axm-zfc-extensionality}
+\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
 
 \textbf{Каноническая запись:}
 \[
 
-(\entityref{op-universal-quantifier}{\mForall} x (\entityref{obj-wff-fol}{\mathcal{B}} \entityref{op-implication}{\to} \entityref{obj-wff-fol}{\mathcal{C}})) \entityref{op-implication}{\to} (\entityref{obj-wff-fol}{\mathcal{B}} \entityref{op-implication}{\to} (\entityref{op-universal-quantifier}{\mForall} x \entityref{obj-wff-fol}{\mathcal{C}}))
+\mForall{A, B}
+(A = B) \mIff (\mForall{x} x \in A \mIff x \in B)
 
 \]
 
@@ -43,114 +208,15 @@
 \hrule
 \vspace{1em}
 
-\section{Правильно построенная формула FOL (Well-Formed Formula FOL)}
-\textbf{Тип:} object \quad \textbf{Источник:} mendelson, p. 48 (mendelson, p. 48)
+\section{Axiom of Replacement}\label{entity:axm-zfc-replacement}
+\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
 
 \textbf{Каноническая запись:}
 \[
 
-\entityref{obj-wff-fol}{\mathcal{A}} \mDefIff (\entityref{obj-predicate}{\text{At}}(\mathcal{A})) \mOr 
-(\mExists \mathcal{B} \in \entityref{obj-wff-fol}{\mathcal{F}} \colon \mathcal{A} = \entityref{op-negation}{\neg} \mathcal{B}) \mOr 
-(\mExists \mathcal{B}, \mathcal{C} \in \entityref{obj-wff-fol}{\mathcal{F}} \colon \mathcal{A} = \mathcal{B} \entityref{op-implication}{\to} \mathcal{C}) \mOr 
-(\mExists x \in \mathcal{V}, \mExists \mathcal{B} \in \entityref{obj-wff-fol}{\mathcal{F}} \colon \mathcal{A} = \entityref{op-universal-quantifier}{\mForall} x \mathcal{B})
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Квантор всеобщности (Universal Quantifier)}
-\textbf{Тип:} operation \quad \textbf{Источник:} mendelson, p. 48 (mendelson, p. 48)
-
-\textbf{Каноническая запись:}
-\[
-
-\entityref{op-universal-quantifier}{\mForall} x \entityref{obj-wff-fol}{\mathcal{A}} \mDefIff (\text{свойство } \entityref{obj-wff-fol}{\mathcal{A}} \text{ выполняется для всех } x)
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Схема аксиом 4: Специализация (Specialization Axiom)}
-\textbf{Тип:} axiom \quad \textbf{Источник:} mendelson, p. 57 (mendelson, p. 57)
-
-\textbf{Каноническая запись:}
-\[
-
-(\entityref{op-universal-quantifier}{\mForall} x \entityref{obj-wff-fol}{\mathcal{B}}(x)) \entityref{op-implication}{\to} \entityref{obj-wff-fol}{\mathcal{B}}(\entityref{obj-term}{t})
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Правило Modus Ponens (Modus Ponens Rule)}
-\textbf{Тип:} operation \quad \textbf{Источник:} mendelson, p. 49 (mendelson, p. 49)
-
-\textbf{Каноническая запись:}
-\[
-
-\frac{\entityref{obj-wff-fol}{\mathcal{A}}, \quad \entityref{obj-wff-fol}{\mathcal{A}} \entityref{op-implication}{\to} \entityref{obj-wff-fol}{\mathcal{B}}}{\entityref{obj-wff-fol}{\mathcal{B}}}
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Импликация (Implication)}
-\textbf{Тип:} operation \quad \textbf{Источник:} mendelson, p. 48 (mendelson, p. 48)
-
-\textbf{Каноническая запись:}
-\[
-
-\entityref{obj-wff-fol}{\mathcal{A}} \entityref{op-implication}{\to} \entityref{obj-wff-fol}{\mathcal{B}} \mDefIff (\text{логическое следование } \entityref{obj-wff-fol}{\mathcal{B}} \text{ из } \entityref{obj-wff-fol}{\mathcal{A}})
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Отрицание (Negation)}
-\textbf{Тип:} operation \quad \textbf{Источник:} mendelson, p. 48 (mendelson, p. 48)
-
-\textbf{Каноническая запись:}
-\[
-
-\entityref{op-negation}{\neg} \entityref{obj-wff-fol}{\mathcal{A}} \mDefIff (\text{формула, утверждающая ложность } \entityref{obj-wff-fol}{\mathcal{A}})
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Предикат (Predicate)}
-\textbf{Тип:} object \quad \textbf{Источник:} mendelson, p. 48 (mendelson, p. 48)
-
-\textbf{Каноническая запись:}
-\[
-
-\entityref{obj-predicate}{P(t_1, \ldots, t_n)} \mDefIff (\mathcal{A}^n \text{ --- предикатный символ}) \mAnd (\mForall i \in \{1,\ldots,n\} \colon \entityref{obj-term}{t_i} \in \entityref{obj-term}{\mathcal{T}})
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Терм (Term)}
-\textbf{Тип:} object \quad \textbf{Источник:} mendelson, p. 48 (mendelson, p. 48)
-
-\textbf{Каноническая запись:}
-\[
-
-\entityref{obj-term}{t} \mDefIff (t \in \mathcal{V}) \mOr (t \in \mathcal{C}) \mOr (\mExists f^n \mAnd \mExists t_1, \ldots, t_n \in \entityref{obj-term}{\mathcal{T}} \colon t = f^n(t_1, \ldots, t_n))
+\left( \mForall{x} \mExists{! y} \, \phi(x, y) \right)
+\mImplies
+\mForall{X} \mExists{Y} \mForall{y} \left( y \in Y \mIff \mExists{x} \left( x \in X \land \phi(x, y) \right) \right)
 
 \]
 
