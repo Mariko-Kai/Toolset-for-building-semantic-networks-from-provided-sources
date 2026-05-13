@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 23.10.12) (preloaded format=pdflatex 2024.4.11)  13 MAY 2026 12:51
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 23.10.12) (preloaded format=pdflatex 2024.4.11)  13 MAY 2026 13:15
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -663,13 +663,8 @@ Package hyperref Info: Link coloring ON on input line 6.
 \openout3 = `result.out'.
 
 LaTeX Info: Redefining \th on input line 6.
-
-Overfull \hbox (6.18591pt too wide) in paragraph at lines 9--10
-\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object  \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A
-/cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
- []
-
 LaTeX Font Info:    Trying to load font information for U+msa on input line 12.
+
 
 (C:\Users\Talgat\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
@@ -680,9 +675,25 @@ LaTeX Font Info:    Trying to load font information for U+msb on input line 12.
 (C:\Users\Talgat\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
+! Missing $ inserted.
+<inserted text> 
+                $
+l.13 
+     
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Display math should end with $$.
+<to be read again> 
+                   \tex_par:D 
+l.13 
+     
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
 ! Undefined control sequence.
-l.13 ...tyref{obj-closed-interval}{[a,b]} \mDefIff
-                                                   \{ \entityref{obj-functio...
+l.14 ...emann-integral}{\int_a^b f(x) dx} \mDefIff
+                                                  
 The control sequence at the end of the top line
 of your error message was never \def'ed. If you have
 misspelled it (e.g., `\hobx'), type `I' and the correct
@@ -690,19 +701,237 @@ spelling (e.g., `I\hbox'). Otherwise just continue,
 and I'll forget about whatever was undefined.
 
 
-Overfull \hbox (6.18591pt too wide) in paragraph at lines 21--22
+! LaTeX Error: Bad math environment delimiter.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.16 \]
+       
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.16 \]
+       
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Display math should end with $$.
+<to be read again> 
+                   \endgroup 
+l.16 \]
+       
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.18 
+     
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Display math should end with $$.
+<to be read again> 
+                   \tex_par:D 
+l.18 
+     
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.19 \mForall
+             {\varepsilon > 0} \mExists{\delta > 0} \mForall{P, \xi}
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.20 
+     
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+! LaTeX Error: Bad math environment delimiter.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.21 \]
+       
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.21 \]
+       
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Display math should end with $$.
+<to be read again> 
+                   \endgroup 
+l.21 \]
+       
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.23 
+     
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Display math should end with $$.
+<to be read again> 
+                   \tex_par:D 
+l.23 
+     
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.24 \left
+          (
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.28 
+     
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+! LaTeX Error: Bad math environment delimiter.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.29 \]
+       
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.29 \]
+       
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Display math should end with $$.
+<to be read again> 
+                   \endgroup 
+l.29 \]
+       
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.31 
+     
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Display math should end with $$.
+<to be read again> 
+                   \tex_par:D 
+l.31 
+     
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.32 \left
+          | \sum_{i=1}^n f(\xi_i) \Delta x_i - I \right| < \varepsilon
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.33 
+     
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+! LaTeX Error: Bad math environment delimiter.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.34 \]
+       
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.34 \]
+       
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Display math should end with $$.
+<to be read again> 
+                   \endgroup 
+l.34 \]
+       
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+
+Overfull \hbox (6.18591pt too wide) in paragraph at lines 44--45
 \T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object  \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A
 /cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
  []
 
 
-Overfull \hbox (6.18591pt too wide) in paragraph at lines 39--40
-\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object  \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A
-/cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
- []
-
-
-Overfull \hbox (6.18591pt too wide) in paragraph at lines 57--58
+Overfull \hbox (6.18591pt too wide) in paragraph at lines 62--63
 \T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object  \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A
 /cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
  []
@@ -711,8 +940,8 @@ Overfull \hbox (6.18591pt too wide) in paragraph at lines 57--58
 
 {C:/Users/Talgat/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
 ! Undefined control sequence.
-l.61  [a,b] \mDefIff
-                     \{ x \in \entityref{obj-real-numbers}{\mathbb{R}} \mid ...
+l.66  [a,b] \mDefIff
+                     \{ x \entityref{obj-set}{\in} \entityref{obj-real-numbe...
 The control sequence at the end of the top line
 of your error message was never \def'ed. If you have
 misspelled it (e.g., `\hobx'), type `I' and the correct
@@ -720,87 +949,191 @@ spelling (e.g., `I\hbox'). Otherwise just continue,
 and I'll forget about whatever was undefined.
 
 
-Overfull \hbox (6.18591pt too wide) in paragraph at lines 69--70
+LaTeX Warning: Hyper reference `entity:prop-partial-order' on page 2 undefined 
+on input line 66.
+
+
+LaTeX Warning: Hyper reference `entity:prop-partial-order' on page 2 undefined 
+on input line 66.
+
+
+Overfull \hbox (6.18591pt too wide) in paragraph at lines 74--75
+\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object  \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A
+/cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
+ []
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.78 
+     
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Display math should end with $$.
+<to be read again> 
+                   \tex_par:D 
+l.78 
+     
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Undefined control sequence.
+l.79 P \mDefIff
+               
+The control sequence at the end of the top line
+of your error message was never \def'ed. If you have
+misspelled it (e.g., `\hobx'), type `I' and the correct
+spelling (e.g., `I\hbox'). Otherwise just continue,
+and I'll forget about whatever was undefined.
+
+
+LaTeX Warning: Hyper reference `entity:obj-subset' on page 2 undefined on input
+ line 80.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.81 \colon
+            a = x_0 < x_1 < \cdots < x_n = b
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.82 
+     
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+! LaTeX Error: Bad math environment delimiter.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.83 \]
+       
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.83 \]
+       
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Display math should end with $$.
+<to be read again> 
+                   \endgroup 
+l.83 \]
+       
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+
+Overfull \hbox (6.18591pt too wide) in paragraph at lines 93--94
 \T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object  \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A
 /cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
  []
 
 
-Overfull \hbox (474.39369pt too wide) detected at line 77
+LaTeX Warning: Hyper reference `entity:obj-subset' on page 2 undefined on input
+ line 97.
+
+
+LaTeX Warning: Hyper reference `entity:obj-cartesian-product' on page 2 undefin
+ed on input line 97.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 2 undef
+ined on input line 100.
+
+
+Overfull \hbox (6.18591pt too wide) in paragraph at lines 111--112
+\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object  \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A
+/cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
+ []
+
+[2]
+Overfull \hbox (474.39369pt too wide) detected at line 119
 [][]\OML/cmm/m/it/10 AxiomofExtensionality[][];[][] AxiomofPairing[][];[][] Axi
 omofUnion[][];[][] AxiomofPowerSet[][];[][] AxiomofInfinity[][];[][] AxiomofReg
 ularity[][];[][] AxiomofSpecification[][];[][] AxiomofReplacement[][];[][] Axio
 mofChoice[][]
  []
 
+
+Overfull \hbox (6.18591pt too wide) in paragraph at lines 129--130
+\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object  \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A
+/cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
+ []
+
+
+LaTeX Warning: Hyper reference `entity:prop-finite' on page 3 undefined on inpu
+t line 133.
+
+
+LaTeX Warning: Command \cyrk invalid in math mode on input line 133.
+
+
+LaTeX Warning: Command \cyro invalid in math mode on input line 133.
+
+
+LaTeX Warning: Command \cyrn invalid in math mode on input line 133.
+
+
+LaTeX Warning: Command \cyre invalid in math mode on input line 133.
+
+
+LaTeX Warning: Command \cyrch invalid in math mode on input line 133.
+
+
+LaTeX Warning: Command \cyrn invalid in math mode on input line 133.
+
+
+LaTeX Warning: Command \cyro invalid in math mode on input line 133.
+
+Missing character: There is no к in font cmr10!
+Missing character: There is no о in font cmr10!
+Missing character: There is no н in font cmr10!
+Missing character: There is no е in font cmr10!
+Missing character: There is no ч in font cmr10!
+Missing character: There is no н in font cmr10!
+Missing character: There is no о in font cmr10!
+Missing character: There is no к in font cmr10!
+Missing character: There is no о in font cmr10!
+Missing character: There is no н in font cmr10!
+Missing character: There is no е in font cmr10!
+Missing character: There is no ч in font cmr10!
+Missing character: There is no н in font cmr10!
+Missing character: There is no о in font cmr10!
+Missing character: There is no к in font cmr7!
+Missing character: There is no о in font cmr7!
+Missing character: There is no н in font cmr7!
+Missing character: There is no е in font cmr7!
+Missing character: There is no ч in font cmr7!
+Missing character: There is no н in font cmr7!
+Missing character: There is no о in font cmr7!
+Missing character: There is no к in font cmr5!
+Missing character: There is no о in font cmr5!
+Missing character: There is no н in font cmr5!
+Missing character: There is no е in font cmr5!
+Missing character: There is no ч in font cmr5!
+Missing character: There is no н in font cmr5!
+Missing character: There is no о in font cmr5!
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.91 
-     
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Display math should end with $$.
-<to be read again> 
-                   \tex_par:D 
-l.91 
-     
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.92 \mForall
-             {\mathcal{F}}
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.94 
-     
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-! LaTeX Error: Bad math environment delimiter.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.95 \]
-       
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.95 \]
-       
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-! Display math should end with $$.
-<to be read again> 
-                   \endgroup 
-l.95 \]
-       
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.106 
+l.145 
       
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
@@ -808,7 +1141,7 @@ you left one out. Proceed, with fingers crossed.
 ! Display math should end with $$.
 <to be read again> 
                    \tex_par:D 
-l.106 
+l.145 
       
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
@@ -816,211 +1149,39 @@ So I shall assume that you typed `$$' both times.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.107 \mForall
-              {A, B}
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.109 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-! LaTeX Error: Bad math environment delimiter.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.110 \]
-        
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.110 \]
-        
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-! Display math should end with $$.
-<to be read again> 
-                   \endgroup 
-l.110 \]
-        
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-[2]
-! Missing $ inserted.
-<inserted text> 
-                $
-l.121 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Display math should end with $$.
-<to be read again> 
-                   \tex_par:D 
-l.121 
-      
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.122 \mForall
-              {X}
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.124 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-! LaTeX Error: Bad math environment delimiter.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.125 \]
-        
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.125 \]
-        
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-! Display math should end with $$.
-<to be read again> 
-                   \endgroup 
-l.125 \]
-        
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.136 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Display math should end with $$.
-<to be read again> 
-                   \tex_par:D 
-l.136 
-      
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.137 \mForall
-              {S}
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.139 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-! LaTeX Error: Bad math environment delimiter.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.140 \]
-        
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.140 \]
-        
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-! Display math should end with $$.
-<to be read again> 
-                   \endgroup 
-l.140 \]
-        
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.151 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Display math should end with $$.
-<to be read again> 
-                   \tex_par:D 
-l.151 
-      
-The `$' that I just saw supposedly matches a previous `$$'.
-So I shall assume that you typed `$$' both times.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.152 \mExists
+l.146 \mExists
               {I}
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
 
+
+LaTeX Warning: Hyper reference `entity:obj-empty-set' on page 3 undefined on in
+put line 147.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 3 undef
+ined on input line 147.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 3 undef
+ined on input line 147.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 3 undef
+ined on input line 147.
+
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.154 
+l.148 
       
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
+
+
+Overfull \hbox (0.9186pt too wide) in paragraph at lines 146--148
+[]$\OMS/cmsy/m/n/10 9\OML/cmm/m/it/10 I []$ 
+ []
 
 
 ! LaTeX Error: Bad math environment delimiter.
@@ -1029,7 +1190,7 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.155 \]
+l.149 \]
         
 Your command was ignored.
 Type  I <command> <return>  to replace it with another command,
@@ -1038,7 +1199,7 @@ or  <return>  to continue without it.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.155 \]
+l.149 \]
         
 I've inserted something that you may have forgotten.
 (See the <inserted text> above.)
@@ -1049,15 +1210,20 @@ my insertion and my current dilemma will both disappear.
 ! Display math should end with $$.
 <to be read again> 
                    \endgroup 
-l.155 \]
+l.149 \]
         
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
 
+
+Overfull \hbox (17.14212pt too wide) in paragraph at lines 155--155
+[]\T2A/cmr/bx/n/14.4 Аксиома под-ста-нов-ки (Axiom of Replacement) 
+ []
+
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.166 
+l.160 
       
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
@@ -1065,7 +1231,7 @@ you left one out. Proceed, with fingers crossed.
 ! Display math should end with $$.
 <to be read again> 
                    \tex_par:D 
-l.166 
+l.160 
       
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
@@ -1073,15 +1239,19 @@ So I shall assume that you typed `$$' both times.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.167 \mForall
-              {X}
+l.161 \left
+           ( \mForall{x} \mExists{! y} \, \phi(x, y) \right)
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 3 undef
+ined on input line 163.
 
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.169 
+l.164 
       
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
@@ -1093,7 +1263,7 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.170 \]
+l.165 \]
         
 Your command was ignored.
 Type  I <command> <return>  to replace it with another command,
@@ -1102,7 +1272,7 @@ or  <return>  to continue without it.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.170 \]
+l.165 \]
         
 I've inserted something that you may have forgotten.
 (See the <inserted text> above.)
@@ -1113,16 +1283,21 @@ my insertion and my current dilemma will both disappear.
 ! Display math should end with $$.
 <to be read again> 
                    \endgroup 
-l.170 \]
+l.165 \]
         
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
+
+
+Overfull \hbox (11.52454pt too wide) in paragraph at lines 171--171
+[]\T2A/cmr/bx/n/14.4 Аксиома вы-де-ле-ния (Axiom of Specification) 
+ []
 
 [3]
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.181 
+l.176 
       
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
@@ -1130,7 +1305,7 @@ you left one out. Proceed, with fingers crossed.
 ! Display math should end with $$.
 <to be read again> 
                    \tex_par:D 
-l.181 
+l.176 
       
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
@@ -1138,21 +1313,113 @@ So I shall assume that you typed `$$' both times.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.182 \mForall
-              {\mathcal{F}}
+l.177 \mForall
+              {X}
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 4 undef
+ined on input line 178.
 
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.189 
+l.179 
       
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
 
 
-Overfull \hbox (3.3252pt too wide) in paragraph at lines 182--189
+! LaTeX Error: Bad math environment delimiter.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.180 \]
+        
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.180 \]
+        
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Display math should end with $$.
+<to be read again> 
+                   \endgroup 
+l.180 \]
+        
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.191 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Display math should end with $$.
+<to be read again> 
+                   \tex_par:D 
+l.191 
+      
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.192 \mForall
+              {\mathcal{F}}
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 4 undef
+ined on input line 194.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 4 undef
+ined on input line 194.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 4 undef
+ined on input line 194.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 4 undef
+ined on input line 195.
+
+
+LaTeX Warning: Hyper reference `entity:obj-empty-set' on page 4 undefined on in
+put line 195.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 4 undef
+ined on input line 198.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.199 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+Overfull \hbox (48.40466pt too wide) in paragraph at lines 192--199
 []$\OMS/cmsy/m/n/10 8F [] )
  []
 
@@ -1163,7 +1430,7 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.190 \]
+l.200 \]
         
 Your command was ignored.
 Type  I <command> <return>  to replace it with another command,
@@ -1172,7 +1439,7 @@ or  <return>  to continue without it.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.190 \]
+l.200 \]
         
 I've inserted something that you may have forgotten.
 (See the <inserted text> above.)
@@ -1183,15 +1450,20 @@ my insertion and my current dilemma will both disappear.
 ! Display math should end with $$.
 <to be read again> 
                    \endgroup 
-l.190 \]
+l.200 \]
         
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
 
+
+Overfull \hbox (28.67392pt too wide) in paragraph at lines 206--206
+[]\T2A/cmr/bx/n/14.4 Аксиома объ-ем-но-сти (Axiom of Extensionality) 
+ []
+
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.201 
+l.211 
       
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
@@ -1199,7 +1471,7 @@ you left one out. Proceed, with fingers crossed.
 ! Display math should end with $$.
 <to be read again> 
                    \tex_par:D 
-l.201 
+l.211 
       
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
@@ -1207,7 +1479,7 @@ So I shall assume that you typed `$$' both times.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.202 \mForall
+l.212 \mForall
               {A, B}
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
@@ -1215,7 +1487,7 @@ you left one out. Proceed, with fingers crossed.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.204 
+l.214 
       
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
@@ -1227,7 +1499,7 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.205 \]
+l.215 \]
         
 Your command was ignored.
 Type  I <command> <return>  to replace it with another command,
@@ -1236,7 +1508,7 @@ or  <return>  to continue without it.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.205 \]
+l.215 \]
         
 I've inserted something that you may have forgotten.
 (See the <inserted text> above.)
@@ -1247,15 +1519,20 @@ my insertion and my current dilemma will both disappear.
 ! Display math should end with $$.
 <to be read again> 
                    \endgroup 
-l.205 \]
+l.215 \]
         
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
 
+
+Overfull \hbox (15.72351pt too wide) in paragraph at lines 221--221
+[]\T2A/cmr/bx/n/14.4 Аксиома ре-гу-ляр-но-сти (Axiom of Regularity) 
+ []
+
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.216 
+l.226 
       
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
@@ -1263,7 +1540,7 @@ you left one out. Proceed, with fingers crossed.
 ! Display math should end with $$.
 <to be read again> 
                    \tex_par:D 
-l.216 
+l.226 
       
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
@@ -1271,15 +1548,23 @@ So I shall assume that you typed `$$' both times.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.217 \left
-           ( \mForall{x} \mExists{! y} \, \phi(x, y) \right)
+l.227 \mForall
+              {S}
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 4 undef
+ined on input line 228.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 4 undef
+ined on input line 228.
 
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.220 
+l.229 
       
 I've inserted a begin-math/end-math symbol since I think
 you left one out. Proceed, with fingers crossed.
@@ -1291,7 +1576,7 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.221 \]
+l.230 \]
         
 Your command was ignored.
 Type  I <command> <return>  to replace it with another command,
@@ -1300,7 +1585,7 @@ or  <return>  to continue without it.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.221 \]
+l.230 \]
         
 I've inserted something that you may have forgotten.
 (See the <inserted text> above.)
@@ -1311,92 +1596,252 @@ my insertion and my current dilemma will both disappear.
 ! Display math should end with $$.
 <to be read again> 
                    \endgroup 
-l.221 \]
+l.230 \]
         
 The `$' that I just saw supposedly matches a previous `$$'.
 So I shall assume that you typed `$$' both times.
 
-[4] (result.aux)
+[4]
+! Missing $ inserted.
+<inserted text> 
+                $
+l.241 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Display math should end with $$.
+<to be read again> 
+                   \tex_par:D 
+l.241 
+      
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.242 \mForall
+              {\mathcal{F}}
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 5 undef
+ined on input line 243.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.244 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+! LaTeX Error: Bad math environment delimiter.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.245 \]
+        
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.245 \]
+        
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Display math should end with $$.
+<to be read again> 
+                   \endgroup 
+l.245 \]
+        
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.256 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Display math should end with $$.
+<to be read again> 
+                   \tex_par:D 
+l.256 
+      
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.257 \mForall
+              {A, B}
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 5 undef
+ined on input line 258.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.259 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+! LaTeX Error: Bad math environment delimiter.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.260 \]
+        
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.260 \]
+        
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Display math should end with $$.
+<to be read again> 
+                   \endgroup 
+l.260 \]
+        
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.271 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Display math should end with $$.
+<to be read again> 
+                   \tex_par:D 
+l.271 
+      
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.272 \mForall
+              {X}
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+LaTeX Warning: Hyper reference `entity:obj-subset' on page 5 undefined on input
+ line 273.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.274 
+      
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+! LaTeX Error: Bad math environment delimiter.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.275 \]
+        
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.275 \]
+        
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Display math should end with $$.
+<to be read again> 
+                   \endgroup 
+l.275 \]
+        
+The `$' that I just saw supposedly matches a previous `$$'.
+So I shall assume that you typed `$$' both times.
+
+[5] (result.aux)
  ***********
 LaTeX2e <2023-11-01>
 L3 programming layer <2023-12-11>
  ***********
+
+
+LaTeX Warning: There were undefined references.
+
 Package rerunfilecheck Info: File `result.out' has not changed.
-(rerunfilecheck)             Checksum: 0CA928FFB4324DC6EBC15B56B3D055EF;2663.
+(rerunfilecheck)             Checksum: F1ED1E128A1A9BE46ADA6609306642A4;4420.
  ) 
 Here is how much of TeX's memory you used:
  12579 strings out of 474495
- 194914 string characters out of 5743463
+ 194960 string characters out of 5743463
  1934460 words of memory out of 5000000
- 34663 multiletter control sequences out of 15000+600000
+ 34673 multiletter control sequences out of 15000+600000
  564617 words of font info for 50 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 90i,6n,93p,570b,457s stack positions out of 10000i,1000n,20000p,200000b,200000s
-
-pdfTeX warning (dest): name{axm-zfc-choice} has been referenced but does not ex
-ist, replaced by a fixed one
-
-
-pdfTeX warning (dest): name{axm-zfc-replacement} has been referenced but does n
-ot exist, replaced by a fixed one
-
-
-pdfTeX warning (dest): name{axm-zfc-specification} has been referenced but does
- not exist, replaced by a fixed one
-
-
-pdfTeX warning (dest): name{axm-zfc-regularity} has been referenced but does no
-t exist, replaced by a fixed one
-
-
-pdfTeX warning (dest): name{axm-zfc-infinity} has been referenced but does not 
-exist, replaced by a fixed one
-
-
-pdfTeX warning (dest): name{axm-zfc-power-set} has been referenced but does not
- exist, replaced by a fixed one
-
-
-pdfTeX warning (dest): name{axm-zfc-union} has been referenced but does not exi
-st, replaced by a fixed one
-
-
-pdfTeX warning (dest): name{axm-zfc-pairing} has been referenced but does not e
-xist, replaced by a fixed one
-
-
-pdfTeX warning (dest): name{axm-zfc-extensionality} has been referenced but doe
-s not exist, replaced by a fixed one
-
-
-pdfTeX warning (dest): name{obj-real-numbers} has been referenced but does not 
-exist, replaced by a fixed one
-
-
-pdfTeX warning (dest): name{obj-set} has been referenced but does not exist, re
-placed by a fixed one
-
-
-pdfTeX warning (dest): name{obj-function} has been referenced but does not exis
-t, replaced by a fixed one
-
-
-pdfTeX warning (dest): name{obj-closed-interval} has been referenced but does n
-ot exist, replaced by a fixed one
-
- <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\larm100
-0.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\la
-bx1000.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi6
-00\labx1440.pk><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/type1/publi
-c/amsfonts/cm/cmex10.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/t
-ype1/public/amsfonts/cm/cmmi10.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKT
-eX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/Talgat/AppData/Local/Prog
-rams/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/Talgat/AppData/L
-ocal/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/Talgat
-/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
-Output written on result.pdf (4 pages, 140416 bytes).
+ 90i,6n,93p,570b,463s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\larm1
+000.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\
+labx1000.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dp
+i600\labx1440.pk><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/type1/pub
+lic/amsfonts/cm/cmex10.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts
+/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/Talgat/AppData/Local/Programs/Mi
+KTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/Talgat/AppData/Local/Pr
+ograms/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/Talgat/AppData
+/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/Talgat
+/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Us
+ers/Talgat/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.p
+fb><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/s
+ymbols/msbm10.pfb>
+Output written on result.pdf (5 pages, 173319 bytes).
 PDF statistics:
- 330 PDF objects out of 1000 (max. 8388607)
- 32 named destinations out of 1000 (max. 500000)
- 113 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 382 PDF objects out of 1000 (max. 8388607)
+ 22 named destinations out of 1000 (max. 500000)
+ 129 words of extra memory for PDF output out of 10000 (max. 10000000)
 

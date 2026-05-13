@@ -5,31 +5,36 @@
 
 \begin{document}
 
-\section{Класс интегрируемых по Риману функций (Riemann Integrable Class)}\label{entity:obj-riemann-class}
-\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
+\section{Интеграл Римана (Riemann Integral)}\label{entity:op-riemann-integral}
+\textbf{Тип:} operation \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, fichtenholz)
 
 \textbf{Каноническая запись:}
 \[
- \mathcal{R}\entityref{obj-closed-interval}{[a,b]} \mDefIff \{ \entityref{obj-function}{f} \mid \mExists \int_a^b \entityref{obj-function}{f}(x) dx \} 
-\]
 
-\vspace{1em}
-\hrule
-\vspace{1em}
+I = \entityref{op-riemann-integral}{\int_a^b f(x) dx} \mDefIff
 
-\section{Функция (Function)}\label{entity:obj-function}
-\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
-
-\textbf{Каноническая запись:}
-\[
- f \subset \entityref{obj-set}{X} \times \entityref{obj-set}{Y} 
 \]
 \[
- \mForall{x} (x \in X \mImplies \mExists{! y} (y \in Y \land (x, y) \in f)) 
+
+\mForall{\varepsilon > 0} \mExists{\delta > 0} \mForall{P, \xi}
+
+\]
+\[
+
+\left(
+  (P \text{ - } \entityref{obj-partition}{\text{разбиение}} \entityref{obj-closed-interval}{[a,b]}) \mAnd (\lambda(P) < \delta) \mAnd (\xi_i \in [x_{i-1}, x_i])
+\right)
+\mImplies
+
+\]
+\[
+
+\left| \sum_{i=1}^n f(\xi_i) \Delta x_i - I \right| < \varepsilon
+
 \]
 
 \textbf{Естественный язык:}
-Функция $f$ из множества $X$ в множество $Y$ — это правило (или бинарное отношение), по которому каждому элементу $x \in X$ ставится в соответствие ровно один элемент $y \in Y$. Формально, это подмножество декартова произведения $X \times Y$, обладающее свойством однозначности.
+Определенным интегралом Римана от функции $f(x)$ на отрезке $[a,b]$ называется предел интегральных сумм $\sum f(\xi_i) \Delta x_i$ при стремлении максимальной длины частичного отрезка $\lambda(P)$ к нулю, независимо от выбора разбиения $P$ и промежуточных точек $\xi_i$.
 
 \vspace{1em}
 \hrule
@@ -58,8 +63,45 @@
 
 \textbf{Каноническая запись:}
 \[
- [a,b] \mDefIff \{ x \in \entityref{obj-real-numbers}{\mathbb{R}} \mid a \le x \le b \} 
+ [a,b] \mDefIff \{ x \entityref{obj-set}{\in} \entityref{obj-real-numbers}{\mathbb{R}} \mid a \entityref{prop-partial-order}{\le} x \entityref{prop-partial-order}{\le} b \} 
 \]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Разбиение отрезка (Partition)}\label{entity:obj-partition}
+\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 325)
+
+\textbf{Каноническая запись:}
+\[
+
+P \mDefIff
+\entityref{obj-finite-set}{\{x_0, x_1, \ldots, x_n\}} \entityref{obj-subset}{\subset} \entityref{obj-closed-interval}{[a, b]}
+\colon a = x_0 < x_1 < \cdots < x_n = b
+
+\]
+
+\textbf{Естественный язык:}
+Разбиением отрезка $[a,b]$ называется конечное множество точек $P = \{x_0, x_1, \ldots, x_n\}$, таких что $a = x_0 < x_1 < \cdots < x_n = b$.
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Функция (Function)}\label{entity:obj-function}
+\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
+
+\textbf{Каноническая запись:}
+\[
+ f \entityref{obj-subset}{\subset} \entityref{obj-set}{X} \entityref{obj-cartesian-product}{\times} \entityref{obj-set}{Y} 
+\]
+\[
+ \mForall{x} (x \entityref{obj-set}{\in} X \mImplies \mExists{! y} (y \entityref{obj-set}{\in} Y \entityref{def-logical-connectives}{\land} (x, y) \entityref{obj-set}{\in} f)) 
+\]
+
+\textbf{Естественный язык:}
+Функция $f$ из множества $X$ в множество $Y$ — это правило (или бинарное отношение), по которому каждому элементу $x \in X$ ставится в соответствие ровно один элемент $y \in Y$. Формально, это подмножество декартова произведения $X \times Y$, обладающее свойством однозначности.
 
 \vspace{1em}
 \hrule
@@ -70,7 +112,7 @@
 
 \textbf{Каноническая запись:}
 \[
- \entityref{obj-set}{X} \text{ - базовое понятие ZFC, определяемое аксиомами:} 
+ X \text{ - базовое понятие ZFC, определяемое аксиомами:} 
 \]
 \[
  \entityref{axm-zfc-extensionality}{Axiom of Extensionality}, \entityref{axm-zfc-pairing}{Axiom of Pairing}, \entityref{axm-zfc-union}{Axiom of Union}, \entityref{axm-zfc-power-set}{Axiom of Power Set}, \entityref{axm-zfc-infinity}{Axiom of Infinity}, \entityref{axm-zfc-regularity}{Axiom of Regularity}, \entityref{axm-zfc-specification}{Axiom of Specification}, \entityref{axm-zfc-replacement}{Axiom of Replacement}, \entityref{axm-zfc-choice}{Axiom of Choice} 
@@ -83,74 +125,26 @@
 \hrule
 \vspace{1em}
 
-\section{Axiom of Union}\label{entity:axm-zfc-union}
-\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
+\section{Конечное множество (Finite Set)}\label{entity:obj-finite-set}
+\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
 
 \textbf{Каноническая запись:}
 \[
-
-\mForall{\mathcal{F}}
-\mExists{U} \mForall{x} \left( x \in U \mIff \mExists{A} (A \in \mathcal{F} \land x \in A) \right)
-
+ \entityref{obj-set}{A} \text{ - \entityref{prop-finite}{конечно}} 
 \]
 
 \vspace{1em}
 \hrule
 \vspace{1em}
 
-\section{Axiom of Pairing}\label{entity:axm-zfc-pairing}
-\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
-
-\textbf{Каноническая запись:}
-\[
-
-\mForall{A, B}
-\mExists{C} \mForall{x} \left( x \in C \mIff (x = A \lor x = B) \right)
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Axiom of Power Set}\label{entity:axm-zfc-power-set}
-\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
-
-\textbf{Каноническая запись:}
-\[
-
-\mForall{X}
-\mExists{P} \mForall{A} (A \in P \mIff A \subset X)
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Axiom of Regularity}\label{entity:axm-zfc-regularity}
-\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
-
-\textbf{Каноническая запись:}
-\[
-
-\mForall{S}
-\left( (\mExists{y} y \in S) \mImplies \mExists{x} \left( x \in S \land \lnot \mExists{z} (z \in S \land z \in x) \right) \right)
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Axiom of Infinity}\label{entity:axm-zfc-infinity}
-\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
+\section{Аксиома бесконечности (Axiom of Infinity)}\label{entity:axm-zfc-infinity}
+\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
 
 \textbf{Каноническая запись:}
 \[
 
 \mExists{I}
-\left( \emptyset \in I \;\land\; \mForall{x} \left( x \in I \mImplies \mExists{y} (y \in I \land \mForall{z} (z \in y \mIff z \in x \lor z = x)) \right) \right)
+\left( \entityref{obj-empty-set}{\\varnothing} \entityref{obj-set}{\in} I \;\entityref{def-logical-connectives}{\land}\; \mForall{x} \left( x \entityref{obj-set}{\in} I \mImplies \mExists{y} (y \entityref{obj-set}{\in} I \entityref{def-logical-connectives}{\land} \mForall{z} (z \entityref{obj-set}{\in} y \mIff z \entityref{obj-set}{\in} x \entityref{def-logical-connectives}{\lor} z = x)) \right) \right)
 
 \]
 
@@ -158,65 +152,125 @@
 \hrule
 \vspace{1em}
 
-\section{Axiom of Specification}\label{entity:axm-zfc-specification}
-\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
-
-\textbf{Каноническая запись:}
-\[
-
-\mForall{X}
-\mExists{Y} \mForall{z} \left( z \in Y \mIff (z \in X \land \phi(z)) \right)
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Axiom of Choice}\label{entity:axm-zfc-choice}
-\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
-
-\textbf{Каноническая запись:}
-\[
-
-\mForall{\mathcal{F}}
-\left(
-  \mForall{A, B} \left( A \in \mathcal{F} \land B \in \mathcal{F} \land A \neq B \mImplies \lnot \mExists{x} (x \in A \land x \in B) \right)
-  \land \lnot(\emptyset \in \mathcal{F})
-\right)
-\mImplies
-\mExists{C} \mForall{A} \left( A \in \mathcal{F} \mImplies \mExists{! x} (x \in A \land x \in C) \right)
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Axiom of Extensionality}\label{entity:axm-zfc-extensionality}
-\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
-
-\textbf{Каноническая запись:}
-\[
-
-\mForall{A, B}
-(A = B) \mIff (\mForall{x} x \in A \mIff x \in B)
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Axiom of Replacement}\label{entity:axm-zfc-replacement}
-\textbf{Тип:} axiom \quad \textbf{Источник:} Unknown (Unknown)
+\section{Аксиома подстановки (Axiom of Replacement)}\label{entity:axm-zfc-replacement}
+\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
 
 \textbf{Каноническая запись:}
 \[
 
 \left( \mForall{x} \mExists{! y} \, \phi(x, y) \right)
 \mImplies
-\mForall{X} \mExists{Y} \mForall{y} \left( y \in Y \mIff \mExists{x} \left( x \in X \land \phi(x, y) \right) \right)
+\mForall{X} \mExists{Y} \mForall{y} \left( y \entityref{obj-set}{\in} Y \mIff \mExists{x} \left( x \entityref{obj-set}{\in} X \entityref{def-logical-connectives}{\land} \phi(x, y) \right) \right)
+
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Аксиома выделения (Axiom of Specification)}\label{entity:axm-zfc-specification}
+\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
+
+\textbf{Каноническая запись:}
+\[
+
+\mForall{X}
+\mExists{Y} \mForall{z} \left( z \entityref{obj-set}{\in} Y \mIff (z \entityref{obj-set}{\in} X \entityref{def-logical-connectives}{\land} \phi(z)) \right)
+
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Аксиома выбора (Axiom of Choice)}\label{entity:axm-zfc-choice}
+\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
+
+\textbf{Каноническая запись:}
+\[
+
+\mForall{\mathcal{F}}
+\left(
+  \mForall{A, B} \left( A \entityref{obj-set}{\in} \mathcal{F} \entityref{def-logical-connectives}{\land} B \entityref{obj-set}{\in} \mathcal{F} \entityref{def-logical-connectives}{\land} A \neq B \mImplies \lnot \mExists{x} (x \entityref{obj-set}{\in} A \entityref{def-logical-connectives}{\land} x \entityref{obj-set}{\in} B) \right)
+  \entityref{def-logical-connectives}{\land} \lnot(\entityref{obj-empty-set}{\\varnothing} \entityref{obj-set}{\in} \mathcal{F})
+\right)
+\mImplies
+\mExists{C} \mForall{A} \left( A \entityref{obj-set}{\in} \mathcal{F} \mImplies \mExists{! x} (x \entityref{obj-set}{\in} A \entityref{def-logical-connectives}{\land} x \entityref{obj-set}{\in} C) \right)
+
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Аксиома объемности (Axiom of Extensionality)}\label{entity:axm-zfc-extensionality}
+\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
+
+\textbf{Каноническая запись:}
+\[
+
+\mForall{A, B}
+(A = B) \mIff (\mForall{x} x \entityref{obj-set}{\in} A \mIff x \entityref{obj-set}{\in} B)
+
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Аксиома регулярности (Axiom of Regularity)}\label{entity:axm-zfc-regularity}
+\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
+
+\textbf{Каноническая запись:}
+\[
+
+\mForall{S}
+\left( (\mExists{y} y \entityref{obj-set}{\in} S) \mImplies \mExists{x} \left( x \entityref{obj-set}{\in} S \entityref{def-logical-connectives}{\land} \lnot \mExists{z} (z \entityref{obj-set}{\in} S \entityref{def-logical-connectives}{\land} z \entityref{obj-set}{\in} x) \right) \right)
+
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Аксиома объединения (Axiom of Union)}\label{entity:axm-zfc-union}
+\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
+
+\textbf{Каноническая запись:}
+\[
+
+\mForall{\mathcal{F}}
+\mExists{U} \mForall{x} \left( x \entityref{obj-set}{\in} U \mIff \mExists{A} (A \entityref{obj-set}{\in} \mathcal{F} \entityref{def-logical-connectives}{\land} x \entityref{obj-set}{\in} A) \right)
+
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Аксиома пары (Axiom of Pairing)}\label{entity:axm-zfc-pairing}
+\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
+
+\textbf{Каноническая запись:}
+\[
+
+\mForall{A, B}
+\mExists{C} \mForall{x} \left( x \entityref{obj-set}{\in} C \mIff (x = A \entityref{def-logical-connectives}{\lor} x = B) \right)
+
+\]
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Аксиома булеана (Axiom of Power Set)}\label{entity:axm-zfc-power-set}
+\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
+
+\textbf{Каноническая запись:}
+\[
+
+\mForall{X}
+\mExists{P} \mForall{A} (A \entityref{obj-set}{\in} P \mIff A \entityref{obj-subset}{\subset} X)
 
 \]
 

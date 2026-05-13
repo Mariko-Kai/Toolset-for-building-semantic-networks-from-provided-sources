@@ -1,7 +1,11 @@
 import os
 import re
+import sqlite3
+from pathlib import Path
 
-CONTENT_DIR = r"f:\Universe\Projects\Учебник по матанализу\content"
+PROJECT_ROOT = Path(r"f:\Universe\Projects\Учебник по матанализу")
+CONTENT_DIR = PROJECT_ROOT / "content"
+DB_PATH = PROJECT_ROOT / "mathesis_index.db"
 
 # Map symbols/terms to (entity_id, display_text)
 # TEXT REPLACEMENTS MUST BE ORDERED BY SPECIFICITY (Longer/More specific first)
@@ -136,9 +140,23 @@ def process_file(filepath):
     
     # Extract current entity-id to avoid self-linking
     current_entity_id = None
+    entity_type = "unknown"
+    defined_in = []
+    
     match_id = re.search(r"^% entity-id:\s*(.+)$", content, re.MULTILINE)
     if match_id:
         current_entity_id = match_id.group(1).strip()
+        
+    match_type = re.search(r"^% entity-type:\s*(.+)$", content, re.MULTILINE)
+    if match_type:
+        entity_type = match_type.group(1).strip()
+        
+    match_def = re.search(r"^% defined-in:\s*(.+)$", content, re.MULTILINE)
+    if match_def:
+        sources_str = match_def.group(1).strip()
+        defined_in = [s.strip() for s in sources_str.split(",")]
+        
+    if current_entity_id:
         # Remove existing self-links
         # Pattern: \entityref{current_id}{text} -> text
         # Only matches if braces are balanced (simple case)
@@ -190,11 +208,35 @@ def process_file(filepath):
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
 
+    return content, current_entity_id, entity_type, defined_in
+
 def main():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
     for root, dirs, files in os.walk(CONTENT_DIR):
         for file in files:
             if file.endswith(".tex") and file != "master.tex" and file != "mathesis.sty":
-                process_file(os.path.join(root, file))
+                filepath = os.path.join(root, file)
+                content, entity_id, entity_type, defined_in = process_file(filepath)
+                
+                # Update DB
+                if entity_id:
+                    # Parse title from filename
+                    match_title = re.search(r'^(.*?) \[', file)
+                    title = match_title.group(1).strip() if match_title else entity_id
+                    rel_path = str(Path(filepath).relative_to(PROJECT_ROOT))
+                    
+                    cursor.execute("INSERT OR REPLACE INTO entities (entity_id, type, title, path) VALUES (?, ?, ?, ?)",
+                                   (entity_id, entity_type, title, rel_path))
+                    
+                    cursor.execute("DELETE FROM formulation_sources WHERE entity_id = ?", (entity_id,))
+                    for src in defined_in:
+                        cursor.execute("INSERT INTO formulation_sources (entity_id, source_book) VALUES (?, ?)", (entity_id, src))
+    
+    conn.commit()
+    conn.close()
+    print("Database indexing complete.")
 
 if __name__ == "__main__":
     main()
