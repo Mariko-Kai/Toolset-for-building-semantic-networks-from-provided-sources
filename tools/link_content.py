@@ -9,6 +9,33 @@ DB_PATH = PROJECT_ROOT / "mathesis_index.db"
 
 # Map symbols/terms to (entity_id, display_text)
 # TEXT REPLACEMENTS MUST BE ORDERED BY SPECIFICITY (Longer/More specific first)
+DEFAULT_MACRO_DEPENDENCIES = {
+    r'\mNorm': 'op-norm-abstract',
+    r'\mAbs': 'op-abs-abstract',
+    r'\mInner': 'op-inner-product-abstract',
+    r'\mDist': 'op-dist-abstract',
+    r'\mSup': 'op-supremum',
+    r'\mInf': 'op-infimum',
+    r'\mDeriv': 'op-derivative',
+    r'\mIntegral': 'op-integral',
+}
+
+def extract_macro_dependencies(content: str) -> list[str]:
+    deps = []
+    for macro, default_id in DEFAULT_MACRO_DEPENDENCIES.items():
+        escaped = re.escape(macro)
+        concrete = re.findall(rf'{escaped}\[([^\]]+)\]', content)
+        if concrete:
+            deps.extend(concrete)
+        elif re.search(rf'{escaped}(?!\[)\{{', content):
+            deps.append(default_id)
+    return deps
+
+def extract_all_dependencies(content: str) -> list[str]:
+    entityref_deps = re.findall(r'\\entityref\{([^}]+)\}', content)
+    macro_deps = extract_macro_dependencies(content)
+    return list(set(entityref_deps + macro_deps))
+
 REPLACEMENTS = [
     # --- MATH SYMBOLS (Case-sensitive usually, handled by regex) ---
     
@@ -57,10 +84,8 @@ REPLACEMENTS = [
     (r"\\times(?![a-zA-Z])", "obj-cartesian-product", None),
     (r"\\circ(?![a-zA-Z])", "obj-composition", None),
     
-    # Relations
-    (r"\\subset(?![a-zA-Z])", "obj-subset", None),
-    (r"\\in(?![a-zA-Z])", "obj-set", None),
-    (r"\\notin(?![a-zA-Z])", "obj-set", None),
+    # Relations — NOTE: \in, \notin, \subset are ZFC PRIMITIVES per architecture.md
+    # They must NOT be auto-wrapped with \entityref. Only non-primitive relations:
     (r"\\sim(?![a-zA-Z])", "prop-equipotent", None),
     (r"\\le(?![a-zA-Z])", "prop-partial-order", None),
     (r"\\leqslant(?![a-zA-Z])", "prop-partial-order", None),
@@ -233,6 +258,13 @@ def main():
                     cursor.execute("DELETE FROM formulation_sources WHERE entity_id = ?", (entity_id,))
                     for src in defined_in:
                         cursor.execute("INSERT INTO formulation_sources (entity_id, source_book) VALUES (?, ?)", (entity_id, src))
+                        
+                    # Extract dependencies and insert into entity_dependency table
+                    deps = extract_all_dependencies(content)
+                    cursor.execute("DELETE FROM entity_dependency WHERE source_id = ?", (entity_id,))
+                    for target_id in deps:
+                        if target_id != entity_id: # Avoid self-linking
+                            cursor.execute("INSERT INTO entity_dependency (source_id, target_id) VALUES (?, ?)", (entity_id, target_id))
     
     conn.commit()
     conn.close()

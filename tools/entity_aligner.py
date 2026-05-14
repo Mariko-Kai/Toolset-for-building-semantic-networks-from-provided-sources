@@ -11,7 +11,7 @@ DB_PATH = PROJECT_ROOT / "mathesis_index.db"
 
 def get_embedding(text):
     url = 'http://localhost:11434/api/embeddings'
-    data = {'model': 'nomic-embed-text:latest', 'prompt': text}
+    data = {'model': 'snowflake-arctic-embed2:568m', 'prompt': text}
     req = urllib.request.Request(url, json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})
     try:
         with urllib.request.urlopen(req) as response:

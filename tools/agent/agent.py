@@ -7,8 +7,8 @@ import subprocess
 from pathlib import Path
 from dotenv import load_dotenv
 
-from google import genai
-from google.genai import types
+import base64
+import urllib.request
 from PIL import Image
 
 # Setup Paths
@@ -156,53 +156,62 @@ def run_validation():
         print(result.stdout)
         print(result.stderr)
 
+def query_ollama_vision(prompt, image_paths, model="llava-phi3:latest"):
+    """Sends a request with images to the local Ollama API."""
+    url = "http://localhost:11434/api/generate"
+    
+    encoded_images = []
+    for ipath in image_paths:
+        with open(ipath, "rb") as img_file:
+            encoded_images.append(base64.b64encode(img_file.read()).decode('utf-8'))
+    
+    data = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "images": encoded_images,
+        "options": {
+            "temperature": 0.1
+        }
+    }
+    
+    try:
+        req = urllib.request.Request(url, json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req, timeout=300) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            return result.get('response', '').strip()
+    except Exception as e:
+        print(f"  [Ollama Vision Error] {e}")
+        return ""
+
 def process_images(image_paths: list[Path]):
-    load_dotenv()
-    api_key = os.getenv("GOOGLE_API_KEY")
-    if not api_key:
-        print("ERROR: GOOGLE_API_KEY environment variable not set.")
-        sys.exit(1)
+    # load_dotenv()
+    # api_key = os.getenv("GOOGLE_API_KEY")
+    # if not api_key:
+    #     print("ERROR: GOOGLE_API_KEY environment variable not set.")
+    #     sys.exit(1)
         
-    client = genai.Client(api_key=api_key)
+    # client = genai.Client(api_key=api_key)
     system_prompt = load_system_prompt()
     
-    # Load images
-    contents = []
-    print(f"Loading {len(image_paths)} images...")
-    for ipath in image_paths:
-        contents.append(Image.open(ipath))
-        
     # Ask the specific instruction
-    contents.append("Extract all mathematical definitions, axioms, and theorems from these pages into strictly formalized LaTeX blocks following the system instructions.")
+    user_instruction = "Extract all mathematical definitions, axioms, and theorems from these pages into strictly formalized LaTeX blocks following the system instructions. Include % entity-id and % entity-type metadata."
     
-    print("Sending request to Gemini Vision (Streaming)...\n")
+    full_prompt = system_prompt + "\n\n" + user_instruction
+    
+    print(f"Sending request to Ollama (llava-phi3) with {len(image_paths)} images...")
     print("=" * 40)
-    print("AGENT THINKING LOG:")
+    
+    response_text = query_ollama_vision(full_prompt, image_paths)
+    
+    print("Ollama Response received.")
     print("-" * 40)
-    
-    response = client.models.generate_content_stream(
-        model='gemini-2.5-pro',
-        contents=contents,
-        config=types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            temperature=0.1
-        )
-    )
-    
-    full_text = ""
-    for chunk in response:
-        if chunk.text:
-            try:
-                print(chunk.text, end="", flush=True)
-            except UnicodeEncodeError:
-                pass
-            full_text += chunk.text
-            
+    print(response_text)
     print("\n" + "=" * 40)
     
-    blocks = extract_latex_blocks(full_text)
+    blocks = extract_latex_blocks(response_text)
     
-    print(f"\nReceived {len(blocks)} LaTeX block(s) from Gemini.")
+    print(f"\nReceived {len(blocks)} LaTeX block(s) from Ollama.")
     
     for i, block in enumerate(blocks):
         meta = parse_metadata(block)

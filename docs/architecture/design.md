@@ -310,6 +310,21 @@ CREATE TABLE formulation (
     UNIQUE(entity_id, source_book)
 );
 
+CREATE TABLE formulation_sources (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_id TEXT NOT NULL,
+    source_book TEXT NOT NULL,
+    source_ref TEXT
+);
+
+CREATE TABLE formulation_raw_cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    book_id TEXT NOT NULL,
+    query TEXT NOT NULL,
+    raw_text TEXT NOT NULL,
+    cluster_id TEXT
+);
+
 -- FTS index
 CREATE VIRTUAL TABLE entity_fts USING fts5(
     entity_id, entity_type, name, content
@@ -794,4 +809,87 @@ class MathesisDB:
 \[ U_\varepsilon(x_0) = \mSet{x \mIn \mReal \mid |x - x_0| < \varepsilon} \]
 $\varepsilon$-окрестностью точки $x_0$ называется множество всех вещественных чисел,
 удаленных от $x_0$ на расстояние строго меньше $\varepsilon$.
+```
+
+---
+
+## 10. Ensemble Extraction & Synthesis Pipeline
+
+Начиная с версии 2.0 конвейер переведен на ансамблевый метод агрегации данных из нескольких источников для достижения математической полноты.
+
+### 10.1 Стадии конвейера
+1. **Extraction (Агрегация)** (`tools/ensemble_extractor.py`)
+   - Извлекает сырые определения из списка учебников (`sources/_registry.yaml`).
+   - Использует механизм **Sliding Context Window** (глубина окна: от начала параграфа до самого определения), чтобы не упустить неявные ограничения (например, ограниченность функции).
+   - Сохраняет результат во временную таблицу БД `formulation_raw_cache`.
+
+2. **Alignment (Выравнивание)** (`tools/entity_aligner.py`)
+   - Прогоняет извлеченные тексты через локальную модель эмбеддингов Ollama (`nomic-embed-text`).
+   - Использует библиотеку **FAISS** (`IndexFlatIP`) для быстрой векторной кластеризации (косинусное сходство).
+   - Назначает схожим определениям общий `cluster_id`.
+
+3. **Synthesis (Синтез)** (`tools/canonical_synthesizer.py`)
+   - Передает весь кластер (включая предшествующий контекст) в LLM.
+   - LLM выявляет скрытые ограничения (implicit constraints) и синтезирует единый строгий канонический файл `.tex`, строго соблюдая *Pure Math Absolute Rule*.
+   - Сохраняет файл в `content/` и удаляет временные записи из `formulation_raw_cache`.
+
+4. **Linking (Связывание)** (`tools/link_content.py`)
+   - Парсит мета-тег `% defined-in:` из `.tex` файлов и создает записи в `formulation_sources`, связывая каноническую сущность со списком использованных книг.
+   - Автоматически прописывает ссылки `\entityref` с использованием `\ensuremath`, чтобы защитить математический контекст.
+
+---
+
+## 11. Terminal Primitives & `content/terminals/`
+
+Терминальные примитивы (Terminal Primitives) — это фундаментальные математические символы (листья в DAG), которые определены либо аксиоматикой ZFC, либо логикой первого порядка (FOL).
+
+### 11.1 Правила терминалов
+- **ЗАПРЕЩЕНО** оборачивать их макросом `\entityref`.
+- **НЕ генерируют** ребер в графе зависимостей `entity_dependency`.
+- Жестко закодированы в `tools/terminals.py` (`\forall`, `\in`, `\land`, `\emptyset` и т.д.).
+
+### 11.2 Директория `content/terminals/`
+Для предоставления человекочитаемых описаний терминалов используется специальная директория `content/terminals/`.
+- **Исключение из Pure Math Rule**: В файлах этой директории разрешено использование естественного языка (комментарии, метафоры, примеры).
+- **Исключение из Lean Export**: Скрипт трансляции `export_to_lean.py` полностью игнорирует эту директорию, так как для Lean терминалы являются встроенными константами.
+
+---
+
+## 12. Late Binding & Abstract Parametric Macros
+
+Архитектура использует паттерн "Позднее связывание" (Late Binding) для разрешения полиморфизма математических операций (например, норма вектора, абсолютное значение, супремум).
+
+### 12.1 Механика макросов
+Все абстрактные операции определены в `mathesis.sty` с опциональным аргументом для `entity-id`:
+
+```latex
+% #1 — optional entity-id (default = abstract interface id)
+% #2 — mandatory operand
+\newcommand{\mNorm}[2][op-norm-abstract]{\left\| #2 \right\|}
+```
+
+### 12.2 Разделение ответственности
+1. **LLM-Экстрактор**: Генерирует только абстрактный вызов без квадратных скобок (Surface Syntax): `\mNorm{x}`.
+2. **Lean Elaborator (Future)**: Анализирует типы из Strict Typing Block и выполняет Typeclass Resolution.
+3. **Graph Mutator (Future)**: Возвращается к исходному `.tex` файлу и инжектирует вычисленный конкретный инстанс в опциональный аргумент: `\mNorm[op-norm-euclidean]{x}`.
+
+---
+
+## 13. Strict Typing Block Convention
+
+Чтобы обеспечить корректный вывод типов в Lean 4 и работу механизма Late Binding, каждая формулировка должна содержать жесткий блок объявления типов (Strict Typing Block).
+
+### 13.1 Правила типизации
+1. Каждое определение/теорема **обязано** начинаться с блока объявления типов.
+2. **Любая переменная**, используемая в `Definitional Body`, обязана быть объявлена через квантор с явным указанием её принадлежности к множеству или типу.
+
+### 13.2 Шаблон
+```latex
+% ПРАВИЛЬНО (Strict Typing Block):
+\mForall{f \colon \entityref{obj-closed-interval}{[a,b]} \mTo \entityref{obj-real-numbers}{\mReal}}
+\mForall{\varepsilon > 0}
+... (тело)
+
+% НЕПРАВИЛЬНО:
+\mAbs{f(x)} < \varepsilon  % Откуда взялись f, x, \varepsilon?
 ```

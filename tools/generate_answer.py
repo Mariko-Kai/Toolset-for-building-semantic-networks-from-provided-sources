@@ -47,20 +47,71 @@ def parse_canonical(filepath):
     
     type_match = re.search(r'% entity-type: (.*)', text)
     entity_type = type_match.group(1).strip() if type_match else "unknown"
+
+    module_match = re.search(r'% module: (.*)', text)
+    module = module_match.group(1).strip() if module_match else ""
     
     section_match = re.search(r'\\section\{(.*?)\}', text)
     title = section_match.group(1).strip() if section_match else entity_id
     
     formulas = re.findall(r'\\\[(.*?)\\\]', text, re.DOTALL)
     
-    deps = list(set(re.findall(r'\\entityref\{([^}]+)\}', text)))
+    deps = list(set(re.findall(r'\\entityref\{([^{}]+)\}', text)))
+    
+    # Extract abstract macro dependencies
+    macro_deps = {
+        r'\mNorm': 'op-norm-abstract',
+        r'\mAbs': 'op-abs-abstract',
+        r'\mInner': 'op-inner-product-abstract',
+        r'\mDist': 'op-dist-abstract',
+        r'\mSup': 'op-supremum',
+        r'\mInf': 'op-infimum',
+        r'\mDeriv': 'op-derivative',
+        r'\mIntegral': 'op-integral',
+    }
+    for macro, default_id in macro_deps.items():
+        escaped = re.escape(macro)
+        concrete = re.findall(rf'{escaped}\[([^\]]+)\]', text)
+        if concrete:
+            deps.extend(concrete)
+        elif re.search(rf'{escaped}(?!\[)\{{', text):
+            deps.append(default_id)
+            
+    deps = list(set(deps))
+    
+    # Extract the full body by removing metadata comments and redundant sections/labels
+    body_lines = [line for line in text.split('\n') if not line.strip().startswith('%')]
+    full_body = '\n'.join(body_lines).strip()
+    full_body = re.sub(r'\\section\{.*?\}', '', full_body)
+    full_body = re.sub(r'\\label\{entity:.*?\}', '', full_body)
+    
+    # Extract description before removing it
+    nl_desc = ""
+    # Match \textbf{Описание:} ... up to \begin{object/axiom/theorem/operation} or \end{document}
+    # Use a non-greedy match that also captures \begin{itemize} blocks within the description
+    desc_match = re.search(
+        r'\\textbf\{Описание:\}\s*(.*?)(?=\\begin\{(?:object|axiom|theorem|operation|property)\}|\\textbf\{(?!Описание)\}|\\section|$)',
+        full_body, flags=re.DOTALL
+    )
+    if desc_match:
+        nl_desc = desc_match.group(1).strip()
+
+    # Strip the Описание block from canonical output as it violates PURE MATH RULE
+    full_body = re.sub(
+        r'\\textbf\{Описание:\}\s*.*?(?=\\begin\{(?:object|axiom|theorem|operation|property)\}|\\textbf\{(?!Описание)\}|\\section|$)',
+        '', full_body, flags=re.DOTALL
+    )
+    full_body = full_body.strip()
     
     return {
         "id": entity_id,
         "type": entity_type,
+        "module": module,
         "title": title,
         "source": source,
         "formulas": formulas,
+        "full_body": full_body,
+        "nl_desc": nl_desc,
         "deps": deps,
         "path": filepath
     }
@@ -86,8 +137,15 @@ def bfs_collect(root_id):
         
         fpath = find_entity_file(eid)
         if fpath is None:
-            print(f"  [SKIP] {eid} — file not found in content/")
-            continue
+            print(f"  [MISSING] {eid} — file not found. Triggering autonomous expansion...")
+            import autonomous_bfs
+            success = autonomous_bfs.expand_missing_entity(eid)
+            if success:
+                fpath = find_entity_file(eid)
+            if fpath is None:
+                print(f"  [SKIP] {eid} — failed to generate or find.")
+                continue
+
         
         data = parse_canonical(fpath)
         visited.append(data)
@@ -121,14 +179,17 @@ def main():
         page_info = data["source"]
         
         nl = NL_DESCRIPTIONS.get(data["id"], "")
+        if not nl:
+            nl = data.get("nl_desc", "")
         
         block = f"\\section{{{data['title']}}}\\label{{entity:{data['id']}}}\n"
-        block += f"\\textbf{{Тип:}} {data['type']} \\quad "
+        block += f"\\textbf{{Тип:}} {data['type']}\\quad "
+        if data.get('module'):
+            block += f"\\textbf{{Модуль:}} {data['module']}\\quad "
         block += f"\\textbf{{Источник:}} {citation} ({page_info})\n\n"
         
         block += "\\textbf{Каноническая запись:}\n"
-        for formula in data["formulas"]:
-            block += f"\\[\n{formula}\n\\]\n"
+        block += f"\n{data.get('full_body', '')}\n\n"
         
         if nl:
             block += f"\n\\textbf{{Естественный язык:}}\n{nl}\n"

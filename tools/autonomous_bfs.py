@@ -5,8 +5,7 @@ import yaml
 import fitz
 import time
 from pathlib import Path
-from dotenv import load_dotenv
-from google import genai
+import urllib.request
 from PIL import Image
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -14,14 +13,30 @@ CONTENT_DIR = PROJECT_ROOT / "content"
 BOOKS_DIR = PROJECT_ROOT / "Books"
 STAGING_DIR = PROJECT_ROOT / "staging" / "bfs"
 
-load_dotenv(PROJECT_ROOT / ".env")
+# load_dotenv(PROJECT_ROOT / ".env")
 
-# Ensure API key is set
-API_KEY = os.environ.get("GOOGLE_API_KEY")
-if not API_KEY:
-    raise ValueError("GOOGLE_API_KEY not found in environment.")
-
-client = genai.Client(api_key=API_KEY)
+def query_ollama(prompt, model="llama3.1:8b", json_mode=False):
+    """Sends a request to the local Ollama API."""
+    url = "http://localhost:11434/api/generate"
+    data = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "options": {
+            "temperature": 0.2,
+        }
+    }
+    if json_mode:
+        data["format"] = "json"
+    
+    try:
+        req = urllib.request.Request(url, json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req, timeout=120) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            return result.get('response', '').strip()
+    except Exception as e:
+        print(f"  [Ollama Error] Check if Ollama is running: {e}")
+        return ""
 
 # Book mapping for PyMuPDF search
 BOOK_MAP = {
@@ -30,35 +45,6 @@ BOOK_MAP = {
     'spivak-calculus': 'Spivak, M. - Calculus - (EN).pdf',
 }
 
-# Mock API for 503 fallback
-MOCK_API = {
-    "keywords": {
-        "op-supremum": {"ru_roots": ["супремум", "точная верхняя"], "en_roots": ["supremum", "least upper"], "entity_type": "operation"},
-        "op-infimum": {"ru_roots": ["инфимум", "точная нижняя"], "en_roots": ["infimum", "greatest lower"], "entity_type": "operation"},
-        "op-definite-integral": {"ru_roots": ["определенный интеграл"], "en_roots": ["definite integral"], "entity_type": "operation"},
-        "obj-riemann-class": {"ru_roots": ["интегрируема по риману"], "en_roots": ["riemann integrable"], "entity_type": "object"},
-        "obj-real-numbers": {"ru_roots": ["вещественны"], "en_roots": ["real number"], "entity_type": "object"},
-        "obj-closed-interval": {"ru_roots": ["отрезок", "замкнутый промежуток"], "en_roots": ["closed interval"], "entity_type": "object"},
-        "obj-function": {"ru_roots": ["функция", "отображение"], "en_roots": ["function", "map"], "entity_type": "object"},
-        "prop-bounded": {"ru_roots": ["ограниченн"], "en_roots": ["bounded"], "entity_type": "property"},
-        "op-finite-sum": {"ru_roots": ["сумма"], "en_roots": ["sum"], "entity_type": "operation"},
-        "obj-finite-set": {"ru_roots": ["конечное множество"], "en_roots": ["finite set"], "entity_type": "object"},
-        "obj-set": {"ru_roots": ["множество"], "en_roots": ["set"], "entity_type": "object"}
-    },
-    "extract": {
-        "op-supremum": {"name_ru": "Супремум", "name_en": "Supremum", "formula_typing": r"$\entityref{obj-set}{A} \subset \entityref{obj-real-numbers}{\mathbb{R}}$", "formula_body": r"\[ M = \sup \entityref{obj-set}{A} \mIff \mForall x \in \entityref{obj-set}{A} \colon x \le M \mAnd \mForall \varepsilon > 0 \mExists x_{\varepsilon} \in \entityref{obj-set}{A} \colon x_{\varepsilon} > M - \varepsilon \]"},
-        "op-infimum": {"name_ru": "Инфимум", "name_en": "Infimum", "formula_typing": r"$\entityref{obj-set}{A} \subset \entityref{obj-real-numbers}{\mathbb{R}}$", "formula_body": r"\[ m = \inf \entityref{obj-set}{A} \mIff \mForall x \in \entityref{obj-set}{A} \colon x \ge m \mAnd \mForall \varepsilon > 0 \mExists x_{\varepsilon} \in \entityref{obj-set}{A} \colon x_{\varepsilon} < m + \varepsilon \]"},
-        "op-definite-integral": {"name_ru": "Определенный интеграл Римана", "name_en": "Definite Integral", "formula_typing": r"$\entityref{obj-function}{f} \colon \entityref{obj-closed-interval}{[a,b]} \to \entityref{obj-real-numbers}{\mathbb{R}}$", "formula_body": r"\[ \int_a^b \entityref{obj-function}{f}(x) dx \mDefIff \lim_{\lambda(\entityref{obj-partition}{P}) \to 0} \sum \entityref{obj-function}{f}(\xi_i) \Delta x_i \]"},
-        "obj-riemann-class": {"name_ru": "Класс интегрируемых по Риману функций", "name_en": "Riemann Integrable Class", "formula_typing": r"$\entityref{obj-function}{f} \colon \entityref{obj-closed-interval}{[a,b]} \to \entityref{obj-real-numbers}{\mathbb{R}}$", "formula_body": r"\[ \mathcal{R}\entityref{obj-closed-interval}{[a,b]} \mDefIff \{ \entityref{obj-function}{f} \mid \mExists \int_a^b \entityref{obj-function}{f}(x) dx \} \]"},
-        "obj-real-numbers": {"name_ru": "Вещественные числа", "name_en": "Real Numbers", "formula_typing": "", "formula_body": r"\[ \mathbb{R} \text{ - аксиоматически заданное поле} \]"},
-        "obj-closed-interval": {"name_ru": "Замкнутый отрезок", "name_en": "Closed Interval", "formula_typing": r"$a, b \in \entityref{obj-real-numbers}{\mathbb{R}}, a \le b$", "formula_body": r"\[ [a,b] \mDefIff \{ x \in \entityref{obj-real-numbers}{\mathbb{R}} \mid a \le x \le b \} \]"},
-        "obj-function": {"name_ru": "Функция", "name_en": "Function", "formula_typing": r"$\entityref{obj-set}{X}, \entityref{obj-set}{Y}$", "formula_body": r"\[ f \colon \entityref{obj-set}{X} \to \entityref{obj-set}{Y} \]"},
-        "prop-bounded": {"name_ru": "Ограниченность функции", "name_en": "Bounded Function", "formula_typing": r"$\entityref{obj-function}{f} \colon \entityref{obj-set}{X} \to \entityref{obj-real-numbers}{\mathbb{R}}$", "formula_body": r"\[ \text{ограничена}(f) \mIff \mExists M > 0 \colon \mForall x \in \entityref{obj-set}{X} \mImplies |f(x)| \le M \]"},
-        "op-finite-sum": {"name_ru": "Конечная сумма", "name_en": "Finite Sum", "formula_typing": r"$a_i \in \entityref{obj-real-numbers}{\mathbb{R}}$", "formula_body": r"\[ \sum_{i=1}^n a_i \mDefIff a_1 + a_2 + \ldots + a_n \]"},
-        "obj-finite-set": {"name_ru": "Конечное множество", "name_en": "Finite Set", "formula_typing": "", "formula_body": r"\[ \entityref{obj-set}{A} \text{ - конечно} \]"},
-        "obj-set": {"name_ru": "Множество", "name_en": "Set", "formula_typing": "", "formula_body": r"\[ X \text{ - базовое понятие ZFC} \]"}
-    }
-}
 
 def get_existing_entities():
     """Returns a set of entity IDs that already have a .tex file."""
@@ -85,11 +71,7 @@ def get_all_dependencies():
     return deps
 
 def generate_search_keywords(entity_id):
-    """Uses Gemini to translate an entity ID into Russian and English search terms."""
-    if entity_id in MOCK_API["keywords"]:
-        print(f"  [Mock LLM] Intercepting keyword generation for {entity_id}")
-        return MOCK_API["keywords"][entity_id]
-        
+    """Uses LLM to translate an entity ID into Russian and English search terms."""
     prompt = f"""You are an assistant for a mathematical pipeline.
     Translate the mathematical entity ID '{entity_id}' into 2-3 essential Russian search roots (stems) and 2-3 English search roots.
     Return ONLY a JSON object:
@@ -103,12 +85,10 @@ def generate_search_keywords(entity_id):
     print(f"  [LLM] Translating ID '{entity_id}' to keywords...")
     for attempt in range(5):
         try:
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=[prompt],
-                config={"response_mime_type": "application/json"}
-            )
-            return json.loads(response.text)
+            response_text = query_ollama(prompt, json_mode=True)
+            if not response_text:
+                raise Exception("Empty response from Ollama")
+            return json.loads(response_text)
         except Exception as e:
             delay = 2 ** attempt
             print(f"  [LLM Attempt {attempt+1}] Failed: {e}. Retrying in {delay}s...")
@@ -156,10 +136,6 @@ def search_textbooks(ru_roots, en_roots):
 
 def extract_definition(entity_id, expected_type, book_id, pdf_path, pages):
     """Extracts text from pages and uses text-only LLM to reconstruct the formal definition."""
-    if entity_id in MOCK_API["extract"]:
-        print(f"  [Mock LLM] Intercepting formal definition extraction for {entity_id}")
-        return MOCK_API["extract"][entity_id]
-        
     doc = fitz.open(str(pdf_path))
     extracted_text = ""
     for p in pages:
@@ -182,24 +158,25 @@ def extract_definition(entity_id, expected_type, book_id, pdf_path, pages):
     {{
         "name_ru": "Название на русском",
         "name_en": "Name in English",
+        "module": "The module this entity belongs to (e.g., 'operations', 'foundations', 'objects')",
         "formula_typing": "Strict Typing Block in pure LaTeX (e.g., $\mForall x \mIn \entityref{{obj-real-numbers}}{{\mReal}}$)",
-        "formula_body": "Definitional Body in pure LaTeX block (e.g., \[\entityref{{...}} \mDefIff ...\])"
+        "formula_body": "Definitional Body in pure LaTeX block (e.g., \[\entityref{{op-abs-abstract}}{{\mathrm{{abs}}}}(x) \mDefIff ...\])",
+        "nl_desc": "Natural language explanation of the entity in Russian."
     }}
     NO natural language in formulas! Use only math mode.
+    All operations with paired symbols MUST use functional notation, e.g. \entityref{{op-abs-abstract}}{{\mathrm{{abs}}}}(x) instead of raw |x|, and \entityref{{op-norm-abstract}}{{\mathrm{{norm}}}}(x) instead of \|x\|.
     """
     
     user_prompt = f"Target Entity ID: {entity_id}\n\nExtracted Textbook Text:\n{extracted_text}"
     
-    print(f"  [LLM-Text] Calling gemini-2.5-flash text model for {entity_id} on pages {pages}...")
+    print(f"  [LLM-Text] Calling Ollama for {entity_id} on pages {pages}...")
     result_data = None
     for attempt in range(5):
         try:
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=[system_prompt, user_prompt],
-                config={"response_mime_type": "application/json"}
-            )
-            result_data = json.loads(response.text)
+            response_text = query_ollama(system_prompt + "\n\n" + user_prompt, json_mode=True)
+            if not response_text:
+                raise Exception("Empty response from Ollama")
+            result_data = json.loads(response_text)
             break
         except Exception as e:
             delay = 2 ** attempt
@@ -231,6 +208,7 @@ def save_canonical_record(entity_id, expected_type, book_id, pages, data):
     content = f"""% entity-id: {entity_id}
 % entity-type: {expected_type}
 % defined-in: {book_id}, p. {page_str}
+% module: {data.get('module', 'foundations')}
 
 \\section{{{data['name_ru']} ({data['name_en']})}}
 
@@ -243,9 +221,55 @@ def save_canonical_record(entity_id, expected_type, book_id, pages, data):
 {data['formula_body']}
 \\end{{{expected_type}}}
 """
+    if data.get('nl_desc'):
+        content += f"\n\\textbf{{Естественный язык:}}\n{data['nl_desc']}\n"
+
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(content)
     print(f"  [Success] Saved to {filepath.relative_to(PROJECT_ROOT)}")
+
+    # Add to master.tex
+    master_path = CONTENT_DIR / "master.tex"
+    if master_path.exists():
+        with open(master_path, "r", encoding="utf-8") as f:
+            master_content = f.read()
+        
+        rel_path = filepath.relative_to(PROJECT_ROOT).as_posix()
+        input_line = f"\\input{{{rel_path}}}"
+        
+        if input_line not in master_content:
+            master_content = master_content.replace("\\end{document}", f"{input_line}\n\\end{{document}}")
+            with open(master_path, "w", encoding="utf-8") as f:
+                f.write(master_content)
+            print(f"  [Success] Added to master.tex: {input_line}")
+
+def expand_missing_entity(target_id):
+    """Dynamically generates a missing entity using LLM and textbooks."""
+    print(f"\n--- [Auto-Expansion] Processing: {target_id} ---")
+    try:
+        kw_data = generate_search_keywords(target_id)
+        ru_roots = kw_data.get('ru_roots', [])
+        en_roots = kw_data.get('en_roots', [])
+        expected_type = kw_data.get('entity_type', 'object')
+        print(f"  Keywords: RU {ru_roots}, EN {en_roots}")
+        
+        # Use book/pages found in search
+        book_id, pdf_path, pages = search_textbooks(ru_roots, en_roots)
+        
+        if not pages:
+            print(f"  [Warning] Could not find '{target_id}' in sources.")
+            return False
+            
+        print(f"  Found in {book_id} on pages {pages}")
+        
+        def_data = extract_definition(target_id, expected_type, book_id, pdf_path, pages)
+        
+        save_canonical_record(target_id, expected_type, book_id, pages, def_data)
+        return True
+        
+    except Exception as e:
+        print(f"  [ERROR] Processing {target_id} failed: {e}")
+        return False
 
 def main():
     print("=== AUTONOMOUS BFS AGENT ===")
@@ -254,7 +278,6 @@ def main():
         existing = get_existing_entities()
         all_deps = get_all_dependencies()
         
-        # Ignore self-references or undefined primitives if we want to stop at some point
         missing = all_deps - existing
         
         if not missing:
@@ -264,37 +287,10 @@ def main():
         print(f"\nFound {len(missing)} missing dependencies: {missing}")
         
         target_id = list(missing)[0]
-        print(f"--- Processing: {target_id} ---")
-        
-        try:
-            kw_data = generate_search_keywords(target_id)
-            ru_roots = kw_data.get('ru_roots', [])
-            en_roots = kw_data.get('en_roots', [])
-            expected_type = kw_data.get('entity_type', 'object')
-            print(f"  Keywords: RU {ru_roots}, EN {en_roots}")
-            
-            # Use mock book/pages if using mock
-            if target_id in MOCK_API["extract"]:
-                book_id = "zorich-1"
-                pdf_path = BOOKS_DIR / BOOK_MAP["zorich-1"]
-                pages = [1]
-            else:
-                book_id, pdf_path, pages = search_textbooks(ru_roots, en_roots)
-            
-            if not pages:
-                print(f"  [Warning] Could not find '{target_id}' in sources.")
-                # Prevent infinite loop by skipping it for now (in reality, fallback to another book)
-                break
-                
-            print(f"  Found in {book_id} on pages {pages}")
-            
-            def_data = extract_definition(target_id, expected_type, book_id, pdf_path, pages)
-            
-            save_canonical_record(target_id, expected_type, book_id, pages, def_data)
-            
-        except Exception as e:
-            print(f"  [ERROR] Processing {target_id} failed: {e}")
+        success = expand_missing_entity(target_id)
+        if not success:
             break
+
 
 if __name__ == "__main__":
     main()

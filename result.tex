@@ -5,51 +5,56 @@
 
 \begin{document}
 
-\section{Интеграл Римана (Riemann Integral)}\label{entity:op-riemann-integral}
-\textbf{Тип:} operation \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, fichtenholz)
+\section{Предел последовательности (Limit of Sequence)}\label{entity:op-limit-seq}
+\textbf{Тип:} operation\quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 77)
 
 \textbf{Каноническая запись:}
-\[
-
-I = \entityref{op-riemann-integral}{\int_a^b f(x) dx} \mDefIff
-
-\]
-\[
-
-\mForall{\varepsilon > 0} \mExists{\delta > 0} \mForall{P, \xi}
-
-\]
-\[
-
-\left(
-  (P \text{ - } \entityref{obj-partition}{\text{разбиение}} \entityref{obj-closed-interval}{[a,b]}) \mAnd (\lambda(P) < \delta) \mAnd (\xi_i \in [x_{i-1}, x_i])
-\right)
-\mImplies
-
-\]
-\[
-
-\left| \sum_{i=1}^n f(\xi_i) \Delta x_i - I \right| < \varepsilon
-
-\]
 
 \textbf{Естественный язык:}
-Определенным интегралом Римана от функции $f(x)$ на отрезке $[a,b]$ называется предел интегральных сумм $\sum f(\xi_i) \Delta x_i$ при стремлении максимальной длины частичного отрезка $\lambda(P)$ к нулю, независимо от выбора разбиения $P$ и промежуточных точек $\xi_i$.
+Число $L \in \mathbb{R}$ называется пределом последовательности $(x_n)_{n \in \mathbb{N}}$, если для любого, даже сколь угодно малого, $\varepsilon > 0$ существует такой номер $n_0 \in \mathbb{N}$, что для всех членов последовательности с номерами $n \geq n_0$ выполняется неравенство $\entityref{op-abs-abstract}{\mathrm{abs}}(x_n - L) < \varepsilon$. 
+
+\begin{operation}[op-limit-seq]
+$(x_n)_{n \in \mathbb{N}} \in \mathbb{R}^{\mathbb{N}}, L \in \mathbb{R}$
+
+\[
+\mLim_{n \to \infty} x_n = L \mDefIff \mForall{\varepsilon > 0}\; \mExists{n_0 \in \mathbb{N}}\; \mForall{n \in \mathbb{N}} \colon \left( n \geq n_0 \mImplies \entityref{op-abs-abstract}{\mathrm{abs}}(x_n - L) < \varepsilon \right)
+\]
+\end{operation}
+
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{Абсолютная величина (Absolute Value)}\label{entity:op-abs-abstract}
+\textbf{Тип:} operation\quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
+
+\textbf{Каноническая запись:}
+
+\begin{operation}[op-abs-abstract]
+
+$x \in \entityref{obj-real-numbers}{\mathbb{R}}$
+
+\[ |x| \mDefIff \max(x, -x) \]
+\end{operation}
+
 
 \vspace{1em}
 \hrule
 \vspace{1em}
 
 \section{Вещественные числа (Real Numbers)}\label{entity:obj-real-numbers}
-\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
+\textbf{Тип:} object\quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
 
 \textbf{Каноническая запись:}
-\[
- \mathbb{R} = (\entityref{obj-set}{R}, +, \cdot, \leq) 
-\]
-\[
- \text{Где } \mathbb{R} \text{ удовлетворяет аксиомам полного упорядоченного поля.} 
-\]
+
+\begin{object}[obj-real-numbers]
+
+
+
+\[ \mathbb{R} = (\entityref{obj-set}{R}, +, \cdot, \leq) \]
+\end{object}
+
 
 \textbf{Естественный язык:}
 Множество вещественных чисел $\mathbb{R}$ — это непрерывная числовая прямая. Формально $\mathbb{R}$ задается как полное (непрерывное) архимедово упорядоченное поле. В нем можно складывать, умножать, сравнивать элементы, и в нем нет «дырок» (каждое ограниченное сверху подмножество имеет точную верхнюю грань).
@@ -58,65 +63,13 @@ I = \entityref{op-riemann-integral}{\int_a^b f(x) dx} \mDefIff
 \hrule
 \vspace{1em}
 
-\section{Замкнутый отрезок (Closed Interval)}\label{entity:obj-closed-interval}
-\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
-
-\textbf{Каноническая запись:}
-\[
- [a,b] \mDefIff \{ x \entityref{obj-set}{\in} \entityref{obj-real-numbers}{\mathbb{R}} \mid a \entityref{prop-partial-order}{\le} x \entityref{prop-partial-order}{\le} b \} 
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Разбиение отрезка (Partition)}\label{entity:obj-partition}
-\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 325)
-
-\textbf{Каноническая запись:}
-\[
-
-P \mDefIff
-\entityref{obj-finite-set}{\{x_0, x_1, \ldots, x_n\}} \entityref{obj-subset}{\subset} \entityref{obj-closed-interval}{[a, b]}
-\colon a = x_0 < x_1 < \cdots < x_n = b
-
-\]
-
-\textbf{Естественный язык:}
-Разбиением отрезка $[a,b]$ называется конечное множество точек $P = \{x_0, x_1, \ldots, x_n\}$, таких что $a = x_0 < x_1 < \cdots < x_n = b$.
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Функция (Function)}\label{entity:obj-function}
-\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
-
-\textbf{Каноническая запись:}
-\[
- f \entityref{obj-subset}{\subset} \entityref{obj-set}{X} \entityref{obj-cartesian-product}{\times} \entityref{obj-set}{Y} 
-\]
-\[
- \mForall{x} (x \entityref{obj-set}{\in} X \mImplies \mExists{! y} (y \entityref{obj-set}{\in} Y \entityref{def-logical-connectives}{\land} (x, y) \entityref{obj-set}{\in} f)) 
-\]
-
-\textbf{Естественный язык:}
-Функция $f$ из множества $X$ в множество $Y$ — это правило (или бинарное отношение), по которому каждому элементу $x \in X$ ставится в соответствие ровно один элемент $y \in Y$. Формально, это подмножество декартова произведения $X \times Y$, обладающее свойством однозначности.
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
 \section{Множество (Set)}\label{entity:obj-set}
-\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
+\textbf{Тип:} object\quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 7)
 
 \textbf{Каноническая запись:}
-\[
- X \text{ - базовое понятие ZFC, определяемое аксиомами:} 
-\]
-\[
- \entityref{axm-zfc-extensionality}{Axiom of Extensionality}, \entityref{axm-zfc-pairing}{Axiom of Pairing}, \entityref{axm-zfc-union}{Axiom of Union}, \entityref{axm-zfc-power-set}{Axiom of Power Set}, \entityref{axm-zfc-infinity}{Axiom of Infinity}, \entityref{axm-zfc-regularity}{Axiom of Regularity}, \entityref{axm-zfc-specification}{Axiom of Specification}, \entityref{axm-zfc-replacement}{Axiom of Replacement}, \entityref{axm-zfc-choice}{Axiom of Choice} 
-\]
+
+
+
 
 \textbf{Естественный язык:}
 Множество — базовое, неопределяемое напрямую понятие математики. Множество представляет собой совокупность объектов произвольной природы, называемых его элементами. Все свойства множеств строго выводятся из аксиом системы Цермело-Френкеля (ZFC).
@@ -125,154 +78,68 @@ P \mDefIff
 \hrule
 \vspace{1em}
 
-\section{Конечное множество (Finite Set)}\label{entity:obj-finite-set}
-\textbf{Тип:} object \quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
+\section{Аксиома объединения (Axiom of Union)}\label{entity:axm-zfc-union}
+\textbf{Тип:} axiom\quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
 
 \textbf{Каноническая запись:}
+
 \[
- \entityref{obj-set}{A} \text{ - \entityref{prop-finite}{конечно}} 
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Аксиома бесконечности (Axiom of Infinity)}\label{entity:axm-zfc-infinity}
-\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
-
-\textbf{Каноническая запись:}
-\[
-
-\mExists{I}
-\left( \entityref{obj-empty-set}{\\varnothing} \entityref{obj-set}{\in} I \;\entityref{def-logical-connectives}{\land}\; \mForall{x} \left( x \entityref{obj-set}{\in} I \mImplies \mExists{y} (y \entityref{obj-set}{\in} I \entityref{def-logical-connectives}{\land} \mForall{z} (z \entityref{obj-set}{\in} y \mIff z \entityref{obj-set}{\in} x \entityref{def-logical-connectives}{\lor} z = x)) \right) \right)
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Аксиома подстановки (Axiom of Replacement)}\label{entity:axm-zfc-replacement}
-\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
-
-\textbf{Каноническая запись:}
-\[
-
-\left( \mForall{x} \mExists{! y} \, \phi(x, y) \right)
-\mImplies
-\mForall{X} \mExists{Y} \mForall{y} \left( y \entityref{obj-set}{\in} Y \mIff \mExists{x} \left( x \entityref{obj-set}{\in} X \entityref{def-logical-connectives}{\land} \phi(x, y) \right) \right)
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Аксиома выделения (Axiom of Specification)}\label{entity:axm-zfc-specification}
-\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
-
-\textbf{Каноническая запись:}
-\[
-
-\mForall{X}
-\mExists{Y} \mForall{z} \left( z \entityref{obj-set}{\in} Y \mIff (z \entityref{obj-set}{\in} X \entityref{def-logical-connectives}{\land} \phi(z)) \right)
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Аксиома выбора (Axiom of Choice)}\label{entity:axm-zfc-choice}
-\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
-
-\textbf{Каноническая запись:}
-\[
-
 \mForall{\mathcal{F}}
-\left(
-  \mForall{A, B} \left( A \entityref{obj-set}{\in} \mathcal{F} \entityref{def-logical-connectives}{\land} B \entityref{obj-set}{\in} \mathcal{F} \entityref{def-logical-connectives}{\land} A \neq B \mImplies \lnot \mExists{x} (x \entityref{obj-set}{\in} A \entityref{def-logical-connectives}{\land} x \entityref{obj-set}{\in} B) \right)
-  \entityref{def-logical-connectives}{\land} \lnot(\entityref{obj-empty-set}{\\varnothing} \entityref{obj-set}{\in} \mathcal{F})
-\right)
-\mImplies
-\mExists{C} \mForall{A} \left( A \entityref{obj-set}{\in} \mathcal{F} \mImplies \mExists{! x} (x \entityref{obj-set}{\in} A \entityref{def-logical-connectives}{\land} x \entityref{obj-set}{\in} C) \right)
-
+\mExists{U} \mForall{x} \left( x \in U \mIff \mExists{A} (A \in \mathcal{F} \entityref{def-logical-connectives}{\land} x \in A) \right)
 \]
+
 
 \vspace{1em}
 \hrule
 \vspace{1em}
 
 \section{Аксиома объемности (Axiom of Extensionality)}\label{entity:axm-zfc-extensionality}
-\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
+\textbf{Тип:} axiom\quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
 
 \textbf{Каноническая запись:}
-\[
 
+\[
 \mForall{A, B}
-(A = B) \mIff (\mForall{x} x \entityref{obj-set}{\in} A \mIff x \entityref{obj-set}{\in} B)
-
+(A = B) \mIff (\mForall{x} x \in A \mIff x \in B)
 \]
 
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Аксиома регулярности (Axiom of Regularity)}\label{entity:axm-zfc-regularity}
-\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
-
-\textbf{Каноническая запись:}
-\[
-
-\mForall{S}
-\left( (\mExists{y} y \entityref{obj-set}{\in} S) \mImplies \mExists{x} \left( x \entityref{obj-set}{\in} S \entityref{def-logical-connectives}{\land} \lnot \mExists{z} (z \entityref{obj-set}{\in} S \entityref{def-logical-connectives}{\land} z \entityref{obj-set}{\in} x) \right) \right)
-
-\]
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Аксиома объединения (Axiom of Union)}\label{entity:axm-zfc-union}
-\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
-
-\textbf{Каноническая запись:}
-\[
-
-\mForall{\mathcal{F}}
-\mExists{U} \mForall{x} \left( x \entityref{obj-set}{\in} U \mIff \mExists{A} (A \entityref{obj-set}{\in} \mathcal{F} \entityref{def-logical-connectives}{\land} x \entityref{obj-set}{\in} A) \right)
-
-\]
 
 \vspace{1em}
 \hrule
 \vspace{1em}
 
 \section{Аксиома пары (Axiom of Pairing)}\label{entity:axm-zfc-pairing}
-\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
+\textbf{Тип:} axiom\quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
 
 \textbf{Каноническая запись:}
+
 \[
-
 \mForall{A, B}
-\mExists{C} \mForall{x} \left( x \entityref{obj-set}{\in} C \mIff (x = A \entityref{def-logical-connectives}{\lor} x = B) \right)
-
+\mExists{C} \mForall{x} \left( x \in C \mIff (x = A \entityref{def-logical-connectives}{\lor} x = B) \right)
 \]
+
 
 \vspace{1em}
 \hrule
 \vspace{1em}
 
-\section{Аксиома булеана (Axiom of Power Set)}\label{entity:axm-zfc-power-set}
-\textbf{Тип:} axiom \quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
+\section{Логические связки (Logical Connectives)}\label{entity:def-logical-connectives}
+\textbf{Тип:} object\quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 2)
 
 \textbf{Каноническая запись:}
-\[
 
-\mForall{X}
-\mExists{P} \mForall{A} (A \entityref{obj-set}{\in} P \mIff A \entityref{obj-subset}{\subset} X)
 
-\]
+
+
+\textbf{Естественный язык:}
+Базовые операции математической логики (пропозициональные связки), используемые для построения сложных высказываний:
+\begin{itemize}
+    \item \textbf{Конъюнкция} ($\land$): Логическое И. Истинно, только если оба операнда истинны.
+    \item \textbf{Дизъюнкция} ($\lor$): Логическое ИЛИ. Истинно, если хотя бы один операнд истинен.
+    \item \textbf{Отрицание} ($\lnot$): Логическое НЕ. Меняет истинность операнда на противоположную.
+    \item \textbf{Импликация} ($\implies$): Логическое следствие (ЕСЛИ..., ТО...). Ложно только в случае, когда из истины следует ложь.
+    \item \textbf{Эквивалентность} ($\iff$): Логическое равенство (ТОГДА И ТОЛЬКО ТОГДА). Истинно, если оба операнда имеют одинаковую истинность.
+\end{itemize}
 
 \vspace{1em}
 \hrule
