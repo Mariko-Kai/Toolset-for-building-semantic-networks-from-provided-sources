@@ -1,5 +1,5 @@
 import urllib.request, json
-from tools.ollama_wrapper import get_available_entities
+from pipeline.ollama_wrapper import get_available_entities
 
 entities = get_available_entities()
 entities_list_str = '\n'.join(entities)

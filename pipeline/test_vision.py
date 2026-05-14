@@ -57,7 +57,7 @@ def test_extraction(image_path: Path):
                 break
 
 if __name__ == "__main__":
-    img_path = PROJECT_ROOT / "tools" / "pdftoimages" / "staging" / "zorich-1" / "page_504.png"
+    img_path = PROJECT_ROOT / "pipeline" / "pdftoimages" / "staging" / "zorich-1" / "page_504.png"
     if img_path.exists():
         test_extraction(img_path)
     else:

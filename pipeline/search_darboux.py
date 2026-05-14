@@ -7,7 +7,7 @@ pdf_path = PROJECT_ROOT / 'Books' / 'Zorich, V.A. - Mathematical Analysis Vol 1 
 pages = [325, 326, 332, 360, 525, 566, 567, 571, 572]
 
 doc = fitz.open(str(pdf_path))
-with open(PROJECT_ROOT / 'tools' / 'darboux_context.txt', 'w', encoding='utf-8') as f:
+with open(PROJECT_ROOT / 'pipeline' / 'darboux_context.txt', 'w', encoding='utf-8') as f:
     for p in pages:
         text = doc[p - 1].get_text('text')
         text_clean = re.sub(r'\s+', ' ', text)
@@ -22,4 +22,4 @@ with open(PROJECT_ROOT / 'tools' / 'darboux_context.txt', 'w', encoding='utf-8')
         f.write("\n")
 
 doc.close()
-print("Done. See tools/darboux_context.txt")
+print("Done. See pipeline/darboux_context.txt")

@@ -5,7 +5,7 @@ import re
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 pdf_path = PROJECT_ROOT / "Books" / "Zorich, V.A. - Mathematical Analysis Vol 2 - (RU) - [9th ed].pdf"
 doc = fitz.open(str(pdf_path))
-f = open(PROJECT_ROOT / "tools" / "matches.txt", "w", encoding="utf-8")
+f = open(PROJECT_ROOT / "pipeline" / "matches.txt", "w", encoding="utf-8")
 
 for p in range(1, len(doc) + 1):
     text = doc[p - 1].get_text("text")

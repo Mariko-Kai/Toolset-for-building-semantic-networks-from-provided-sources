@@ -1,17 +1,17 @@
 """pdf_to_images.py — Render PDF pages as PNG images for transcription.
 
 Usage:
-    python tools/pdf_to_images.py BOOK_KEY [OPTIONS]
+    python pipeline/pdf_to_images.py BOOK_KEY [OPTIONS]
 
 Examples:
     # Render pages 85-120 of Zorich Vol 1
-    python tools/pdf_to_images.py zorich-1 --pages 85-120
+    python pipeline/pdf_to_images.py zorich-1 --pages 85-120
 
     # Render page 90, split into top and bottom halves
-    python tools/pdf_to_images.py zorich-1 --pages 90 --half
+    python pipeline/pdf_to_images.py zorich-1 --pages 90 --half
 
     # Render all pages of Rudin Ch.3 at 200 DPI
-    python tools/pdf_to_images.py rudin --pages 43-68 --dpi 200
+    python pipeline/pdf_to_images.py rudin --pages 43-68 --dpi 200
 
 Output goes to:  staging/BOOK_KEY/page_NNN.png  (or page_NNN_top.png / _bottom.png)
 """

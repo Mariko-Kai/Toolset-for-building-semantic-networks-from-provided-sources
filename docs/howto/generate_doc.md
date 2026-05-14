@@ -17,7 +17,7 @@
 Поиск осуществляется строго по приоритетам из `sources/_registry.yaml` для соответствующей дисциплины.
 
 ```bash
-python tools/search_index.py --query "аналитическая функция"
+python pipeline/search_index.py --query "аналитическая функция"
 ```
 
 Алгоритм поиска:
@@ -32,7 +32,7 @@ python tools/search_index.py --query "аналитическая функция"
 ## Шаг 1: Конвертация PDF → Изображения
 
 ```bash
-python tools/pdftoimages/pdf_to_images.py "Books/Zorich V.A. - Mathematical Analysis I - (RU) - [2012].pdf" --pages 40-45
+python pipeline/pdftoimages/pdf_to_images.py "Books/Zorich V.A. - Mathematical Analysis I - (RU) - [2012].pdf" --pages 40-45
 ```
 
 Результат: изображения страниц появятся во временной директории.
@@ -42,7 +42,7 @@ python tools/pdftoimages/pdf_to_images.py "Books/Zorich V.A. - Mathematical Anal
 ## Шаг 2: Запуск агента-экстрактора
 
 ```bash
-python tools/agent/agent.py --images <путь_к_изображениям>
+python pipeline/agent/agent.py --images <путь_к_изображениям>
 ```
 
 Агент:

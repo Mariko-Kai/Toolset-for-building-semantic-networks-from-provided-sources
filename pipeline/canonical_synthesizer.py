@@ -11,7 +11,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT))
 
-from tools.lean_validator import validate_semantics_with_lean
+from pipeline.lean_validator import validate_semantics_with_lean
 DB_PATH = PROJECT_ROOT / "mathesis_index.db"
 CONTENT_DIR = PROJECT_ROOT / "content"
 
@@ -108,7 +108,7 @@ CRITICAL: DO NOT add any notes, remarks, text, or English words outside or insid
     return prompt
 
 def sanitize_terminal_entityrefs(latex: str) -> str:
-    from tools.terminals import ALL_TERMINALS
+    from pipeline.terminals import ALL_TERMINALS
     for terminal in ALL_TERMINALS:
         escaped = re.escape(terminal)
         # Строгое совпадение: второй аргумент entityref === terminal
@@ -213,7 +213,7 @@ def synthesize_cluster(cluster_id, formulations, sources):
             continue
 
         # === REAL Lean 4 Validation ===
-        from tools.export_to_lean import translate_to_lean
+        from pipeline.export_to_lean import translate_to_lean
 
         # Strip proof blocks for Lean (Lean validates formulations only)
         lean_input = re.sub(r'\\begin\{proof\}.*?\\end\{proof\}', '', latex_content, flags=re.DOTALL)

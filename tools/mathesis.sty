@@ -16,7 +16,7 @@
 \newtheorem{corollary}{Следствие}[chapter]
 
 % --- Semantic Entity Reference ---
-\newcommand{\entityref}[2]{\hyperlink{#1}{#2}}
+\newcommand{\entityref}[2]{\hyperref[entity:#1]{\ensuremath{#2}}}
 
 % --- Semantic Macros ---
 % Quantifiers
@@ -26,8 +26,6 @@
 % Logic Connectives
 \newcommand{\mImplies}{\Rightarrow}
 \newcommand{\mIff}{\Leftrightarrow}
-\newcommand{\mDefIff}{\stackrel{\mathrm{def}}{\iff}}
-\newcommand{\mQED}{\qed}
 \newcommand{\mAnd}{\land}
 \newcommand{\mOr}{\lor}
 \newcommand{\mNot}{\lnot}
@@ -39,13 +37,9 @@
 \newcommand{\mSubset}{\subset}
 \newcommand{\mSubseteq}{\subseteq}
 \newcommand{\mReal}{\mathbb{R}}
-\newcommand{\mR}{\mReal}
 \newcommand{\mNat}{\mathbb{N}}
-\newcommand{\mN}{\mNat}
 \newcommand{\mInt}{\mathbb{Z}}
-\newcommand{\mZ}{\mInt}
 \newcommand{\mRat}{\mathbb{Q}}
-\newcommand{\mQ}{\mRat}
 
 % Maps and mappings
 \newcommand{\mTo}{\to}
@@ -53,18 +47,3 @@
 
 % Limits
 \newcommand{\mLim}{\lim}
-
-% === Abstract Parametric Macros (Late Binding) ===
-% #1 — optional entity-id (default = abstract interface id).
-%       Injected by Graph Mutator (Module 4). LLM NEVER fills this.
-% #2 — mandatory operand.
-%
-% Defaults protect against empty-bracket parsing issues and serve as
-% implicit DAG edges for link_content.py (see Component 10).
-
-\newcommand{\mDist}[3][op-dist-abstract]{\entityref{#1}{\mathrm{d}(#2, #3)}}
-\newcommand{\mSup}[2][op-supremum]{\entityref{#1}{\sup\limits_{#2}}}
-\newcommand{\mInf}[2][op-infimum]{\entityref{#1}{\inf\limits_{#2}}}
-\newcommand{\mDeriv}[3][op-derivative]{\entityref{#1}{\frac{d #2}{d #3}}}
-\newcommand{\mIntegral}[4][op-integral]{\entityref{#1}{\int_{#2}^{#3} #4}}
-\newcommand{\mEmpty}{\varnothing}

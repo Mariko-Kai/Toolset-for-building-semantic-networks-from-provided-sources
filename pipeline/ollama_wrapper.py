@@ -11,10 +11,10 @@ from pathlib import Path
 # Конфигурация путей
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CONTENT_DIR = PROJECT_ROOT / "content"
-GENERATE_SCRIPT = PROJECT_ROOT / "tools" / "generate_answer.py"
-EXTRACTOR_SCRIPT = PROJECT_ROOT / "tools" / "ensemble_extractor.py"
-ALIGNER_SCRIPT = PROJECT_ROOT / "tools" / "entity_aligner.py"
-SYNTHESIZER_SCRIPT = PROJECT_ROOT / "tools" / "canonical_synthesizer.py"
+GENERATE_SCRIPT = PROJECT_ROOT / "pipeline" / "generate_answer.py"
+EXTRACTOR_SCRIPT = PROJECT_ROOT / "pipeline" / "ensemble_extractor.py"
+ALIGNER_SCRIPT = PROJECT_ROOT / "pipeline" / "entity_aligner.py"
+SYNTHESIZER_SCRIPT = PROJECT_ROOT / "pipeline" / "canonical_synthesizer.py"
 
 def get_available_entities():
     """Сканирует директорию content и собирает доступные entity-id и их названия."""
@@ -184,7 +184,7 @@ def main():
     
     if entity_id:
         print(f"[+] Распознанный Entity ID: {entity_id}")
-        print(f"[*] Запуск конвейера: python tools/generate_answer.py --root {entity_id}\n")
+        print(f"[*] Запуск конвейера: python pipeline/generate_answer.py --root {entity_id}\n")
         try:
             subprocess.run(["python", str(GENERATE_SCRIPT), "--root", entity_id], check=True)
         except subprocess.CalledProcessError as e:
@@ -207,7 +207,7 @@ def main():
     
     if entity_id:
         print(f"[+] Распознанный Entity ID: {entity_id}")
-        print(f"[*] Запуск конвейера: python tools/generate_answer.py --root {entity_id}\n")
+        print(f"[*] Запуск конвейера: python pipeline/generate_answer.py --root {entity_id}\n")
         try:
             subprocess.run(["python", str(GENERATE_SCRIPT), "--root", entity_id], check=True)
         except subprocess.CalledProcessError as e:

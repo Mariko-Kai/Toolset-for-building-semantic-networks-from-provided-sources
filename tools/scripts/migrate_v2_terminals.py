@@ -5,7 +5,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT))
 
-from tools.canonical_synthesizer import sanitize_terminal_entityrefs
+from pipeline.canonical_synthesizer import sanitize_terminal_entityrefs
 
 CONTENT_DIR = PROJECT_ROOT / "content"
 

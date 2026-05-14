@@ -52,7 +52,7 @@ for attempt in range(3):
         )
         result = json.loads(response.text)
         
-        with open(PROJECT_ROOT / 'tools' / 'darboux_vision_result.json', 'w', encoding='utf-8') as f:
+        with open(PROJECT_ROOT / 'pipeline' / 'darboux_vision_result.json', 'w', encoding='utf-8') as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
         
         print(f"\nStatus: {result.get('status')}")
@@ -64,4 +64,4 @@ for attempt in range(3):
         print(f"Attempt {attempt+1} failed: {e}")
         time.sleep(5)
 
-print("\nDone. Full result in tools/darboux_vision_result.json")
+print("\nDone. Full result in pipeline/darboux_vision_result.json")

@@ -6,8 +6,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT))
 
-from tools.search_index import translate_term, search_in_book, get_ranked_books, build_or_load_index
-from tools.pdftoimages.pdf_to_images import BOOK_REGISTRY
+from pipeline.search_index import translate_term, search_in_book, get_ranked_books, build_or_load_index
+from pipeline.pdftoimages.pdf_to_images import BOOK_REGISTRY
 
 def test():
     query = "аналитическая функция"

@@ -10,13 +10,13 @@ from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 BOOKS_DIR = PROJECT_ROOT / "Books"
-INDEX_FILE = PROJECT_ROOT / "tools" / "book_index_cache.json"
+INDEX_FILE = PROJECT_ROOT / "pipeline" / "book_index_cache.json"
 REGISTRY_FILE = PROJECT_ROOT / "sources" / "_registry.yaml"
 
 # Need to import BOOK_REGISTRY to map id -> filename
 import sys
 sys.path.append(str(PROJECT_ROOT))
-from tools.pdftoimages.pdf_to_images import BOOK_REGISTRY
+from pipeline.pdftoimages.pdf_to_images import BOOK_REGISTRY
 
 load_dotenv(PROJECT_ROOT / ".env")
 

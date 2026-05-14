@@ -14,7 +14,7 @@ from PIL import Image
 # Setup Paths
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(PROJECT_ROOT))
-from tools.pdftoimages.pdf_to_images import BOOK_REGISTRY, BOOKS_DIR, render_pages, parse_page_range
+from pipeline.pdftoimages.pdf_to_images import BOOK_REGISTRY, BOOKS_DIR, render_pages, parse_page_range
 
 CONTENT_DIR = PROJECT_ROOT / "content"
 DOCS_DIR = PROJECT_ROOT / "docs"

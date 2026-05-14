@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path("f:/Universe/Projects/Учебник по матанализу")
-sys.path.append(str(PROJECT_ROOT / "tools"))
+sys.path.append(str(PROJECT_ROOT / "pipeline"))
 
 import autonomous_bfs
 

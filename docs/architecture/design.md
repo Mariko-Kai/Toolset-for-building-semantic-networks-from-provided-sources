@@ -425,7 +425,7 @@ content/
 > `\begin{object}` / `\begin{axiom}` / `\begin{theorem}` допускаются **исключительно**
 > математические символы в LaTeX math mode. Единственное исключение — содержимое
 > `\text{}` для стандартных терминов (e.g. `\text{sgn}`). Все словесные пояснения
-> формируются **только** на этапе генерации ответа инструментом `tools/generate_answer.py`
+> формируются **только** на этапе генерации ответа инструментом `pipeline/generate_answer.py`
 > (см. Раздел 9).
 
 > [!IMPORTANT]
@@ -643,7 +643,7 @@ All `\section{definition}` / `\section{statement}` in `content/` use these rules
 |---|---|
 | One concept per definition | no conjunctions |
 | Display math only | no inline in definitions |
-| **No natural language (absolute)** | **Запрещён любой текст на естественном языке внутри `content/`. `\text{}` допускается только для стандартных математических терминов (e.g. `\text{sgn}`, `\text{const}`). Описания на русском/английском языке генерируются исключительно в `result.tex` инструментом `tools/generate_answer.py`.** |
+| **No natural language (absolute)** | **Запрещён любой текст на естественном языке внутри `content/`. `\text{}` допускается только для стандартных математических терминов (e.g. `\text{sgn}`, `\text{const}`). Описания на русском/английском языке генерируются исключительно в `result.tex` инструментом `pipeline/generate_answer.py`.** |
 | Proof end | `\mQED` |
 
 ---
@@ -789,7 +789,7 @@ class MathesisDB:
 
 Канонические файлы в `content/` хранят **только** строгую математику (см. Pure Math Absolute Rule в Разделе 2.2). Для формирования человекочитаемого ответа используется отдельный инструмент.
 
-### 9.1 Инструмент: `tools/generate_answer.py`
+### 9.1 Инструмент: `pipeline/generate_answer.py`
 
 Скрипт выполняет следующий цикл:
 
@@ -818,22 +818,22 @@ $\varepsilon$-окрестностью точки $x_0$ называется м�
 Начиная с версии 2.0 конвейер переведен на ансамблевый метод агрегации данных из нескольких источников для достижения математической полноты.
 
 ### 10.1 Стадии конвейера
-1. **Extraction (Агрегация)** (`tools/ensemble_extractor.py`)
+1. **Extraction (Агрегация)** (`pipeline/ensemble_extractor.py`)
    - Извлекает сырые определения из списка учебников (`sources/_registry.yaml`).
    - Использует механизм **Sliding Context Window** (глубина окна: от начала параграфа до самого определения), чтобы не упустить неявные ограничения (например, ограниченность функции).
    - Сохраняет результат во временную таблицу БД `formulation_raw_cache`.
 
-2. **Alignment (Выравнивание)** (`tools/entity_aligner.py`)
+2. **Alignment (Выравнивание)** (`pipeline/entity_aligner.py`)
    - Прогоняет извлеченные тексты через локальную модель эмбеддингов Ollama (`nomic-embed-text`).
    - Использует библиотеку **FAISS** (`IndexFlatIP`) для быстрой векторной кластеризации (косинусное сходство).
    - Назначает схожим определениям общий `cluster_id`.
 
-3. **Synthesis (Синтез)** (`tools/canonical_synthesizer.py`)
+3. **Synthesis (Синтез)** (`pipeline/canonical_synthesizer.py`)
    - Передает весь кластер (включая предшествующий контекст) в LLM.
    - LLM выявляет скрытые ограничения (implicit constraints) и синтезирует единый строгий канонический файл `.tex`, строго соблюдая *Pure Math Absolute Rule*.
    - Сохраняет файл в `content/` и удаляет временные записи из `formulation_raw_cache`.
 
-4. **Linking (Связывание)** (`tools/link_content.py`)
+4. **Linking (Связывание)** (`pipeline/link_content.py`)
    - Парсит мета-тег `% defined-in:` из `.tex` файлов и создает записи в `formulation_sources`, связывая каноническую сущность со списком использованных книг.
    - Автоматически прописывает ссылки `\entityref` с использованием `\ensuremath`, чтобы защитить математический контекст.
 
@@ -846,7 +846,7 @@ $\varepsilon$-окрестностью точки $x_0$ называется м�
 ### 11.1 Правила терминалов
 - **ЗАПРЕЩЕНО** оборачивать их макросом `\entityref`.
 - **НЕ генерируют** ребер в графе зависимостей `entity_dependency`.
-- Жестко закодированы в `tools/terminals.py` (`\forall`, `\in`, `\land`, `\emptyset` и т.д.).
+- Жестко закодированы в `pipeline/terminals.py` (`\forall`, `\in`, `\land`, `\emptyset` и т.д.).
 
 ### 11.2 Директория `content/terminals/`
 Для предоставления человекочитаемых описаний терминалов используется специальная директория `content/terminals/`.

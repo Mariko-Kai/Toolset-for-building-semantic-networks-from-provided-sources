@@ -1,6 +1,6 @@
 import sys
 from unittest.mock import patch
-from tools.ollama_wrapper import main
+from pipeline.ollama_wrapper import main
 
 def test_run():
     test_args = ["ollama_wrapper.py", "определение интеграла Римана", "--model", "llama3.1:8b"]
