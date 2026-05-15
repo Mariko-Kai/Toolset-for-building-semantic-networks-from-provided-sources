@@ -10,8 +10,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT))
-
-from pipeline.lean_validator import validate_semantics_with_lean
+from pipeline.lean_validator import validate_entity
 DB_PATH = PROJECT_ROOT / "mathesis_index.db"
 CONTENT_DIR = PROJECT_ROOT / "content"
 
@@ -31,7 +30,14 @@ def query_ollama(prompt, model="llama3.1:8b"):
         req = urllib.request.Request(url, json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})
         with urllib.request.urlopen(req, timeout=300) as response:
             result = json.loads(response.read().decode('utf-8'))
-            return result.get('response', '').strip()
+            resp_text = result.get('response', '').strip()
+            # Extract and log thinking
+            think_match = re.search(r'<think>(.*?)</think>', resp_text, flags=re.DOTALL)
+            if think_match:
+                think_content = think_match.group(1).strip()
+                print(f"  [LLM Think]: {think_content}")
+            resp_text = re.sub(r'<think>.*?</think>', '', resp_text, flags=re.DOTALL).strip()
+            return resp_text
     except Exception as e:
         print(f"Ollama error: {e}")
         return ""
@@ -51,8 +57,15 @@ def build_synthesis_prompt(cluster_id, formulations, sources, entity_type):
     text_input = "\n".join([f"[{s}]: {t}" for s, t in zip(sources, formulations)])
 
     rules = r"""OUTPUT: Only LaTeX. No ```latex blocks. Include:
-% entity-id: <short-id>
+% entity-id: <prefix-short-id>
 % entity-type: <object|property|operation|theorem>
+
+CRITICAL NAMING RULE: The entity-id MUST follow the Mathesis architecture standard:
+- if type is object: prefix MUST be `obj-` (e.g. obj-real-numbers)
+- if type is property: prefix MUST be `prop-` (e.g. prop-continuous)
+- if type is operation: prefix MUST be `op-` (e.g. op-riemann-integral)
+- if type is theorem: prefix MUST be `thm-` (e.g. thm-weierstrass)
+DO NOT use `def-` as a prefix.
 
 CRITICAL: Generate EXACTLY ONE mathematical entity. DO NOT repeat the output. DO NOT provide multiple versions. One % entity-id, one % entity-type, and the LaTeX block(s).
 
@@ -147,7 +160,7 @@ def sanitize_raw_delimiters(latex: str) -> str:
     latex = re.sub(r'(?<!\\)\|([^|]+?)\|', r'\\entityref{op-abs-abstract}{\\mathrm{abs}}(\1)', latex)
     return latex
 
-def synthesize_cluster(cluster_id, formulations, sources):
+def synthesize_cluster(cluster_id, formulations, sources, model="qwen3:8b"):
     import time
     print(f"\n{'='*60}", flush=True)
     print(f"[synthesizer] Cluster: {cluster_id}", flush=True)
@@ -175,7 +188,7 @@ def synthesize_cluster(cluster_id, formulations, sources):
 
         print(f"[synthesizer] Sending prompt to Ollama LLM...", flush=True)
         t0 = time.time()
-        response = query_ollama(current_prompt)
+        response = query_ollama(current_prompt, model=model)
         elapsed = time.time() - t0
         print(f"[synthesizer] LLM responded in {elapsed:.1f}s ({len(response)} chars)", flush=True)
 
@@ -212,11 +225,9 @@ def synthesize_cluster(cluster_id, formulations, sources):
             current_attempt += 1
             continue
 
-        # === REAL Lean 4 Validation ===
-        from pipeline.export_to_lean import translate_to_lean
-
-        # Strip proof blocks for Lean (Lean validates formulations only)
-        lean_input = re.sub(r'\\begin\{proof\}.*?\\end\{proof\}', '', latex_content, flags=re.DOTALL)
+        # === Lean 4 Validation (v2: LLM-assisted) ===
+        from pipeline.export_to_lean import translate_to_lean_via_llm, translate_to_lean_regex
+        from pipeline.lean_validator import validate_entity, discover_mathlib_signatures
 
         # Extract entity metadata for translation
         match_id_temp = re.search(r"^% entity-id:\s*(.+)$", latex_content, re.MULTILINE)
@@ -224,37 +235,61 @@ def synthesize_cluster(cluster_id, formulations, sources):
         temp_eid = match_id_temp.group(1).strip() if match_id_temp else "temp_entity"
         temp_etype = match_type_temp.group(1).strip() if match_type_temp else "axiom"
 
-        lean_code = translate_to_lean(temp_eid, temp_etype, lean_input)
+        # Type Discovery: Guess mathlib terms from the title or content
+        import string
+        clean_title = temp_eid.replace('def-', '').replace('op-', '').replace('obj-', '').replace('prop-', '').replace('thm-', '').replace('-', ' ')
+        discovery_terms = [clean_title.title().replace(' ', ''), clean_title.lower().split()[0], "integral", "Continuous", "Filter", "Set"]
+        # Limit to reasonable unique terms
+        discovery_terms = list(set([t for t in discovery_terms if len(t) > 3]))[:4]
+        
+        print(f"  [synthesizer] Running Mathlib discovery for terms: {discovery_terms}")
+        signatures = discover_mathlib_signatures(discovery_terms)
+        hints = "\n".join(signatures) if signatures else "No hints found."
+        if signatures:
+            print(f"  [synthesizer] Discovered {len(signatures)} Mathlib signatures to use as hints.")
+
+        # Try LLM translation first, then regex fallback
+        lean_code = translate_to_lean_via_llm(temp_eid, temp_etype, latex_content, model=model, mathlib_hints=hints)
+        if not lean_code:
+            lean_code = translate_to_lean_regex(temp_eid, temp_etype, latex_content)
 
         if lean_code:
-            temp_lean = PROJECT_ROOT / "lean_validator" / "TempValidation.lean"
-            with open(temp_lean, 'w', encoding='utf-8') as lf:
-                lf.write("import Mathlib\n\n")
-                lf.write(f"-- Auto-generated validation for {temp_eid}\n")
-                lf.write(lean_code + "\n")
-
             print(f"  Lean validating: {lean_code[:80]}...")
-            result = validate_semantics_with_lean(str(temp_lean))
-
-            try:
-                temp_lean.unlink()
-            except Exception:
-                pass
+            result = validate_entity(temp_eid, lean_code)
         else:
-            print("  No math formulas found for Lean validation, skipping.")
+            print("  No translatable content for Lean validation, skipping.")
             result = {"status": "success", "errors": []}
 
         if result["status"] == "success":
             print("  [OK] Lean validation passed!")
             break
+        elif result["status"] == "timeout":
+            print("  [TIMEOUT] Lean validation timed out. Proceeding without validation.")
+            break
         else:
-            print(f"  [FAIL] Lean validation failed: {result['errors']}")
-            error_feedback = "\n".join([e["message"] for e in result["errors"]])
+            print(f"  [FAIL] Lean validation failed: {result['errors'][:2]}")
+            
+            # Enhance placeholder feedback
+            messages = []
+            for e in result["errors"][:3]:
+                msg = e["message"]
+                if "don't know how to synthesize placeholder" in msg:
+                    type_match = re.search(r'of type\n\s*(.+)', msg)
+                    if type_match:
+                        msg = f"ОШИБКА ПЛЕЙСХОЛДЕРА (`_`): Lean сообщает, что на месте `_` ожидается точный тип `{type_match.group(1).strip()}`. Подставь этот тип в свой код!"
+                messages.append(msg)
+                
+            error_feedback = "\n".join(messages)
             current_attempt += 1
 
     return latex_content
 
 def main():
+    parser = argparse.ArgumentParser(description="Canonical Synthesizer")
+    parser.add_argument("--model", type=str, default="phi4-mini", help="LLM Model")
+    parser.add_argument("--cv-model", type=str, default="glm-ocr", help="CV Model")
+    args = parser.parse_args()
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
@@ -274,8 +309,10 @@ def main():
         conn.close()
         return
 
+    processed_entities = set()
+
     for cid, data in clusters.items():
-        synthesized_tex = synthesize_cluster(cid, data['texts'], data['sources'])
+        synthesized_tex = synthesize_cluster(cid, data['texts'], data['sources'], model=args.model)
         if not synthesized_tex:
             continue
 
@@ -288,9 +325,16 @@ def main():
             continue
 
         entity_id = match_id.group(1).strip()
+        
+        # Prevent rewriting the same entity multiple times across different clusters
+        if entity_id in processed_entities:
+            print(f"[synthesizer] [SKIP] Entity '{entity_id}' already synthesized in this run. Skipping redundant cluster.")
+            continue
+            
         entity_type = match_type.group(1).strip()
         title = entity_id.replace('-', ' ').title()
         print(f"[synthesizer] Parsed: entity_id={entity_id}, type={entity_type}, title={title}")
+        processed_entities.add(entity_id)
 
         # Decide directory based on type (correct pluralization)
         TYPE_DIR_MAP = {

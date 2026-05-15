@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 23.10.12) (preloaded format=pdflatex 2024.4.11)  14 MAY 2026 21:47
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 23.10.12) (preloaded format=pdflatex 2024.4.11)  15 MAY 2026 06:32
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -664,38 +664,43 @@ Package hyperref Info: Link coloring ON on input line 6.
 
 LaTeX Info: Redefining \th on input line 6.
 
-Overfull \hbox (28.22672pt too wide) in paragraph at lines 8--8
-[]\T2A/cmr/bx/n/14.4 Предел по-сле-до-ва-тель-но-сти (Limit of Sequence) 
+Overfull \hbox (3.96423pt too wide) in paragraph at lines 9--10
+\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A/
+cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
  []
 
-LaTeX Font Info:    Trying to load font information for U+msa on input line 14.
+
+Overfull \hbox (0.79597pt too wide) in paragraph at lines 16--18
+[][]\T2A/cmr/bx/n/10 Объект 0.1 \T2A/cmr/m/n/10 (obj--set)\T2A/cmr/bx/n/10 . []
+Есте-ствен-ный язык: \T2A/cmr/m/n/10 Мно-же-ство ^^V ба-зо-вое, неопре-
+ []
+
+LaTeX Font Info:    Trying to load font information for U+msa on input line 32.
 
 (C:\Users\Talgat\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 14.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 32.
 
 
 (C:\Users\Talgat\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-Overfull \hbox (3.96423pt too wide) in paragraph at lines 47--48
-\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A/
-cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
- []
-
-
-Overfull \hbox (3.96423pt too wide) in paragraph at lines 67--68
-\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A/
-cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
- []
-
 [1
 
 {C:/Users/Talgat/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
-Overfull \hbox (20.75581pt too wide) in paragraph at lines 81--81
-[]\T2A/cmr/bx/n/14.4 Аксиома объ-ем-но-сти (Axiom of Extensionality) 
- []
+
+! LaTeX Error: \begin{object} on input line 13 ended by \end{document}.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.109 \end{document}
+                    
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
 
 [2] (result.aux)
  ***********
@@ -703,48 +708,35 @@ LaTeX2e <2023-11-01>
 L3 programming layer <2023-12-11>
  ***********
 Package rerunfilecheck Info: File `result.out' has not changed.
-(rerunfilecheck)             Checksum: 776DF3B354141E6BADE5CB6D27B37008;1968.
- ) 
+(rerunfilecheck)             Checksum: 922DAC2528D8FF80E49725B1DF3B82AC;575.
+ )
+(\end occurred inside a group at level 1)
+
+### semi simple group (level 1) entered at line 13 (\begingroup)
+### bottom level 
 Here is how much of TeX's memory you used:
- 12578 strings out of 474495
- 194964 string characters out of 5743463
- 1936460 words of memory out of 5000000
+ 12576 strings out of 474495
+ 194917 string characters out of 5743463
+ 1933460 words of memory out of 5000000
  34679 multiletter control sequences out of 15000+600000
- 563006 words of font info for 48 fonts, out of 8000000 for 9000
+ 563341 words of font info for 49 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 90i,6n,93p,598b,456s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 90i,5n,93p,545b,690s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-pdfTeX warning (dest): name{def-logical-connectives} has been referenced but do
-es not exist, replaced by a fixed one
+pdfTeX warning (dest): name{term-log-conn} has been referenced but does not exi
+st, replaced by a fixed one
 
-
-pdfTeX warning (dest): name{obj-set} has been referenced but does not exist, re
-placed by a fixed one
-
-
-pdfTeX warning (dest): name{obj-real-numbers} has been referenced but does not 
-exist, replaced by a fixed one
-
-
-pdfTeX warning (dest): name{op-abs-abstract} has been referenced but does not e
-xist, replaced by a fixed one
-
- <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\larm100
-0.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\la
-bx1000.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi6
-00\labx1440.pk><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/type1/publi
-c/amsfonts/cm/cmmi10.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/t
-ype1/public/amsfonts/cm/cmmi7.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKTe
-X/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/Talgat/AppData/Local/Progr
-ams/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/Talgat/AppData/Loc
-al/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/Talgat/A
-ppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb><C:/Users
-/Talgat/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm1
-0.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfont
-s/symbols/msbm7.pfb>
-Output written on result.pdf (2 pages, 139844 bytes).
+ <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tcrm1
+000.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\
+larm1000.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dp
+i600\labx1000.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t
+2a/dpi600\labx1440.pk><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/type
+1/public/amsfonts/cm/cmmi10.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/
+fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/Talgat/AppData/Local/Program
+s/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb>
+Output written on result.pdf (2 pages, 86185 bytes).
 PDF statistics:
- 280 PDF objects out of 1000 (max. 8388607)
- 17 named destinations out of 1000 (max. 500000)
- 57 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 228 PDF objects out of 1000 (max. 8388607)
+ 14 named destinations out of 1000 (max. 500000)
+ 41 words of extra memory for PDF output out of 10000 (max. 10000000)
 

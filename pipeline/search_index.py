@@ -30,7 +30,7 @@ def get_ranked_books(discipline="mathematical_analysis"):
     books.sort(key=lambda x: x.get("priority", 999))
     return [b["id"] for b in books]
 
-def translate_term(term: str) -> dict:
+def translate_term(term: str, model_name: str = "gemini-2.5-pro") -> dict:
     """Uses LLM to translate term to English and provide root words for partial matching."""
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
@@ -56,7 +56,7 @@ def translate_term(term: str) -> dict:
     
     try:
         response = client.models.generate_content(
-            model='gemini-2.5-pro',
+            model=model_name,
             contents=prompt,
             config={"response_mime_type": "application/json"}
         )
@@ -109,11 +109,12 @@ def main():
     parser = argparse.ArgumentParser(description="Search for a math term across ranked textbooks")
     parser.add_argument("--query", type=str, required=True, help="Term to search for")
     parser.add_argument("--discipline", type=str, default="mathematical_analysis", help="Discipline key from registry")
+    parser.add_argument("--model", type=str, default="gemini-2.5-pro", choices=["gemini-2.5-pro", "gemini-2.5-flash", "gemini-1.5-pro", "gemini-1.5-flash"], help="Gemini model to use for query translation")
     
     args = parser.parse_args()
     
-    print(f"Translating and analyzing roots for: '{args.query}'...")
-    term_data = translate_term(args.query)
+    print(f"Translating and analyzing roots for: '{args.query}' (using {args.model})...")
+    term_data = translate_term(args.query, args.model)
     print(f"  Russian roots: {term_data.get('ru_roots')}")
     print(f"  English roots: {term_data.get('en_roots')}\n")
     

@@ -4,7 +4,9 @@ from pathlib import Path
 import subprocess
 import shutil
 
+import sys
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.append(str(PROJECT_ROOT))
 CONTENT_DIR = PROJECT_ROOT / "content"
 
 BOOK_CITATIONS = {
@@ -137,9 +139,13 @@ def bfs_collect(root_id):
         
         fpath = find_entity_file(eid)
         if fpath is None:
-            print(f"  [MISSING] {eid} — file not found. Triggering autonomous expansion...")
-            import autonomous_bfs
-            success = autonomous_bfs.expand_missing_entity(eid)
+            print(f"  [MISSING] {eid} — file not found. Triggering Pipeline v2 enrichment...")
+            # Преобразуем ID в человеческий запрос (например, 'prop-partial-order' -> 'partial order')
+            human_query = eid.split('-', 1)[1].replace('-', ' ') if '-' in eid else eid
+            
+            from pipeline.ollama_wrapper import run_enrichment_pipeline
+            success = run_enrichment_pipeline(human_query)
+            
             if success:
                 fpath = find_entity_file(eid)
             if fpath is None:
@@ -159,18 +165,40 @@ def bfs_collect(root_id):
 
 import argparse
 
+def multi_root_bfs_collect(root_ids):
+    """Runs BFS from multiple roots, merging graphs without duplication."""
+    all_entities = []
+    seen_ids = set()
+
+    for root_id in root_ids:
+        print(f"\n=== BFS от корня: {root_id} ===")
+        branch = bfs_collect(root_id)
+        for entity in branch:
+            if entity["id"] not in seen_ids:
+                seen_ids.add(entity["id"])
+                all_entities.append(entity)
+
+    return all_entities
+
 def main():
-    parser = argparse.ArgumentParser(description="Dynamic LaTeX Compiler via BFS")
-    parser.add_argument('--root', type=str, default='thm-newton-leibniz', help='The root entity ID to start BFS from')
+    parser = argparse.ArgumentParser(description="Dynamic LaTeX Compiler via BFS (Multi-Root)")
+    parser.add_argument('--root', type=str, default=None, help='Single root entity ID')
+    parser.add_argument('--roots', type=str, default=None, help='Comma-separated root entity IDs')
     args = parser.parse_args()
-    
-    root_id = args.root
-    
-    print(f"=== DYNAMIC COMPILER: Сборка графа для {root_id} (BFS) ===\n")
-    
-    entities = bfs_collect(root_id)
-    
-    print(f"\nCollected {len(entities)} entities. Generating result.tex...\n")
+
+    if args.roots:
+        root_ids = [r.strip() for r in args.roots.split(',') if r.strip()]
+    elif args.root:
+        root_ids = [args.root]
+    else:
+        print("[-] Укажите --root или --roots")
+        return
+
+    print(f"=== DYNAMIC COMPILER: Сборка графа для {root_ids} (Multi-Root BFS) ===\n")
+
+    entities = multi_root_bfs_collect(root_ids)
+
+    print(f"\nCollected {len(entities)} unique entities. Generating result.tex...\n")
     
     content = ""
     for data in entities:

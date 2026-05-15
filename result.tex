@@ -5,70 +5,12 @@
 
 \begin{document}
 
-\section{Предел последовательности (Limit of Sequence)}\label{entity:op-limit-seq}
-\textbf{Тип:} operation\quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 77)
-
-\textbf{Каноническая запись:}
-
-\textbf{Естественный язык:}
-Число $L \in \mathbb{R}$ называется пределом последовательности $(x_n)_{n \in \mathbb{N}}$, если для любого, даже сколь угодно малого, $\varepsilon > 0$ существует такой номер $n_0 \in \mathbb{N}$, что для всех членов последовательности с номерами $n \geq n_0$ выполняется неравенство $\entityref{op-abs-abstract}{\mathrm{abs}}(x_n - L) < \varepsilon$. 
-
-\begin{operation}[op-limit-seq]
-$(x_n)_{n \in \mathbb{N}} \in \mathbb{R}^{\mathbb{N}}, L \in \mathbb{R}$
-
-\[
-\mLim_{n \to \infty} x_n = L \mDefIff \mForall{\varepsilon > 0}\; \mExists{n_0 \in \mathbb{N}}\; \mForall{n \in \mathbb{N}} \colon \left( n \geq n_0 \mImplies \entityref{op-abs-abstract}{\mathrm{abs}}(x_n - L) < \varepsilon \right)
-\]
-\end{operation}
-
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Абсолютная величина (Absolute Value)}\label{entity:op-abs-abstract}
-\textbf{Тип:} operation\quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
-
-\textbf{Каноническая запись:}
-
-\begin{operation}[op-abs-abstract]
-
-$x \in \entityref{obj-real-numbers}{\mathbb{R}}$
-
-\[ |x| \mDefIff \max(x, -x) \]
-\end{operation}
-
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Вещественные числа (Real Numbers)}\label{entity:obj-real-numbers}
-\textbf{Тип:} object\quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 1)
-
-\textbf{Каноническая запись:}
-
-\begin{object}[obj-real-numbers]
-
-
-
-\[ \mathbb{R} = (\entityref{obj-set}{R}, +, \cdot, \leq) \]
-\end{object}
-
-
-\textbf{Естественный язык:}
-Множество вещественных чисел $\mathbb{R}$ — это непрерывная числовая прямая. Формально $\mathbb{R}$ задается как полное (непрерывное) архимедово упорядоченное поле. В нем можно складывать, умножать, сравнивать элементы, и в нем нет «дырок» (каждое ограниченное сверху подмножество имеет точную верхнюю грань).
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Множество (Set)}\label{entity:obj-set}
+\section{obj-set}\label{entity:obj-set}
 \textbf{Тип:} object\quad \textbf{Источник:} Зорич В.А., Математический анализ, Том I (zorich-1, p. 7)
 
 \textbf{Каноническая запись:}
 
-
+\begin{object}[obj-set] % Множество (Set)
 
 
 \textbf{Естественный язык:}
@@ -78,45 +20,84 @@ $x \in \entityref{obj-real-numbers}{\mathbb{R}}$
 \hrule
 \vspace{1em}
 
-\section{Аксиома объемности (Axiom of Extensionality)}\label{entity:axm-zfc-extensionality}
+\section{axm-zfc-pairing}\label{entity:axm-zfc-pairing}
 \textbf{Тип:} axiom\quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
 
 \textbf{Каноническая запись:}
+
+\begin{axiom}[axm-zfc-pairing] % Аксиома пары (Axiom of Pairing)
+
+
+
+\[
+\mForall{A, B}
+\mExists{C} \mForall{x} \left( x \in C \mIff (x = A \entityref{term-log-conn}{\lor} x = B) \right)
+\]
+\end{axiom}
+
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{axm-zfc-extensionality}\label{entity:axm-zfc-extensionality}
+\textbf{Тип:} axiom\quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
+
+\textbf{Каноническая запись:}
+
+\begin{axiom}[axm-zfc-extensionality] % Аксиома объемности (Axiom of Extensionality)
+
+
 
 \[
 \mForall{A, B}
 (A = B) \mIff (\mForall{x} x \in A \mIff x \in B)
 \]
+\end{axiom}
 
 
 \vspace{1em}
 \hrule
 \vspace{1em}
 
-\section{Аксиома пары (Axiom of Pairing)}\label{entity:axm-zfc-pairing}
+\section{axm-zfc-union}\label{entity:axm-zfc-union}
 \textbf{Тип:} axiom\quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
 
 \textbf{Каноническая запись:}
 
-\[
-\mForall{A, B}
-\mExists{C} \mForall{x} \left( x \in C \mIff (x = A \entityref{def-logical-connectives}{\lor} x = B) \right)
-\]
+\begin{axiom}[axm-zfc-union] % Аксиома объединения (Axiom of Union)
 
 
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Аксиома объединения (Axiom of Union)}\label{entity:axm-zfc-union}
-\textbf{Тип:} axiom\quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
-
-\textbf{Каноническая запись:}
 
 \[
 \mForall{\mathcal{F}}
-\mExists{U} \mForall{x} \left( x \in U \mIff \mExists{A} (A \in \mathcal{F} \entityref{def-logical-connectives}{\land} x \in A) \right)
+\mExists{U} \mForall{x} \left( x \in U \mIff \mExists{A} (A \in \mathcal{F} \entityref{term-log-conn}{\land} x \in A) \right)
 \]
+\end{axiom}
+
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section{term-log-conn}\label{entity:term-log-conn}
+\textbf{Тип:} terminal\quad \textbf{Источник:} Unknown (Unknown)
+
+\textbf{Каноническая запись:}
+
+\begin{object}[term-log-conn] % Логические связки (Logical Connectives)
+
+
+
+\textbf{Базовый набор:}
+\begin{itemize}
+    \item \textbf{Конъюнкция ($\entityref{term-log-conn}{\land}$):} Истинна, когда оба утверждения истинны.
+    \item \textbf{Дизъюнкция ($\entityref{term-log-conn}{\lor}$):} Истинна, когда хотя бы одно утверждение истинно.
+    \item \textbf{Отрицание ($\lnot$):} Инвертирует логическое значение.
+    \item \textbf{Импликация ($\entityref{term-log-conn}{\implies}$):} «Если... то...».
+    \item \textbf{Эквивалентность ($\entityref{term-log-conn}{\iff}$):} «Тогда и только тогда, когда».
+\end{itemize}
+\end{object}
 
 
 \vspace{1em}
