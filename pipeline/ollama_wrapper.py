@@ -183,7 +183,7 @@ def run_enrichment_pipeline(
     """Runs the full extraction → alignment → synthesis pipeline."""
     print(f"\n[*] === AUTO-ENRICHMENT: Запускаю конвейер обогащения ===")
 
-    term_ru, term_en = translate_term(clean_term)
+    term_ru, term_en = translate_term(clean_term, model=extract_model)
     print(f"[*] Целевой термин (RU): '{term_ru}'")
     print(f"[*] Целевой термин (EN): '{term_en}'")
 

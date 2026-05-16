@@ -45,6 +45,7 @@ SUCCESS_FILE = LEAN_DIR / "SuccessfulEntities.lean"
 
 # Active LLM provider config (set by main() or setup_provider())
 _LLM_PROVIDER = "ollama"  
+_OLLAMA_MODEL = None
 _GEMINI_CLIENT = None
 _GEMINI_MODEL_NAME = None
 _OPENAI_CLIENT = None
@@ -69,7 +70,7 @@ _LEAN_HF_MODEL = None
 
 def setup_provider(provider, api_key=None, model=None):
     """External setup for other modules to configure LLM provider."""
-    global _LLM_PROVIDER, _GEMINI_CLIENT, _GEMINI_MODEL_NAME, _OPENAI_CLIENT, _OPENAI_MODEL_NAME, _GROQ_CLIENT, _GROQ_MODEL_NAME, _HF_CLIENT, _HF_MODEL_NAME
+    global _LLM_PROVIDER, _OLLAMA_MODEL, _GEMINI_CLIENT, _GEMINI_MODEL_NAME, _OPENAI_CLIENT, _OPENAI_MODEL_NAME, _GROQ_CLIENT, _GROQ_MODEL_NAME, _HF_CLIENT, _HF_MODEL_NAME
     _LLM_PROVIDER = provider
     
     if _LLM_PROVIDER == "gemini":
@@ -96,6 +97,8 @@ def setup_provider(provider, api_key=None, model=None):
             return
         _HF_CLIENT = GradioClient(model, token=api_key) if api_key else GradioClient(model)
         if model: _HF_MODEL_NAME = model
+    elif _LLM_PROVIDER == "ollama":
+        if model: _OLLAMA_MODEL = model
 
 def setup_lean_provider(provider, api_key=None, model=None):
     """Configure a separate provider for Lean generation."""
@@ -125,6 +128,9 @@ def setup_lean_provider(provider, api_key=None, model=None):
 # ── Ollama Interface ─────────────────────────────────────────────────────────
 
 def query_ollama(prompt, model="goedel:latest", system_prompt=None, json_mode=False):
+    if not model:
+        from pipeline.config import get_default_model
+        model = get_default_model("extract", "ollama")
     url = "http://localhost:11434/api/generate"
     data = {
         "model": model, 
@@ -462,7 +468,7 @@ def query_llm(prompt, model="goedel:latest", system_prompt=None, json_mode=False
         model_name = _LEAN_HF_MODEL or _HF_MODEL_NAME or model
         return query_hf(prompt, system_prompt=system_prompt, client=client, model=model_name, json_mode=json_mode)
     else:
-        model_name = _LEAN_OLLAMA_MODEL or model
+        model_name = _LEAN_OLLAMA_MODEL or _OLLAMA_MODEL or model
         return query_ollama(prompt, model=model_name, system_prompt=system_prompt, json_mode=json_mode)
 
 

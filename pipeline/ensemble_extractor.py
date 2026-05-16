@@ -514,7 +514,7 @@ def main():
                 active_query = query_en
                 active_roots = roots_en
 
-        results = process_single_book(pdf_path, active_query, entity_type, active_roots, args.model)
+        results = process_single_book(pdf_path, active_query, entity_type, active_roots, model)
 
         for res in results:
             text_parts = []
