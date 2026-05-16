@@ -21,14 +21,26 @@ CONTENT_DIR = PROJECT_ROOT / "content"
 
 
 
-def detect_entity_type_from_text(raw_texts):
-    """Определяет тип сущности по ключевым словам в извлеченном тексте."""
+def detect_entity_type_from_text(raw_texts, has_proof=False):
+    """Определяет тип сущности. Согласно архитектуре, всё, что имеет доказательство — теорема."""
+    if has_proof:
+        return "theorem"
+        
     combined = " ".join(raw_texts).lower()
-    theorem_keywords = ["теорема", "лемма", "следствие", "theorem", "lemma",
-                        "corollary", "доказательство", "proof", "∎"]
+    theorem_keywords = ["теорема", "лемма", "следствие", "theorem", "lemma", "corollary"]
+    def_keywords = ["определение", "называется", "определим", "definition", "defined as"]
+    
+    # 1. Strong theorem check
     for kw in theorem_keywords:
         if kw in combined:
             return "theorem"
+            
+    # 2. Strong definition check
+    for kw in def_keywords:
+        if kw in combined:
+            return "definition"
+            
+    # Default fallback
     return "definition"
 
 def build_synthesis_prompt(cluster_id, formulations, sources, entity_type):
@@ -139,13 +151,13 @@ def sanitize_raw_delimiters(latex: str) -> str:
     latex = re.sub(r'(?<!\\)\|([^|]+?)\|', r'\\entityref{op-abs-abstract}{\\mathrm{abs}}(\1)', latex)
     return latex
 
-def synthesize_cluster(cluster_id, formulations, sources, model="qwen3:8b"):
+def synthesize_cluster(cluster_id, formulations, sources, has_proof=False, model="qwen3:8b"):
     import time
     print(f"\n{'='*60}", flush=True)
     print(f"[synthesizer] Cluster: {cluster_id}", flush=True)
     print(f"[synthesizer] Sources: {', '.join(sources)} ({len(formulations)} formulations)", flush=True)
 
-    entity_type = detect_entity_type_from_text(formulations)
+    entity_type = detect_entity_type_from_text(formulations, has_proof=has_proof)
     print(f"[synthesizer] Detected entity type: {entity_type}", flush=True)
 
     prompt = build_synthesis_prompt(cluster_id, formulations, sources, entity_type)
@@ -157,6 +169,7 @@ def synthesize_cluster(cluster_id, formulations, sources, model="qwen3:8b"):
     current_attempt = 1
     error_feedback = ""
     latex_content = ""
+    valid_lean_code = None
 
     while current_attempt <= max_attempts:
         print(f"\n[synthesizer] --- Attempt {current_attempt}/{max_attempts} ---", flush=True)
@@ -269,6 +282,7 @@ def synthesize_cluster(cluster_id, formulations, sources, model="qwen3:8b"):
 
         if result["status"] == "success":
             print("  [OK] Lean validation passed!")
+            valid_lean_code = lean_code
             break
         elif result["status"] == "timeout":
             print("  [TIMEOUT] Lean validation timed out. Proceeding without validation.")
@@ -289,7 +303,7 @@ def synthesize_cluster(cluster_id, formulations, sources, model="qwen3:8b"):
             error_feedback = "\n".join(messages)
             current_attempt += 1
 
-    return latex_content
+    return latex_content, valid_lean_code
 
 def main():
     global _LLM_PROVIDER, _GEMINI_CLIENT, _GEMINI_MODEL_NAME, _OPENAI_CLIENT, _OPENAI_MODEL_NAME, _GROQ_CLIENT, _GROQ_MODEL_NAME
@@ -338,15 +352,17 @@ def main():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    cursor.execute("SELECT temp_cluster_id, source_book, raw_text FROM formulation_raw_cache WHERE temp_cluster_id IS NOT NULL")
+    cursor.execute("SELECT temp_cluster_id, source_book, raw_text, has_proof FROM formulation_raw_cache WHERE temp_cluster_id IS NOT NULL")
     rows = cursor.fetchall()
 
     clusters = {}
-    for cid, source, text in rows:
+    for cid, source, text, proof_flag in rows:
         if cid not in clusters:
-            clusters[cid] = {'sources': [], 'texts': []}
+            clusters[cid] = {'sources': [], 'texts': [], 'has_proof': False}
         clusters[cid]['sources'].append(source)
         clusters[cid]['texts'].append(text)
+        if proof_flag == 1:
+            clusters[cid]['has_proof'] = True
 
     print(f"[synthesizer] Found {len(clusters)} cluster(s) to synthesize.")
     if not clusters:
@@ -357,7 +373,7 @@ def main():
     processed_entities = set()
 
     for cid, data in clusters.items():
-        synthesized_tex = synthesize_cluster(cid, data['texts'], data['sources'], model=args.model)
+        synthesized_tex, valid_lean_code = synthesize_cluster(cid, data['texts'], data['sources'], has_proof=data['has_proof'], model=args.model)
         if not synthesized_tex:
             continue
 
@@ -398,6 +414,23 @@ def main():
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(synthesized_tex)
         print(f"[synthesizer] [OK] Saved: {file_path.relative_to(PROJECT_ROOT)}")
+
+        # Save validated lean code if available
+        if valid_lean_code:
+            lean_dir = PROJECT_ROOT / "lean_validator" / "Validated"
+            lean_dir.mkdir(parents=True, exist_ok=True)
+            lean_file_path = lean_dir / f"{entity_id}.lean"
+            with open(lean_file_path, "w", encoding="utf-8") as f:
+                f.write(valid_lean_code)
+            print(f"[synthesizer] [OK] Saved Lean code: {lean_file_path.relative_to(PROJECT_ROOT)}")
+            
+            # Append to SuccessfulEntities.lean
+            success_file = PROJECT_ROOT / "lean_validator" / "SuccessfulEntities.lean"
+            if not success_file.exists():
+                with open(success_file, "w", encoding="utf-8") as f:
+                    f.write("import Mathlib\n\n-- Valid entities generated by Goedel-Formalizer\n\n")
+            with open(success_file, "a", encoding="utf-8") as f:
+                f.write(f"-- Entity: {entity_id} | Type: {entity_type}\n{valid_lean_code}\n\n")
 
         # Add to master.tex
         master_path = CONTENT_DIR / "master.tex"

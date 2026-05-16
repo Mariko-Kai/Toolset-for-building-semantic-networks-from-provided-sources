@@ -120,7 +120,12 @@ Return ONLY valid JSON:
     ]
 }}
 """
-    response = query_llm(prompt, model=model)
+    response = query_llm(prompt, model=model, json_mode=True)
+    
+    # Strip markdown JSON wrappers if present
+    response = re.sub(r'^```json\s*', '', response.strip(), flags=re.MULTILINE)
+    response = re.sub(r'^```\s*$', '', response.strip(), flags=re.MULTILINE).strip()
+    
     try:
         parsed = json.loads(response)
         matches = parsed.get("matches", [])
@@ -161,7 +166,7 @@ Return strictly JSON:
 }}"""
     # JSON mode is tricky with some models without specific formatting prompts, but handled inside the unified query_llm if possible.
     # We enforce JSON by explicitly instructing it in the prompt (already done).
-    resp = query_llm(prompt, model=model)
+    resp = query_llm(prompt, model=model, json_mode=True)
     try:
         parsed = json.loads(resp)
         return parsed.get("term_ru", term), parsed.get("term_en", term)

@@ -341,8 +341,19 @@ def parse_with_llm(raw_text: str, query: str, entity_type: str, model="llama3.1:
 {{ "found": true, "context": "...", "statement": "...", "proof": "...", "page_ref": 0 }}
 """
     response = query_llm(prompt, model=model, json_mode=True)
+    
+    # Strip markdown JSON wrappers if present
+    response = re.sub(r'^```json\s*', '', response.strip(), flags=re.MULTILINE)
+    response = re.sub(r'^```\s*$', '', response.strip(), flags=re.MULTILINE).strip()
+    
     try:
-        return json.loads(response)
+        result = json.loads(response)
+        # Gemma models sometimes return a list instead of a dict
+        if isinstance(result, list):
+            result = result[0] if result else {"found": False}
+        if not isinstance(result, dict):
+            return {"found": False}
+        return result
     except (json.JSONDecodeError, ValueError):
         return {"found": False}
 
@@ -494,6 +505,10 @@ def main():
             temp_cluster_id TEXT
         )
     """)
+    # Clear stale cache from previous (possibly interrupted) runs
+    cursor.execute("DELETE FROM formulation_raw_cache")
+    conn.commit()
+    print(f"[*] Кэш формулировок очищен.")
 
     total_count = 0
     for pdf_path in all_books:

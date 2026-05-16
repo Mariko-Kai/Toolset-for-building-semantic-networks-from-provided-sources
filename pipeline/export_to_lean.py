@@ -167,6 +167,23 @@ def query_ollama(prompt, model="goedel:latest", system_prompt=None, json_mode=Fa
 
 _GEMINI_LAST_CALL_TIME = 0.0
 
+def _get_gemini_cooldown_for_model(model_name, prompt_len):
+    # Default fallback limits if model not strictly matched
+    rpm, tpm = 15, 250000 
+    
+    model_lower = model_name.lower()
+    if "flash-lite" in model_lower:
+        rpm, tpm = 15, 250000
+    elif "gemma" in model_lower:
+        rpm, tpm = 15, 999999999  # Unlimited TPM
+        
+    delay_rpm = 60.0 / rpm
+    tokens = prompt_len / 4.0
+    delay_tpm = (tokens * 60.0) / tpm if tpm > 0 else 0
+    
+    # Add a small buffer (0.1s) to prevent exact boundary triggers
+    return max(delay_rpm, delay_tpm) + 0.1
+
 def query_gemini(prompt, system_prompt=None, client=None, model=None, json_mode=False):
     """Query Google Gemini API."""
     global _GEMINI_CLIENT, _GEMINI_MODEL_NAME, _GEMINI_LAST_CALL_TIME
@@ -177,10 +194,15 @@ def query_gemini(prompt, system_prompt=None, client=None, model=None, json_mode=
         print("  [lean-export] Gemini client not initialized!")
         return ""
     
-    # Проактивный cooldown (2с)
+    # Dynamic cooldown based on RPM/TPM
+    full_len = len(prompt) + (len(system_prompt) if system_prompt else 0)
+    cooldown = _get_gemini_cooldown_for_model(target_model, full_len)
+    
     elapsed = time.time() - _GEMINI_LAST_CALL_TIME
-    if elapsed < 2.0:
-        time.sleep(2.0 - elapsed)
+    if elapsed < cooldown:
+        wait_sec = cooldown - elapsed
+        time.sleep(wait_sec)
+        
     _GEMINI_LAST_CALL_TIME = time.time()
     try:
         contents = []
@@ -193,16 +215,26 @@ def query_gemini(prompt, system_prompt=None, client=None, model=None, json_mode=
         
         for attempt in range(5):
             try:
+                # Gemma models often throw 500 Internal Error on temp=0.0 via Gemini API. Use temp=0.1.
+                config_kwargs = {"temperature": 0.1, "max_output_tokens": 1024}
+                if json_mode:
+                    config_kwargs["response_mime_type"] = "application/json"
+                    
                 response = target_client.models.generate_content(
                     model=target_model,
                     contents=contents,
-                    config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=1024)
+                    config=types.GenerateContentConfig(**config_kwargs)
                 )
                 return response.text.strip()
             except Exception as e:
-                if "429" in str(e):
+                err_str = str(e)
+                if "429" in err_str:
                     wait_time = 30 + (attempt * 10)
-                    print(f"  [gemini] Rate limit hit (429). Sleeping {wait_time}s...")
+                    print(f"  [gemini] Rate limit hit (429). Retry {attempt+1}/5, sleeping {wait_time}s...")
+                    time.sleep(wait_time)
+                elif "500" in err_str:
+                    wait_time = 5 + (attempt * 3)
+                    print(f"  [gemini] Internal error (500). Retry {attempt+1}/5, sleeping {wait_time}s...")
                     time.sleep(wait_time)
                 else:
                     raise e
@@ -454,22 +486,27 @@ def query_llm(prompt, model="goedel:latest", system_prompt=None, json_mode=False
     if active_provider == "gemini":
         client = _LEAN_GEMINI_CLIENT or _GEMINI_CLIENT
         model_name = _LEAN_GEMINI_MODEL or _GEMINI_MODEL_NAME or model
-        return query_gemini(prompt, system_prompt=system_prompt, client=client, model=model_name, json_mode=json_mode)
+        result = query_gemini(prompt, system_prompt=system_prompt, client=client, model=model_name, json_mode=json_mode)
     elif active_provider == "openai":
         client = _LEAN_OPENAI_CLIENT or _OPENAI_CLIENT
         model_name = _LEAN_OPENAI_MODEL or _OPENAI_MODEL_NAME or model
-        return query_openai(prompt, system_prompt=system_prompt, client=client, model=model_name, json_mode=json_mode)
+        result = query_openai(prompt, system_prompt=system_prompt, client=client, model=model_name, json_mode=json_mode)
     elif active_provider == "groq":
         client = _LEAN_GROQ_CLIENT or _GROQ_CLIENT
         model_name = _LEAN_GROQ_MODEL or _GROQ_MODEL_NAME or model
-        return query_groq(prompt, system_prompt=system_prompt, client=client, model=model_name, json_mode=json_mode)
+        result = query_groq(prompt, system_prompt=system_prompt, client=client, model=model_name, json_mode=json_mode)
     elif active_provider == "hf":
         client = _LEAN_HF_CLIENT or _HF_CLIENT
         model_name = _LEAN_HF_MODEL or _HF_MODEL_NAME or model
-        return query_hf(prompt, system_prompt=system_prompt, client=client, model=model_name, json_mode=json_mode)
+        result = query_hf(prompt, system_prompt=system_prompt, client=client, model=model_name, json_mode=json_mode)
     else:
         model_name = _LEAN_OLLAMA_MODEL or _OLLAMA_MODEL or model
-        return query_ollama(prompt, model=model_name, system_prompt=system_prompt, json_mode=json_mode)
+        result = query_ollama(prompt, model=model_name, system_prompt=system_prompt, json_mode=json_mode)
+
+    # Strip `<think>...</think>` tags globally to prevent reasoning blocks from breaking JSON or text parsers
+    if result and "<think>" in result:
+        result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+    return result
 
 
 
