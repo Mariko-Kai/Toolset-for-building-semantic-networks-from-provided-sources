@@ -30,7 +30,7 @@ def get_ranked_books(discipline="mathematical_analysis"):
     books.sort(key=lambda x: x.get("priority", 999))
     return [b["id"] for b in books]
 
-def translate_term(term: str, model_name: str = "gemini-2.5-pro") -> dict:
+def translate_term(term: str, model_name: str = "gemini-2.5-flash") -> dict:
     """Uses LLM to translate term to English and provide root words for partial matching."""
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
@@ -109,7 +109,7 @@ def main():
     parser = argparse.ArgumentParser(description="Search for a math term across ranked textbooks")
     parser.add_argument("--query", type=str, required=True, help="Term to search for")
     parser.add_argument("--discipline", type=str, default="mathematical_analysis", help="Discipline key from registry")
-    parser.add_argument("--model", type=str, default="gemini-2.5-pro", choices=["gemini-2.5-pro", "gemini-2.5-flash", "gemini-1.5-pro", "gemini-1.5-flash"], help="Gemini model to use for query translation")
+    parser.add_argument("--model", type=str, default="gemini-2.5-flash", choices=["gemini-2.5-pro", "gemini-2.5-flash", "gemini-1.5-pro", "gemini-1.5-flash"], help="Gemini model to use for query translation")
     
     args = parser.parse_args()
     

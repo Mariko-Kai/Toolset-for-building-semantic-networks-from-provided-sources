@@ -198,8 +198,7 @@ def discover_mathlib_signatures(terms: list[str]) -> list[str]:
             encoding='utf-8',
             errors='replace',
             env=env,
-            timeout=180
-        )
+            timeout=300)
         
         _, infos = _parse_lean_output(result.stdout, result.stderr)
         signatures = [info['message'] for info in infos if ':' in info['message']]

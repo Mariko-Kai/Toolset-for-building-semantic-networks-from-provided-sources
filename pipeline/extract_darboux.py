@@ -10,7 +10,7 @@ PROJECT_ROOT = Path(r'f:\Universe\Projects\Учебник по матанали�
 load_dotenv(PROJECT_ROOT / ".env")
 
 parser = argparse.ArgumentParser(description="Extract mathematical definitions using Gemini Vision")
-parser.add_argument("--model", type=str, default="gemini-2.5-pro", choices=["gemini-2.5-pro", "gemini-2.5-flash", "gemini-1.5-pro", "gemini-1.5-flash"], help="Gemini model to use for CV/OCR")
+parser.add_argument("--model", type=str, default="gemini-2.5-flash", choices=["gemini-2.5-pro", "gemini-2.5-flash", "gemini-1.5-pro", "gemini-1.5-flash"], help="Gemini model to use for CV/OCR")
 args = parser.parse_args()
 
 system_prompt = """You are a mathematical entity extractor. You are given images of pages from a Russian mathematical analysis textbook (Zorich).

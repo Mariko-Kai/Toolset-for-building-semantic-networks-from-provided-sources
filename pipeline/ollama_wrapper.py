@@ -15,6 +15,14 @@ import sys
 import difflib
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from pipeline.export_to_lean import query_llm, setup_provider, setup_lean_provider, _LLM_PROVIDER
+from pipeline.config import PROVIDERS, resolve_module_config
+
+
 # ── Path Configuration ───────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CONTENT_DIR = PROJECT_ROOT / "content"
@@ -40,54 +48,6 @@ def get_available_entities():
     return entities
 
 
-# ── Ollama Interface ─────────────────────────────────────────────────────────
-
-def query_ollama(prompt, model="llama3.1:8b", json_mode=False):
-    """Sends a prompt to local Ollama API."""
-    url = "http://localhost:11434/api/generate"
-    data = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-        "options": {"num_ctx": 8192}
-    }
-    
-    # Модели DeepSeek иногда выдают пустые ответы, если жестко форсировать json_mode,
-    # поэтому для них мы запрашиваем обычный текст, но просим JSON в системном промпте.
-    if json_mode and "deepseek" not in model.lower():
-        data["format"] = "json"
-        
-    try:
-        req = urllib.request.Request(url, json.dumps(data).encode('utf-8'),
-                                     headers={'Content-Type': 'application/json'})
-        with urllib.request.urlopen(req) as response:
-            result = json.loads(response.read().decode('utf-8'))
-            resp_text = result.get('response', '').strip()
-            
-            # 1. Извлекаем и логируем цепочку мыслей (thinking models)
-            think_match = re.search(r'<think>(.*?)</think>', resp_text, flags=re.DOTALL)
-            if think_match:
-                think_content = think_match.group(1).strip()
-                print(f"  [LLM Think]: {think_content}")
-            resp_text = re.sub(r'<think>.*?</think>', '', resp_text, flags=re.DOTALL).strip()
-            
-            # 2. Если ожидается JSON, извлекаем его из текста (очистка от markdown-разметки)
-            if json_mode:
-                # Попытка извлечь JSON из ```json ... ``` блока
-                json_block_match = re.search(r'```(?:json)?\s*([\s\S]*?)```', resp_text)
-                if json_block_match:
-                    resp_text = json_block_match.group(1).strip()
-                else:
-                    # Резервный поиск скобок JSON
-                    brackets_match = re.search(r'(\{.*\}|\[.*\])', resp_text, re.DOTALL)
-                    if brackets_match:
-                        resp_text = brackets_match.group(1).strip()
-
-            return resp_text
-    except Exception as e:
-        print(f"[-] Ошибка Ollama (проверьте, что сервер запущен): {e}")
-        sys.exit(1)
-
 
 # ── Keyword Extraction ───────────────────────────────────────────────────────
 
@@ -112,7 +72,7 @@ def extract_keyword(query, model):
     
     # Translate to English using LLM
     prompt = f"Translate the mathematical term '{clean}' into English. Output ONLY the translated term in lowercase, no quotes, no punctuation, no explanations."
-    en_term = query_ollama(prompt, model=model).strip()
+    en_term = query_llm(prompt, model=model).strip()
     
     # Clean it up just in case
     en_term = en_term.translate(str.maketrans('', '', string.punctuation)).lower()
@@ -160,7 +120,7 @@ Return ONLY valid JSON:
     ]
 }}
 """
-    response = query_ollama(prompt, model, json_mode=True)
+    response = query_llm(prompt, model=model)
     try:
         parsed = json.loads(response)
         matches = parsed.get("matches", [])
@@ -191,7 +151,7 @@ Return ONLY valid JSON:
     return validated_matches, canonical_term
 
 
-def translate_term(term, model="deepseek-r1:14b"):
+def translate_term(term, model="qwen3:8b"):
     """Translates a term into EN and RU using LLM."""
     prompt = f"""Translate the mathematical term '{term}' into both English and Russian.
 Return strictly JSON:
@@ -199,7 +159,9 @@ Return strictly JSON:
     "term_ru": "russian translation",
     "term_en": "english translation"
 }}"""
-    resp = query_ollama(prompt, model=model, json_mode=True)
+    # JSON mode is tricky with some models without specific formatting prompts, but handled inside the unified query_llm if possible.
+    # We enforce JSON by explicitly instructing it in the prompt (already done).
+    resp = query_llm(prompt, model=model)
     try:
         parsed = json.loads(resp)
         return parsed.get("term_ru", term), parsed.get("term_en", term)
@@ -207,11 +169,21 @@ Return strictly JSON:
         return term, term
 
 
-def run_enrichment_pipeline(clean_term, model="deepseek-r1:14b", cv_model="glm-ocr"):
+def run_enrichment_pipeline(
+    clean_term, *,
+    # Extraction module
+    extract_provider=None, extract_api_key=None, extract_model=None,
+    # Synthesis module
+    synth_provider=None, synth_api_key=None, synth_model=None,
+    # Lean module
+    lean_provider=None, lean_api_key=None, lean_model=None,
+    # OCR
+    cv_model="glm-ocr",
+):
     """Runs the full extraction → alignment → synthesis pipeline."""
     print(f"\n[*] === AUTO-ENRICHMENT: Запускаю конвейер обогащения ===")
-    
-    term_ru, term_en = translate_term(clean_term, model)
+
+    term_ru, term_en = translate_term(clean_term)
     print(f"[*] Целевой термин (RU): '{term_ru}'")
     print(f"[*] Целевой термин (EN): '{term_en}'")
 
@@ -219,10 +191,33 @@ def run_enrichment_pipeline(clean_term, model="deepseek-r1:14b", cv_model="glm-o
     env['PYTHONIOENCODING'] = 'utf-8'
     env['PYTHONUNBUFFERED'] = '1'
 
+    # ── Аргументы для ensemble_extractor (extraction) ────────────────────────
+    extract_args = ["--cv-model", cv_model]
+    if extract_provider:
+        extract_args += ["--extract-provider", extract_provider]
+        if extract_api_key: extract_args += ["--extract-api-key", extract_api_key]
+        if extract_model:   extract_args += ["--extract-model", extract_model]
+    if lean_provider:
+        extract_args += ["--lean-provider", lean_provider]
+
+    # ── Аргументы для canonical_synthesizer (synth) ──────────────────────────
+    synth_args = ["--cv-model", cv_model]
+    if synth_provider:
+        synth_args += ["--synth-provider", synth_provider]
+        if synth_api_key: synth_args += ["--synth-api-key", synth_api_key]
+        if synth_model:   synth_args += ["--synth-model", synth_model]
+    if lean_provider:
+        synth_args += ["--lean-provider", lean_provider]
+        if lean_api_key: synth_args += ["--lean-api-key", lean_api_key]
+        if lean_model:   synth_args += ["--lean-model", lean_model]
+
     steps = [
-        ("1/3", "Извлечение из учебников", [sys.executable, str(EXTRACTOR_SCRIPT), f"{term_ru}|{term_en}", "--model", model, "--cv-model", cv_model]),
-        ("2/3", "Выравнивание формулировок", [sys.executable, str(ALIGNER_SCRIPT)]),
-        ("3/3", "Синтез канонической записи", [sys.executable, str(SYNTHESIZER_SCRIPT), "--model", model, "--cv-model", cv_model]),
+        ("1/3", "Извлечение из учебников",
+         [sys.executable, str(EXTRACTOR_SCRIPT), f"{term_ru}|{term_en}"] + extract_args),
+        ("2/3", "Выравнивание формулировок",
+         [sys.executable, str(ALIGNER_SCRIPT)]),
+        ("3/3", "Синтез канонической записи",
+         [sys.executable, str(SYNTHESIZER_SCRIPT)] + synth_args),
     ]
 
     for step_num, step_name, cmd in steps:
@@ -243,45 +238,86 @@ def run_enrichment_pipeline(clean_term, model="deepseek-r1:14b", cv_model="glm-o
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
+    global _LLM_PROVIDER, _GEMINI_CLIENT, _GEMINI_MODEL_NAME, _OPENAI_CLIENT, _OPENAI_MODEL_NAME, _GROQ_CLIENT, _GROQ_MODEL_NAME
     parser = argparse.ArgumentParser(description="Mathesis Pipeline — Multi-Result Wrapper")
     parser.add_argument("query", type=str, help="Входной запрос на естественном языке")
-    parser.add_argument("--model", type=str, default="deepseek-r1:14b", 
-                        help="Модель Ollama (например: llama3.1:8b, deepseek-r1:14b, gemma3:4b)")
-    parser.add_argument("--cv-model", type=str, default="glm-ocr", 
-                        help="Модель CV/OCR для обработки изображений (например: glm-ocr)")
+    parser.add_argument("--cv-model", type=str, default="glm-ocr",
+                        help="Модель CV/OCR для обработки изображений")
+
+    # ── Глобальные аргументы (оверрайдят ВСЕ модули) ─────────────────────────
+    parser.add_argument("--provider", type=str, default=None, choices=PROVIDERS,
+                        help="Глобальный LLM провайдер для всех модулей")
+    parser.add_argument("--model",    type=str, default=None,
+                        help="Глобальная LLM модель для всех модулей")
+    parser.add_argument("--api-key",  type=str, default=None,
+                        help="Глобальный API ключ для всех модулей")
+
+    # ── Per-module: Extraction ────────────────────────────────────────────────
+    parser.add_argument("--extract-provider", type=str, default=None, choices=PROVIDERS)
+    parser.add_argument("--extract-model",    type=str, default=None)
+    parser.add_argument("--extract-api-key",  type=str, default=None)
+
+    # ── Per-module: Synthesis ─────────────────────────────────────────────────
+    parser.add_argument("--synth-provider", type=str, default=None, choices=PROVIDERS)
+    parser.add_argument("--synth-model",    type=str, default=None)
+    parser.add_argument("--synth-api-key",  type=str, default=None)
+
+    # ── Per-module: Lean formalization ────────────────────────────────────────
+    parser.add_argument("--lean-provider", type=str, default=None, choices=PROVIDERS)
+    parser.add_argument("--lean-model",    type=str, default=None)
+    parser.add_argument("--lean-api-key",  type=str, default=None)
+
     args = parser.parse_args()
 
-    print(f"[*] Анализ запроса (LLM: {args.model}, CV: {args.cv_model})...")
+    # ── Разрешаем конфигурацию для каждого модуля ────────────────────────────
+    extract_provider, extract_model, extract_api_key = resolve_module_config(
+        module="extract",
+        global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
+        module_provider=args.extract_provider, module_model=args.extract_model, module_api_key=args.extract_api_key,
+    )
+    synth_provider, synth_model, synth_api_key = resolve_module_config(
+        module="synth",
+        global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
+        module_provider=args.synth_provider, module_model=args.synth_model, module_api_key=args.synth_api_key,
+    )
+
+    # Для routing-запросов (extract_keyword, resolve_entities) используем extract-провайдер
+    setup_provider(extract_provider, api_key=extract_api_key, model=extract_model)
+
+    from pipeline.export_to_lean import _LLM_PROVIDER
+    active_provider_name = (_LLM_PROVIDER or "OLLAMA").upper()
+    print(f"[*] Анализ запроса (Провайдер: {active_provider_name}, Модель: {extract_model}, CV: {args.cv_model})...")
 
     # Step 1: Extract clean keyword
-    keyword, canonical = extract_keyword(args.query, args.model)
+    keyword, canonical = extract_keyword(args.query, extract_model)
 
     # Step 2: Resolve against existing entities
     available = get_available_entities()
-    matches, _ = resolve_entities(args.query, canonical, args.model, available)
+    matches, _ = resolve_entities(args.query, canonical, extract_model, available)
 
     if matches:
-        # Display all matches
         print(f"\n[+] Найдено {len(matches)} совпадений:")
         for i, m in enumerate(matches, 1):
             print(f"    {i}. [{m['entity_id']}] (confidence: {m['confidence']}) — {m.get('reason', '')}")
 
-        # Build result with ALL matching entity roots
         root_ids = [m["entity_id"] for m in matches]
         roots_arg = ",".join(root_ids)
         print(f"\n[*] Сборка result.pdf для: {roots_arg}")
         try:
-            subprocess.run(
-                [sys.executable, str(GENERATE_SCRIPT), "--roots", roots_arg],
-                check=True
-            )
+            subprocess.run([sys.executable, str(GENERATE_SCRIPT), "--roots", roots_arg], check=True)
         except subprocess.CalledProcessError as e:
             print(f"[-] Ошибка генерации: {e}")
         return
 
     # Step 3: No matches — trigger enrichment
     print(f"\n[!] Сущности не найдены. Запускаю обогащение для: '{canonical}'")
-    success = run_enrichment_pipeline(canonical, args.model, args.cv_model)
+    success = run_enrichment_pipeline(
+        canonical,
+        extract_provider=extract_provider, extract_api_key=extract_api_key, extract_model=extract_model,
+        synth_provider=synth_provider,     synth_api_key=synth_api_key,     synth_model=synth_model,
+        lean_provider=args.lean_provider,  lean_api_key=args.lean_api_key,  lean_model=args.lean_model,
+        cv_model=args.cv_model,
+    )
 
     if not success:
         print("[-] Конвейер обогащения завершился с ошибкой.")
@@ -290,7 +326,7 @@ def main():
     # Step 4: Retry after enrichment
     print(f"\n[*] Повторный поиск в обновленной базе...")
     available = get_available_entities()
-    matches, _ = resolve_entities(canonical, canonical, args.model, available)
+    matches, _ = resolve_entities(canonical, canonical, extract_model, available)
 
     if matches:
         print(f"\n[+] После обогащения найдено {len(matches)} совпадений:")
@@ -301,14 +337,15 @@ def main():
         roots_arg = ",".join(root_ids)
         print(f"\n[*] Сборка result.pdf для: {roots_arg}")
         try:
-            subprocess.run(
-                [sys.executable, str(GENERATE_SCRIPT), "--roots", roots_arg],
-                check=True
-            )
+            subprocess.run([sys.executable, str(GENERATE_SCRIPT), "--roots", roots_arg], check=True)
         except subprocess.CalledProcessError as e:
             print(f"[-] Ошибка генерации: {e}")
     else:
         print("[-] Даже после обогащения сущности не были найдены.")
+
+
+
+
 
 
 if __name__ == "__main__":

@@ -1,0 +1,1 @@
+axiom obj_term : Type

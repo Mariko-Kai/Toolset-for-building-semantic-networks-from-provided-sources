@@ -11,8 +11,17 @@ import re
 import sys
 import json
 import urllib.request
+import time
 from pathlib import Path
 import fitz  # PyMuPDF
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from pipeline.export_to_lean import query_llm, setup_provider, setup_lean_provider, _LLM_PROVIDER
+from pipeline.config import PROVIDERS, resolve_module_config
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = PROJECT_ROOT / "mathesis_index.db"
@@ -46,52 +55,27 @@ MATH_STEMS_RU = {
 }
 
 MATH_STEMS_EN = {
-    "convergence": "converg", "convergent": "converg", "converges": "converg",
-    "bounded": "bound", "boundedness": "bound",
-    "continuous": "continu", "continuity": "continu",
-    "derivative": "derivat", "derivatives": "derivat", "differentiation": "differenti",
-    "integral": "integr", "integration": "integr", "integrable": "integr",
-    "sequence": "sequenc", "sequences": "sequenc",
-    "function": "funct", "functions": "funct",
+    "convergence": "convergence", "convergent": "convergence", "converges": "convergence",
+    "bounded": "bounded", "boundedness": "bounded",
+    "continuous": "continuous", "continuity": "continuous",
+    "derivative": "derivative", "derivatives": "derivative", "differentiation": "derivative",
+    "integral": "integral", "integration": "integral", "integrable": "integral",
+    "integrals": "integral",
+    "sequence": "sequence", "sequences": "sequence",
+    "function": "function", "functions": "function",
     "theorem": "theorem", "theorems": "theorem",
     "limit": "limit", "limits": "limit",
-    "definition": "definit", "definitions": "definit",
+    "definition": "definition", "definitions": "definition",
     "proof": "proof", "proofs": "proof",
     "set": "set", "sets": "set",
     "axiom": "axiom", "axioms": "axiom",
+    "sum": "sum", "sums": "sum",
+    "riemann": "riemann",
 }
 
 PROOF_END_MARKERS = ["∎", "□", "Q.E.D.", "q.e.d.", "Доказательство завершено",
                      "Теорема доказана", "что и требовалось доказать", "ч.т.д.",
                      "\\blacksquare", "\\qed"]
-
-
-# ── Ollama Interface ─────────────────────────────────────────────────────────
-
-def query_ollama(prompt, model="llama3.1:8b", json_mode=False):
-    url = "http://localhost:11434/api/generate"
-    data = {
-        "model": model, "prompt": prompt, "stream": False,
-        "options": {"num_ctx": 8192, "num_predict": 1024, "temperature": 0.2}
-    }
-    if json_mode:
-        data["format"] = "json"
-    try:
-        req = urllib.request.Request(url, json.dumps(data).encode('utf-8'),
-                                     headers={'Content-Type': 'application/json'})
-        with urllib.request.urlopen(req, timeout=180) as response:
-            result = json.loads(response.read().decode('utf-8'))
-            resp_text = result.get('response', '').strip()
-            # Extract and log thinking
-            think_match = re.search(r'<think>(.*?)</think>', resp_text, flags=re.DOTALL)
-            if think_match:
-                think_content = think_match.group(1).strip()
-                print(f"  [LLM Think]: {think_content}")
-            resp_text = re.sub(r'<think>.*?</think>', '', resp_text, flags=re.DOTALL).strip()
-            return resp_text
-    except Exception as e:
-        print(f"  [-] Ошибка LLM: {e}")
-        return ""
 
 
 # ── Book Discovery ───────────────────────────────────────────────────────────
@@ -356,7 +340,7 @@ def parse_with_llm(raw_text: str, query: str, entity_type: str, model="llama3.1:
 Верни СТРОГО JSON:
 {{ "found": true, "context": "...", "statement": "...", "proof": "...", "page_ref": 0 }}
 """
-    response = query_ollama(prompt, model=model, json_mode=True)
+    response = query_llm(prompt, model=model, json_mode=True)
     try:
         return json.loads(response)
     except (json.JSONDecodeError, ValueError):
@@ -433,9 +417,49 @@ def process_single_book(pdf_path: Path, query: str, entity_type: str, roots: lis
 def main():
     parser = argparse.ArgumentParser(description="Ensemble PDF Extractor v2 — Global Search")
     parser.add_argument("query", type=str, help="Математический термин для поиска (может быть в формате 'ru|en')")
-    parser.add_argument("--model", type=str, default="llama3.1:8b", help="Модель Ollama")
     parser.add_argument("--cv-model", type=str, default="glm-ocr", help="Модель CV/OCR")
+
+    # ── Глобальные аргументы (оверрайдят все модули) ─────────────────────────
+    parser.add_argument("--provider", type=str, default=None, choices=PROVIDERS,
+                        help="Глобальный LLM провайдер (оверрайдит --extract-provider)")
+    parser.add_argument("--model",    type=str, default=None,
+                        help="Глобальная модель (оверрайдит --extract-model)")
+    parser.add_argument("--api-key",  type=str, default=None,
+                        help="Глобальный API ключ (оверрайдит --extract-api-key)")
+
+    # ── Per-module аргументы для extraction ──────────────────────────────────
+    parser.add_argument("--extract-provider", type=str, default=None, choices=PROVIDERS,
+                        help="Провайдер LLM для модуля извлечения")
+    parser.add_argument("--extract-model",    type=str, default=None,
+                        help="Модель LLM для модуля извлечения")
+    parser.add_argument("--extract-api-key",  type=str, default=None,
+                        help="API ключ для модуля извлечения")
+
+    # ── Lean-аргументы (для консистентности при запуске через ollama_wrapper) -
+    parser.add_argument("--lean-provider", type=str, default=None, choices=PROVIDERS, help="Игнорируется в этом модуле")
+    parser.add_argument("--lean-api-key",  type=str, default=None, help="Игнорируется в этом модуле")
+    parser.add_argument("--lean-model",    type=str, default=None, help="Игнорируется в этом модуле")
+
     args = parser.parse_args()
+
+    # Разрешаем итоговую конфигурацию модуля extraction
+    provider, model, api_key = resolve_module_config(
+        module="extract",
+        global_provider=args.provider,
+        global_model=args.model,
+        global_api_key=args.api_key,
+        module_provider=args.extract_provider,
+        module_model=args.extract_model,
+        module_api_key=args.extract_api_key,
+    )
+
+    # Initialize LLM provider via shared logic
+    setup_provider(provider, api_key=api_key, model=model)
+
+
+    from pipeline.export_to_lean import _LLM_PROVIDER
+    active_provider_name = (_LLM_PROVIDER or "OLLAMA").upper()
+    print(f"[*] Провайдер: {active_provider_name} ({model})")
 
     # Parse dual-language query if provided
     if "|" in args.query:

@@ -6,41 +6,20 @@ import re
 import argparse
 import sys
 import os
+import time
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.append(str(PROJECT_ROOT))
-from pipeline.lean_validator import validate_entity
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from pipeline.export_to_lean import query_llm, setup_provider, setup_lean_provider, _LLM_PROVIDER
+from pipeline.config import PROVIDERS, resolve_module_config
+
 DB_PATH = PROJECT_ROOT / "mathesis_index.db"
 CONTENT_DIR = PROJECT_ROOT / "content"
 
-def query_ollama(prompt, model="llama3.1:8b"):
-    url = "http://localhost:11434/api/generate"
-    data = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-        "options": {
-            "num_predict": 1024,   # Hard cap: LaTeX theorem ~300-600 tokens
-            "num_ctx": 4096,       # Enough for prompt + response on GTX 1650
-            "temperature": 0.3,    # Low creativity — strict formal output
-        }
-    }
-    try:
-        req = urllib.request.Request(url, json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})
-        with urllib.request.urlopen(req, timeout=300) as response:
-            result = json.loads(response.read().decode('utf-8'))
-            resp_text = result.get('response', '').strip()
-            # Extract and log thinking
-            think_match = re.search(r'<think>(.*?)</think>', resp_text, flags=re.DOTALL)
-            if think_match:
-                think_content = think_match.group(1).strip()
-                print(f"  [LLM Think]: {think_content}")
-            resp_text = re.sub(r'<think>.*?</think>', '', resp_text, flags=re.DOTALL).strip()
-            return resp_text
-    except Exception as e:
-        print(f"Ollama error: {e}")
-        return ""
+
 
 def detect_entity_type_from_text(raw_texts):
     """Определяет тип сущности по ключевым словам в извлеченном тексте."""
@@ -172,9 +151,9 @@ def synthesize_cluster(cluster_id, formulations, sources, model="qwen3:8b"):
     prompt = build_synthesis_prompt(cluster_id, formulations, sources, entity_type)
     print(f"[synthesizer] Prompt length: {len(prompt)} chars", flush=True)
 
-    print(f"[synthesizer] Starting LLM Synthesis Loop (max 3 attempts)...", flush=True)
+    max_attempts = 7
+    print(f"[synthesizer] Starting LLM Synthesis Loop (max {max_attempts} attempts)...", flush=True)
 
-    max_attempts = 3
     current_attempt = 1
     error_feedback = ""
     latex_content = ""
@@ -186,30 +165,46 @@ def synthesize_cluster(cluster_id, formulations, sources, model="qwen3:8b"):
             print(f"[synthesizer] Injecting Lean error feedback into prompt...", flush=True)
             current_prompt += f"\n\nПРЕДУПРЕЖДЕНИЕ (Попытка {current_attempt}): Lean 4 отклонил твою формулировку со следующими ошибками:\n{error_feedback}\nПожалуйста, исправь LaTeX-код, чтобы он прошел строгую типизацию и объяви все используемые переменные."
 
-        print(f"[synthesizer] Sending prompt to Ollama LLM...", flush=True)
+        from pipeline.export_to_lean import _LLM_PROVIDER
+        active_provider_name = (_LLM_PROVIDER or "OLLAMA").upper()
+        print(f"[synthesizer] Sending prompt to {active_provider_name} LLM...", flush=True)
         t0 = time.time()
-        response = query_ollama(current_prompt, model=model)
+        response = query_llm(current_prompt, model=model)
         elapsed = time.time() - t0
         print(f"[synthesizer] LLM responded in {elapsed:.1f}s ({len(response)} chars)", flush=True)
+
+        if not response or len(response.strip()) < 10:
+            print("[synthesizer] [ERROR] LLM returned empty response or error. Failing attempt.")
+            current_attempt += 1
+            error_feedback = "LLM response was empty or API error occurred."
+            continue
 
         # Cleanup backtick wrappers if any
         response = re.sub(r'^```latex\s*', '', response, flags=re.MULTILINE)
         response = re.sub(r'^```\s*', '', response, flags=re.MULTILINE)
 
+        # Improved parsing logic
         latex_content = ""
-        in_block = False
-        for line in response.split('\n'):
-            if line.strip().startswith("% entity-id:"):
-                if in_block:
-                    # Second entity detected, stop parsing
-                    break
-                latex_content += line + "\n"
-                in_block = True
-            elif in_block:
-                latex_content += line + "\n"
+        
+        # 1. Look for the start header
+        header_match = re.search(r'(% entity-id:.*)', response, re.DOTALL)
+        if header_match:
+            latex_content = header_match.group(1).strip()
+            # If there's a second entity-id block, truncate it
+            second_header = re.search(r'\n% entity-id:', latex_content[1:])
+            if second_header:
+                latex_content = latex_content[:second_header.start() + 1].strip()
+        else:
+            # 2. Fallback: find common LaTeX environments if header is missing
+            env_match = re.search(r'(\\begin\{[a-z]+\}.*?\\end\{[a-z]+\})', response, re.DOTALL)
+            if env_match:
+                latex_content = env_match.group(1).strip()
+            else:
+                # 3. Last fallback: use the whole response but clean it later
+                latex_content = response
 
-        if not latex_content:
-            print("[synthesizer] Failed to parse LLM output. Using raw response.")
+        if not latex_content or len(latex_content.strip()) < 10:
+            print("[synthesizer] Failed to parse LLM output or output empty. Using raw response.")
             latex_content = response
 
         # === Post-processing pipeline ===
@@ -235,15 +230,27 @@ def synthesize_cluster(cluster_id, formulations, sources, model="qwen3:8b"):
         temp_eid = match_id_temp.group(1).strip() if match_id_temp else "temp_entity"
         temp_etype = match_type_temp.group(1).strip() if match_type_temp else "axiom"
 
-        # Type Discovery: Guess mathlib terms from the title or content
+        # Type Discovery: Extract Mathlib-relevant terms from the entity ID
         import string
         clean_title = temp_eid.replace('def-', '').replace('op-', '').replace('obj-', '').replace('prop-', '').replace('thm-', '').replace('-', ' ')
-        discovery_terms = [clean_title.title().replace(' ', ''), clean_title.lower().split()[0], "integral", "Continuous", "Filter", "Set"]
-        # Limit to reasonable unique terms
-        discovery_terms = list(set([t for t in discovery_terms if len(t) > 3]))[:4]
+        # Build terms from actual entity words, PascalCase for Lean identifiers
+        entity_words = [w for w in clean_title.split() if len(w) > 2]
+        discovery_terms = []
+        for w in entity_words:
+            discovery_terms.append(w.title())  # e.g. "Riemann"
+            # Also try compound: "RiemannIntegral" from consecutive words
+        if len(entity_words) >= 2:
+            discovery_terms.append(''.join(w.title() for w in entity_words))  # e.g. "RiemannIntegral"
+        discovery_terms = list(set(discovery_terms))[:4]
         
-        print(f"  [synthesizer] Running Mathlib discovery for terms: {discovery_terms}")
-        signatures = discover_mathlib_signatures(discovery_terms)
+        signatures = []
+        if discovery_terms:
+            print(f"  [synthesizer] Running Mathlib discovery for terms: {discovery_terms}")
+            try:
+                signatures = discover_mathlib_signatures(discovery_terms)
+            except Exception as e:
+                print(f"  [synthesizer] Mathlib discovery failed (non-blocking): {e}")
+                signatures = []
         hints = "\n".join(signatures) if signatures else "No hints found."
         if signatures:
             print(f"  [synthesizer] Discovered {len(signatures)} Mathlib signatures to use as hints.")
@@ -285,10 +292,48 @@ def synthesize_cluster(cluster_id, formulations, sources, model="qwen3:8b"):
     return latex_content
 
 def main():
+    global _LLM_PROVIDER, _GEMINI_CLIENT, _GEMINI_MODEL_NAME, _OPENAI_CLIENT, _OPENAI_MODEL_NAME, _GROQ_CLIENT, _GROQ_MODEL_NAME
     parser = argparse.ArgumentParser(description="Canonical Synthesizer")
-    parser.add_argument("--model", type=str, default="phi4-mini", help="LLM Model")
     parser.add_argument("--cv-model", type=str, default="glm-ocr", help="CV Model")
+
+    # ── Глобальные аргументы (оверрайдят все модули) ───────────────────────
+    parser.add_argument("--provider", type=str, default=None, choices=PROVIDERS,
+                        help="Глобальный LLM провайдер")
+    parser.add_argument("--model",    type=str, default=None,
+                        help="Глобальная модель")
+    parser.add_argument("--api-key",  type=str, default=None,
+                        help="Глобальный API ключ")
+
+    # ── Per-module аргументы для synth ─────────────────────────────────────
+    parser.add_argument("--synth-provider", type=str, default=None, choices=PROVIDERS,
+                        help="Провайдер LLM для модуля синтеза")
+    parser.add_argument("--synth-model",    type=str, default=None,
+                        help="Модель LLM для модуля синтеза")
+    parser.add_argument("--synth-api-key",  type=str, default=None,
+                        help="API ключ для модуля синтеза")
+
+    # ── Аргументы Lean-провайдера ──────────────────────────────────
+    parser.add_argument("--lean-provider", type=str, default=None, choices=PROVIDERS,
+                        help="Отдельный провайдер для Lean формализации")
+    parser.add_argument("--lean-api-key",  type=str, default=None, help="API Key for Lean provider")
+    parser.add_argument("--lean-model",    type=str, default=None, help="Model for Lean provider")
     args = parser.parse_args()
+
+    # Разрешаем итоговую конфигурацию модуля synth
+    provider, model, api_key = resolve_module_config(
+        module="synth",
+        global_provider=args.provider,
+        global_model=args.model,
+        global_api_key=args.api_key,
+        module_provider=args.synth_provider,
+        module_model=args.synth_model,
+        module_api_key=args.synth_api_key,
+    )
+
+    # Initialize LLM providers via shared logic
+    setup_provider(provider, api_key=api_key, model=model)
+    if args.lean_provider:
+        setup_lean_provider(args.lean_provider, api_key=args.lean_api_key, model=args.lean_model)
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()

@@ -41,7 +41,7 @@ def test_extraction(image_path: Path):
     for attempt in range(5):
         try:
             response = client.models.generate_content(
-                model='gemini-2.5-pro',
+                model='gemini-2.5-flash',
                 contents=[system_prompt, img, user_prompt]
             )
             print("----- RESPONSE -----")
