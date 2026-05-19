@@ -1,0 +1,22 @@
+% defined-in: zorich-1, p. 57
+% entity-id: op-abs-abstract
+% entity-type: operation
+
+\section{Абсолютная величина (Absolute Value)}
+\label{entity:op-abs-abstract}
+
+\textbf{Описание:}
+Абсолютная величина (модуль) действительного числа $x$ — это расстояние от начала отсчета до точки $x$ на числовой прямой. Формально, она равна $x$, если $x \geq 0$, и $-x$, если $x < 0$.
+
+\entityref{op-hypertarget}{\hypertarget}{op-abs-abstract}{}
+\hypertarget{op-abs-abstract}{}
+\begin{operation}
+\[
+\mForall{x \in \entityref{obj-real-numbers}{\mathbb{R}}}
+\mathrm{abs}(x) \mDefinedAs
+\begin{cases}
+x, & x \geq 0 \\
+-x, & x < 0
+\end{cases}
+\]
+\end{operation}

@@ -3,16 +3,53 @@ import re
 from pathlib import Path
 import subprocess
 import shutil
-
 import sys
+import io
+
+# Fix Windows console encoding
+if sys.platform == 'win32' and getattr(sys.stdout, 'encoding', '').lower() != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT))
 CONTENT_DIR = PROJECT_ROOT / "content"
 
-BOOK_CITATIONS = {
-    "zorich-1": "Зорич В.А., Математический анализ, Том I",
-    "zorich-2": "Зорич В.А., Математический анализ, Том II",
-}
+def load_book_citations():
+    citations = {
+        "zorich": "Зорич В.А., Математический анализ, Том I",
+        "apostol": "Apostol T.M., Mathematical Analysis",
+        "spivak": "Spivak M., Calculus",
+    }
+    books_dir = PROJECT_ROOT / "Books"
+    if not books_dir.exists():
+        return citations
+
+    try:
+        for f in books_dir.iterdir():
+            if f.is_file() and f.suffix.lower() == ".pdf":
+                name = f.stem
+                parts = name.split(" - ")
+                if len(parts) >= 2:
+                    author = parts[0].strip()
+                    title = parts[1].strip()
+                    citation_str = f"{author}, {title}"
+                    
+                    # Derive key: e.g. "Apostol, T.M." -> "apostol"
+                    key_base = author.split(',')[0].strip().split()[0].lower()
+                    if "zorich" in key_base:
+                        citations[key_base] = "Зорич В.А., Математический анализ, Том I"
+                    else:
+                        citations[key_base] = citation_str
+                    
+                    # Also map full stem to support precise matches
+                    citations[name.lower()] = citation_str
+    except Exception as e:
+        print(f"[Warning] Failed to load citations from Books directory: {e}. Falling back to default list.")
+        
+    return citations
+
+BOOK_CITATIONS = load_book_citations()
 
 NL_DESCRIPTIONS = {
     "op-riemann-integral": r"Определенным интегралом Римана от функции $f(x)$ на отрезке $[a,b]$ называется предел интегральных сумм $\sum f(\xi_i) \Delta x_i$ при стремлении максимальной длины частичного отрезка $\lambda(P)$ к нулю, независимо от выбора разбиения $P$ и промежуточных точек $\xi_i$.",
@@ -126,7 +163,7 @@ def find_entity_file(entity_id):
                 return Path(dirpath) / fn
     return None
 
-def bfs_collect(root_id):
+def bfs_collect(root_id, args=None):
     visited = []
     queue = [root_id]
     seen = set()
@@ -143,8 +180,54 @@ def bfs_collect(root_id):
             # Преобразуем ID в человеческий запрос (например, 'prop-partial-order' -> 'partial order')
             human_query = eid.split('-', 1)[1].replace('-', ' ') if '-' in eid else eid
             
+            # Resolve module configs using passed args (or defaults)
+            from pipeline.config import resolve_module_config
             from pipeline.ollama_wrapper import run_enrichment_pipeline
-            success = run_enrichment_pipeline(human_query)
+            
+            extract_provider = extract_model = extract_api_key = None
+            preview_provider = preview_model = preview_api_key = None
+            synth_provider = synth_model = synth_api_key = None
+            lean_provider = lean_model = lean_api_key = None
+            cv_model = "glm-ocr"
+            no_validate = False
+            
+            if args:
+                extract_provider, extract_model, extract_api_key = resolve_module_config(
+                    module="extract",
+                    global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
+                    module_provider=args.extract_provider, module_model=args.extract_model, module_api_key=args.extract_api_key,
+                )
+                preview_provider, preview_model, preview_api_key = resolve_module_config(
+                    module="preview",
+                    global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
+                    module_provider=args.extract_preview_provider, module_model=args.extract_preview_model, module_api_key=args.extract_preview_api_key,
+                )
+                synth_provider, synth_model, synth_api_key = resolve_module_config(
+                    module="synth",
+                    global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
+                    module_provider=args.synth_provider, module_model=args.synth_model, module_api_key=args.synth_api_key,
+                )
+                lean_provider = args.lean_provider
+                lean_model = args.lean_model
+                lean_api_key = args.lean_api_key
+                cv_model = args.cv_model
+                no_validate = args.no_validate
+
+            try:
+                success, generated, _ = run_enrichment_pipeline(
+                    human_query,
+                    extract_provider=extract_provider, extract_api_key=extract_api_key, extract_model=extract_model,
+                    preview_provider=preview_provider, preview_api_key=preview_api_key, preview_model=preview_model,
+                    synth_provider=synth_provider,     synth_api_key=synth_api_key,     synth_model=synth_model,
+                    lean_provider=lean_provider,        lean_api_key=lean_api_key,        lean_model=lean_model,
+                    cv_model=cv_model,
+                    no_validate=no_validate,
+                )
+            except Exception as e:
+                import traceback
+                print(f"  [ERROR] Failed to run enrichment pipeline: {e}", flush=True)
+                traceback.print_exc(file=sys.stdout)
+                sys.exit(1)
             
             if success:
                 fpath = find_entity_file(eid)
@@ -165,14 +248,14 @@ def bfs_collect(root_id):
 
 import argparse
 
-def multi_root_bfs_collect(root_ids):
+def multi_root_bfs_collect(root_ids, args=None):
     """Runs BFS from multiple roots, merging graphs without duplication."""
     all_entities = []
     seen_ids = set()
 
     for root_id in root_ids:
         print(f"\n=== BFS от корня: {root_id} ===")
-        branch = bfs_collect(root_id)
+        branch = bfs_collect(root_id, args)
         for entity in branch:
             if entity["id"] not in seen_ids:
                 seen_ids.add(entity["id"])
@@ -184,6 +267,30 @@ def main():
     parser = argparse.ArgumentParser(description="Dynamic LaTeX Compiler via BFS (Multi-Root)")
     parser.add_argument('--root', type=str, default=None, help='Single root entity ID')
     parser.add_argument('--roots', type=str, default=None, help='Comma-separated root entity IDs')
+    
+    # Forwarded model configurations
+    parser.add_argument("--cv-model", type=str, default="glm-ocr")
+    parser.add_argument("--provider", type=str, default=None)
+    parser.add_argument("--model",    type=str, default=None)
+    parser.add_argument("--api-key",  type=str, default=None)
+
+    parser.add_argument("--extract-provider", type=str, default=None)
+    parser.add_argument("--extract-model",    type=str, default=None)
+    parser.add_argument("--extract-api-key",  type=str, default=None)
+    
+    parser.add_argument("--extract-preview-provider", type=str, default=None)
+    parser.add_argument("--extract-preview-model",    type=str, default=None)
+    parser.add_argument("--extract-preview-api-key",  type=str, default=None)
+
+    parser.add_argument("--synth-provider", type=str, default=None)
+    parser.add_argument("--synth-model",    type=str, default=None)
+    parser.add_argument("--synth-api-key",  type=str, default=None)
+
+    parser.add_argument("--lean-provider", type=str, default=None)
+    parser.add_argument("--lean-model",    type=str, default=None)
+    parser.add_argument("--lean-api-key",  type=str, default=None)
+    parser.add_argument("--no-validate", action='store_true')
+
     args = parser.parse_args()
 
     if args.roots:
@@ -194,12 +301,108 @@ def main():
         print("[-] Укажите --root или --roots")
         return
 
+    # Resolve configurations for all modules
+    from pipeline.config import resolve_module_config
+    
+    extract_provider, extract_model, extract_api_key = resolve_module_config(
+        module="extract",
+        global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
+        module_provider=args.extract_provider, module_model=args.extract_model, module_api_key=args.extract_api_key,
+    )
+    preview_provider, preview_model, preview_api_key = resolve_module_config(
+        module="preview",
+        global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
+        module_provider=args.extract_preview_provider, module_model=args.extract_preview_model, module_api_key=args.extract_preview_api_key,
+    )
+    synth_provider, synth_model, synth_api_key = resolve_module_config(
+        module="synth",
+        global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
+        module_provider=args.synth_provider, module_model=args.synth_model, module_api_key=args.synth_api_key,
+    )
+
     print(f"=== DYNAMIC COMPILER: Сборка графа для {root_ids} (Multi-Root BFS) ===\n")
 
-    entities = multi_root_bfs_collect(root_ids)
+    entities = multi_root_bfs_collect(root_ids, args)
 
-    print(f"\nCollected {len(entities)} unique entities. Generating result.tex...\n")
+    print(f"\nCollected {len(entities)} unique entities. Running Lean validation and recursive enrichment...\n")
+
+    # Recursive lean-validation loop: discover missing mathesis dependencies and trigger enrichment
+    from pipeline.lean_validator import validate_entity
+    from pipeline.ollama_wrapper import get_missing_deps_from_lean_error, run_enrichment_pipeline
+
+    max_iters = 5
+    iter_count = 0
+    roots_changed = True
+    while iter_count < max_iters and roots_changed:
+        iter_count += 1
+        roots_changed = False
+        missing_terms = []
+        for ent in entities:
+            eid = ent["id"]
+            lean_path = PROJECT_ROOT / "lean_validator" / "Validated" / f"{eid}.lean"
+            if not lean_path.exists():
+                continue
+            lean_code = lean_path.read_text(encoding='utf-8')
+            result = validate_entity(eid, lean_code)
+            if result.get("status") != "success":
+                # Log the Lean compile errors
+                error_feedback = "\n".join([f"Line {e['line']}: {e['message']}" for e in result.get("errors", [])])
+                from pipeline.export_to_lean import log_to_file
+                log_to_file("lean_errors", error_feedback, entity_id=eid)
+                
+                missing = get_missing_deps_from_lean_error(result.get("errors", []))
+                mathesis_deps = [d for d in missing if any(d.startswith(p) for p in ["obj-", "prop-", "op-", "thm-", "def-"]) ]
+                for dep in mathesis_deps:
+                    human = dep.split('-',1)[1].replace('-', ' ')
+                    if human not in missing_terms:
+                        missing_terms.append(human)
+        if not missing_terms:
+            break
+        print(f"[Validation loop {iter_count}] Found missing dependencies to enrich: {missing_terms}")
+        for term in missing_terms:
+            ok, gen, _ = run_enrichment_pipeline(
+                term,
+                extract_provider=extract_provider, extract_api_key=extract_api_key, extract_model=extract_model,
+                preview_provider=preview_provider, preview_api_key=preview_api_key, preview_model=preview_model,
+                synth_provider=synth_provider,     synth_api_key=synth_api_key,     synth_model=synth_model,
+                lean_provider=args.lean_provider,  lean_api_key=args.lean_api_key,  lean_model=args.lean_model,
+                cv_model=args.cv_model,
+                no_validate=args.no_validate,
+            )
+            if ok:
+                roots_changed = True
+        if roots_changed:
+            # rebuild entities graph to include newly synthesized entities
+            entities = multi_root_bfs_collect(root_ids, args)
+
+    print(f"Validation/enrichment loop finished after {iter_count} iterations.")
+
+    # Build and log the final graph structure for this query
+    from pipeline.export_to_lean import log_to_file
     
+    graph_lines = []
+    graph_lines.append("=== FINAL GRAPH STRUCTURE ===")
+    graph_lines.append(f"Query Roots: {root_ids}")
+    graph_lines.append(f"Total Unique Entities: {len(entities)}\n")
+    
+    graph_lines.append("Nodes:")
+    for ent in entities:
+        graph_lines.append(f"  - {ent['id']} (Type: {ent['type']})")
+        
+    graph_lines.append("\nEdges (Dependencies):")
+    for ent in entities:
+        if ent.get('deps'):
+            for dep in ent['deps']:
+                graph_lines.append(f"  {ent['id']} -> {dep}")
+        else:
+            graph_lines.append(f"  {ent['id']} -> (No dependencies)")
+            
+    graph_content = "\n".join(graph_lines)
+    
+    # Save log to logs/graphs/ category using the combined roots as the entity_id
+    combined_roots = "_".join(root_ids)
+    log_to_file("graphs", graph_content, entity_id=combined_roots)
+
     content = ""
     for data in entities:
         book_key = data["source"].split(",")[0].strip()
@@ -230,6 +433,13 @@ def main():
         f.write(TEMPLATE % {"content": content})
     
     print(f"Generated {result_tex}")
+    
+    # Rebuild master.tex at the very end during result formation
+    try:
+        from pipeline.canonical_synthesizer import rebuild_master_tex
+        rebuild_master_tex()
+    except Exception as e:
+        print(f"[WARN] Failed to rebuild master.tex: {e}")
     
     if not (PROJECT_ROOT / "mathesis.sty").exists():
         shutil.copy(CONTENT_DIR / "mathesis.sty", PROJECT_ROOT / "mathesis.sty")

@@ -27,6 +27,7 @@
 \newcommand{\mImplies}{\Rightarrow}
 \newcommand{\mIff}{\Leftrightarrow}
 \newcommand{\mDefIff}{\stackrel{\mathrm{def}}{\iff}}
+\newcommand{\mDefinedAs}{\coloneqq}
 \newcommand{\mQED}{\qed}
 \newcommand{\mAnd}{\land}
 \newcommand{\mOr}{\lor}
@@ -38,33 +39,13 @@
 \newcommand{\mIn}{\in}
 \newcommand{\mSubset}{\subset}
 \newcommand{\mSubseteq}{\subseteq}
+\newcommand{\mEmpty}{\varnothing}
 \newcommand{\mReal}{\mathbb{R}}
-\newcommand{\mR}{\mReal}
 \newcommand{\mNat}{\mathbb{N}}
-\newcommand{\mN}{\mNat}
 \newcommand{\mInt}{\mathbb{Z}}
-\newcommand{\mZ}{\mInt}
-\newcommand{\mRat}{\mathbb{Q}}
-\newcommand{\mQ}{\mRat}
+\newcommand{\mComplex}{\mathbb{C}}
+
 
 % Maps and mappings
 \newcommand{\mTo}{\to}
 \newcommand{\mMap}[3]{#1 \colon #2 \mTo #3}
-
-% Limits
-\newcommand{\mLim}{\lim}
-
-% === Abstract Parametric Macros (Late Binding) ===
-% #1 — optional entity-id (default = abstract interface id).
-%       Injected by Graph Mutator (Module 4). LLM NEVER fills this.
-% #2 — mandatory operand.
-%
-% Defaults protect against empty-bracket parsing issues and serve as
-% implicit DAG edges for link_content.py (see Component 10).
-
-\newcommand{\mDist}[3][op-dist-abstract]{\entityref{#1}{\mathrm{d}(#2, #3)}}
-\newcommand{\mSup}[2][op-supremum]{\entityref{#1}{\sup\limits_{#2}}}
-\newcommand{\mInf}[2][op-infimum]{\entityref{#1}{\inf\limits_{#2}}}
-\newcommand{\mDeriv}[3][op-derivative]{\entityref{#1}{\frac{d #2}{d #3}}}
-\newcommand{\mIntegral}[4][op-integral]{\entityref{#1}{\int_{#2}^{#3} #4}}
-\newcommand{\mEmpty}{\varnothing}

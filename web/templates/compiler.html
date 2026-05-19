@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+{% block title %}PDF Компилятор{% endblock %}
+
+{% block content %}
+<div class="compiler-grid">
+    <!-- INPUT & CONSOLE -->
+    <div class="compiler-input-card">
+        <div class="compiler-header">
+            <h1>PDF Компилятор</h1>
+            <p>Сборка и компиляция математического графа в PDF в реальном времени</p>
+        </div>
+
+        <div class="compiler-tabs">
+            <button class="compiler-tab active" id="tab-query" data-mode="query">Запрос</button>
+            <button class="compiler-tab" id="tab-id" data-mode="id">ID объекта</button>
+        </div>
+
+        <div id="query-group" class="form-group">
+            <label for="entity-query">Введите запрос (определение, свойство, теорема,...)</label>
+            <input type="text" id="entity-query" class="input-control" placeholder="Введите математический запрос (например: интеграл Римана)..." value="Определи интеграл Римана">
+        </div>
+
+        <div id="id-group" class="form-group" style="display: none;">
+            <label for="entity-root">Корневая сущность (Root Entity ID)</label>
+            <input type="text" id="entity-root" class="input-control" placeholder="Например: thm-cauchy-criterion-limit-base" list="entities-list" value="thm-cauchy-criterion-limit-base">
+            <datalist id="entities-list">
+                {% for eid in entity_ids %}
+                <option value="{{ eid }}">
+                {% endfor %}
+            </datalist>
+        </div>
+
+        <button id="compile-btn" class="btn-compile">
+            <span class="btn-text">Скомпилировать PDF</span>
+        </button>
+
+        <div class="form-group" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <label>Логи компиляции</label>
+            <div id="console-log" class="console-box">
+                <div class="console-placeholder">Ожидание запуска компиляции...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF VIEWER -->
+    <div class="pdf-viewer-card">
+        <div class="pdf-viewer-header">
+            <div class="pdf-title">
+                <span class="pdf-title-dot"></span>
+                <span>Документ (result.pdf)</span>
+            </div>
+            <a href="/result.pdf" target="_blank" class="btn-open-pdf">Открыть в новой вкладке</a>
+        </div>
+        <div class="pdf-iframe-container" id="pdf-container">
+            <iframe id="pdf-frame" class="pdf-iframe" src="/result.pdf"></iframe>
+        </div>
+    </div>
+</div>
+
+<script>
+    const compileBtn = document.getElementById('compile-btn');
+    const entityInput = document.getElementById('entity-root');
+    const queryInput = document.getElementById('entity-query');
+    const idGroup = document.getElementById('id-group');
+    const queryGroup = document.getElementById('query-group');
+    const tabQuery = document.getElementById('tab-query');
+    const tabId = document.getElementById('tab-id');
+    const consoleLog = document.getElementById('console-log');
+    const pdfFrame = document.getElementById('pdf-frame');
+    
+    // Cloudflare banner DOM elements
+    const cfDot = document.getElementById('cf-dot');
+    const cfText = document.getElementById('cf-text');
+
+    // Create a WebSocket connection that works locally and via Cloudflare HTTPS/WSS
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/compiler`;
+    
+    let socket;
+    let currentMode = 'query';
+    
+    function setMode(mode) {
+        currentMode = mode;
+        if (mode === 'query') {
+            tabQuery.classList.add('active');
+            tabId.classList.remove('active');
+            queryGroup.style.display = 'flex';
+            idGroup.style.display = 'none';
+        } else {
+            tabQuery.classList.remove('active');
+            tabId.classList.add('active');
+            queryGroup.style.display = 'none';
+            idGroup.style.display = 'flex';
+        }
+    }
+
+    tabQuery.addEventListener('click', () => {
+        setMode('query');
+        syncInput();
+    });
+
+    tabId.addEventListener('click', () => {
+        setMode('id');
+        syncInput();
+    });
+    
+    function connectWebSocket() {
+        socket = new WebSocket(wsUrl);
+        
+        socket.onopen = () => {
+            console.log('WebSocket connection established!');
+        };
+        
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'init') {
+                // Initialize input value (if not focused by current user)
+                if (data.mode) {
+                    setMode(data.mode);
+                }
+                
+                if (document.activeElement !== entityInput) {
+                    entityInput.value = data.root || 'thm-cauchy-criterion-limit-base';
+                }
+                if (document.activeElement !== queryInput) {
+                    queryInput.value = data.query || 'Определи интеграл Римана';
+                }
+                
+                // Initialize logs
+                if (data.logs && data.logs.length > 0) {
+                    consoleLog.innerHTML = '';
+                    data.logs.forEach(line => appendLogLine(line));
+                }
+                
+                // Initialize compile status
+                updateCompilationUI(data.is_compiling);
+                
+                // Initialize Cloudflare status
+                if (data.cloudflare_url) {
+                    updateCloudflareUI(data.cloudflare_url);
+                }
+            }
+            
+            else if (data.type === 'input') {
+                // Sync search ID input on other devices in real-time
+                if (data.mode) {
+                    setMode(data.mode);
+                }
+                if (data.mode === 'id') {
+                    if (document.activeElement !== entityInput) {
+                        entityInput.value = data.value;
+                    }
+                } else {
+                    if (document.activeElement !== queryInput) {
+                        queryInput.value = data.value;
+                    }
+                }
+            }
+            
+            else if (data.type === 'start') {
+                // Clear console and start UI compile state
+                const targetText = data.mode === 'id' ? `сущности "${data.value}"` : `запроса "${data.value}"`;
+                consoleLog.innerHTML = `<span style="color: #8b949e;">[system] Запуск конвейера компиляции для ${targetText}...\n</span>`;
+                updateCompilationUI(true);
+            }
+            
+            else if (data.type === 'log') {
+                // Append log line
+                appendLogLine(data.line);
+            }
+            
+            else if (data.type === 'done') {
+                // Return compile state to idle and refresh PDF iframe
+                updateCompilationUI(false);
+                
+                // Reload PDF
+                const timestamp = new Date().getTime();
+                pdfFrame.src = `/result.pdf?t=${timestamp}`;
+                
+                // Add success system line
+                const statusSpan = document.createElement('span');
+                statusSpan.style.color = '#2ecc71';
+                statusSpan.style.fontWeight = 'bold';
+                statusSpan.textContent = `\n[system] Сборка PDF успешно завершена! result.pdf обновлен.\n`;
+                consoleLog.appendChild(statusSpan);
+                consoleLog.scrollTop = consoleLog.scrollHeight;
+            }
+            
+            else if (data.type === 'cloudflare_url') {
+                // Dynamically update public URL
+                updateCloudflareUI(data.url);
+            }
+        };
+        
+        socket.onclose = () => {
+            console.log('WebSocket closed. Retrying in 3 seconds...');
+            setTimeout(connectWebSocket, 3000);
+        };
+        
+        socket.onerror = (err) => {
+            console.error('WebSocket encountered error:', err);
+            socket.close();
+        };
+    }
+
+    // Connect immediately
+    connectWebSocket();
+
+    function syncInput() {
+        const val = currentMode === 'id' ? entityInput.value : queryInput.value;
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: 'input',
+                mode: currentMode,
+                value: val
+            }));
+        }
+    }
+
+    // Sync input typing in real time
+    entityInput.addEventListener('input', syncInput);
+    queryInput.addEventListener('input', syncInput);
+
+    // Start compilation on click
+    compileBtn.addEventListener('click', () => {
+        const val = currentMode === 'id' ? entityInput.value.trim() : queryInput.value.trim();
+        if (!val) {
+            alert(currentMode === 'id' ? 'Пожалуйста, введите ID корневой сущности!' : 'Пожалуйста, введите запрос на естественном языке!');
+            return;
+        }
+        
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: 'start',
+                mode: currentMode,
+                value: val
+            }));
+        }
+    });
+
+    // Helper to format and colorize log lines in console box
+    function appendLogLine(line) {
+        // Remove existing placeholder if present
+        const placeholder = consoleLog.querySelector('.console-placeholder');
+        if (placeholder) {
+            placeholder.remove();
+        }
+        
+        const span = document.createElement('span');
+        
+        if (line.includes('[OK]') || line.includes('successful')) {
+            span.style.color = '#2ecc71'; // Green
+        } else if (line.includes('[ERROR]') || line.includes('failed') || line.includes('Error')) {
+            span.style.color = '#e74c3c'; // Red
+        } else if (line.includes('[BFS]') || line.includes('Collected')) {
+            span.style.color = '#3498db'; // Blue
+        } else if (line.startsWith('=== ')) {
+            span.style.color = '#f39c12'; // Orange
+            span.style.fontWeight = 'bold';
+        }
+        
+        span.textContent = line + '\n';
+        consoleLog.appendChild(span);
+        consoleLog.scrollTop = consoleLog.scrollHeight;
+    }
+
+    // Helper to toggle compilation button and inputs
+    function updateCompilationUI(isCompiling) {
+        if (isCompiling) {
+            compileBtn.disabled = true;
+            compileBtn.innerHTML = '<div class="spinner"></div><span>Компиляция...</span>';
+            entityInput.disabled = true;
+            queryInput.disabled = true;
+            tabQuery.disabled = true;
+            tabId.disabled = true;
+        } else {
+            compileBtn.disabled = false;
+            compileBtn.innerHTML = '<span class="btn-text">Скомпилировать PDF</span>';
+            entityInput.disabled = false;
+            queryInput.disabled = false;
+            tabQuery.disabled = false;
+            tabId.disabled = false;
+        }
+    }
+
+    // Helper to update Cloudflare banner details dynamically
+    function updateCloudflareUI(url) {
+        if (cfDot) {
+            cfDot.classList.add('cf-dot-active');
+        }
+        if (cfText) {
+            cfText.innerHTML = `Public: <a href="${url}/compiler" target="_blank" class="cf-link">${url}</a>`;
+        }
+    }
+</script>
+{% endblock %}

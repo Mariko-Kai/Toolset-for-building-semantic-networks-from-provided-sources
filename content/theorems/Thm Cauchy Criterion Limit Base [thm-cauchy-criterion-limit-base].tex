@@ -1,0 +1,28 @@
+% defined-in: zorich (page 133), zorich (page 133), zorich (page 134)
+% entity-id: thm-cauchy-criterion-limit-base
+% entity-type: theorem
+
+\entityref{op-hypertarget}{\hypertarget}{thm-cauchy-criterion-limit-base}{}
+\hypertarget{thm-cauchy-criterion-limit-base}{}
+\begin{theorem}[Cauchy Criterion for Limits over a Base]
+\[
+\mForall{X \in \mathrm{Set}}
+\mForall{\mathcal{B} \subseteq \mathcal{P}(X)}
+\mForall{\entityref{obj-function}{f} \colon X \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\left( \text{is\_base}(\mathcal{B}) \right)
+\mImplies
+\left( \mExists{A \in \entityref{obj-real-numbers}{\mathbb{R}}} \entityref{op-limit-function-base}{\mathrm{IsLimitBase}}(\entityref{obj-function}{f}, \mathcal{B}, A) \right)
+\mIff
+\left( \mForall{\varepsilon > 0} \mExists{B \in \mathcal{B}} \left( \entityref{op-supremum}{\sup}_{x_1, x_2 \in B} \entityref{op-abs-abstract}{\mathrm{abs}}(f(x_1) - f(x_2)) < \varepsilon \right) \right)
+\]
+\end{theorem}
+
+\begin{proof}[RU]
+Необходимость: Пусть $\entityref{op-limit}{\lim}_{\mathcal{B}} f(x) = A$. Тогда для любого $\varepsilon > 0$ существует $B \in \mathcal{B}$ такое, что для любого $x \in B$ выполняется $\entityref{op-abs-abstract}{\mathrm{abs}}(f(x) - A) < \frac{\varepsilon}{3}$. Для любых $x_1, x_2 \in B$ имеем $\entityref{op-abs-abstract}{\mathrm{abs}}(f(x_1) - f(x_2)) \leq \entityref{op-abs-abstract}{\mathrm{abs}}(f(x_1) - A) + \entityref{op-abs-abstract}{\mathrm{abs}}(f(x_2) - A) < \frac{2}{3}\varepsilon < \varepsilon$.
+Достаточность: Для каждого $n \in \entityref{obj-natural-numbers}{\mathbb{N}}$ выберем $B_n \in \mathcal{B}$ такое, что $\omega(\entityref{obj-function}{f}; B_n) < \frac{1}{n}$. Выберем $x_n \in B_n$. Для любых $n, m$ и $x \in B_n \entityref{op-intersection}{\cap} B_m$ имеем $\entityref{op-abs-abstract}{\mathrm{abs}}(f(x_n) - f(x_m)) \leq \entityref{op-abs-abstract}{\mathrm{abs}}(f(x_n) - f(x)) + \entityref{op-abs-abstract}{\mathrm{abs}}(f(x) - f(x_m)) < \frac{1}{n} + \frac{1}{m}$. Последовательность $\{f(x_n)\}$ фундаментальна и, следовательно, сходится к некоторому $A \in \entityref{obj-real-numbers}{\mathbb{R}}$. Переходя к пределу при $m \entityref{op-to}{\to} \infty$, получаем $\entityref{op-abs-abstract}{\mathrm{abs}}(f(x_n) - A) \leq \frac{1}{n}$. Тогда для $x \in B_n$ имеем $\entityref{op-abs-abstract}{\mathrm{abs}}(f(x) - A) \leq \entityref{op-abs-abstract}{\mathrm{abs}}(f(x) - f(x_n)) + \entityref{op-abs-abstract}{\mathrm{abs}}(f(x_n) - A) < \frac{1}{n} + \frac{1}{n} = \frac{2}{n}$. Выбирая $n > \frac{2}{\varepsilon}$, получаем требуемое.
+\end{proof}
+
+\begin{proof}[EN]
+Necessity: Let $\entityref{op-limit}{\lim}_{\mathcal{B}} f(x) = A$. For any $\varepsilon > 0$, there exists $B \in \mathcal{B}$ such that for all $x \in B$, $\entityref{op-abs-abstract}{\mathrm{abs}}(f(x) - A) < \frac{\varepsilon}{3}$. For any $x_1, x_2 \in B$, we have $\entityref{op-abs-abstract}{\mathrm{abs}}(f(x_1) - f(x_2)) \leq \entityref{op-abs-abstract}{\mathrm{abs}}(f(x_1) - A) + \entityref{op-abs-abstract}{\mathrm{abs}}(f(x_2) - A) < \frac{2}{3}\varepsilon < \varepsilon$.
+Sufficiency: For each $n \in \entityref{obj-natural-numbers}{\mathbb{N}}$, choose $B_n \in \mathcal{B}$ such that $\omega(\entityref{obj-function}{f}; B_n) < \frac{1}{n}$. Choose $x_n \in B_n$. For any $n, m$ and $x \in B_n \entityref{op-intersection}{\cap} B_m$ we have $\entityref{op-abs-abstract}{\mathrm{abs}}(f(x_n) - f(x_m)) \leq \entityref{op-abs-abstract}{\mathrm{abs}}(f(x_n) - f(x)) + \entityref{op-abs-abstract}{\mathrm{abs}}(f(x) - f(x_m)) < \frac{1}{n} + \frac{1}{m}$. The sequence $\{f(x_n)\}$ is Cauchy and therefore converges to some $A \in \entityref{obj-real-numbers}{\mathbb{R}}$. Passing to the limit as $m \entityref{op-to}{\to} \infty$, we obtain $\entityref{op-abs-abstract}{\mathrm{abs}}(f(x_n) - A) \leq \frac{1}{n}$. Then for $x \in B_n$ we have $\entityref{op-abs-abstract}{\mathrm{abs}}(f(x) - A) \leq \entityref{op-abs-abstract}{\mathrm{abs}}(f(x) - f(x_n)) + \entityref{op-abs-abstract}{\mathrm{abs}}(f(x_n) - A) < \frac{1}{n} + \frac{1}{n} = \frac{2}{n}$. Choosing $n > \frac{2}{\varepsilon}$, we obtain the desired result.
+\end{proof}

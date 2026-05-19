@@ -12,7 +12,7 @@ pipeline/config.py — Централизованная конфигурация
   3. Дефолты из этого файла
 """
 
-PROVIDERS = ["ollama", "gemini", "openai", "groq", "hf"]
+PROVIDERS = ["ollama", "gemini", "openai", "groq", "hf", "llama_cpp"]
 
 # Дефолтные модели для каждого провайдера
 _MODELS = {
@@ -21,6 +21,7 @@ _MODELS = {
     "openai": "gpt-4o-mini",
     "groq":   "llama-3.3-70b-versatile",
     "hf":     "Qwen/Qwen2.5-Coder-Artifacts",
+    "llama_cpp": "ggml-vicuna-7b.bin",
 }
 
 # Переопределения модели по умолчанию для конкретных модулей и провайдеров
@@ -40,6 +41,12 @@ _MODULE_MODEL_OVERRIDES = {
         "groq":   "llama-3.3-70b-versatile",
         "gemini": "gemini-2.5-flash",
     },
+    "preview": {
+        # Модель предпросмотра — быстрая и лёгкая для сканирования всех страниц
+        "ollama": "phi4-mini:latest",
+        "groq":   "llama-3.1-8b-instant",
+        "gemini": "gemini-2.5-flash-lite",
+    },
 }
 
 DEFAULTS = {
@@ -51,6 +58,9 @@ DEFAULTS = {
     },
     "lean": {
         "provider": "ollama",  # Если lean-provider не указан, используется основной
+    },
+    "preview": {
+        "provider": "ollama",  # Модель предпросмотра по умолчанию использует ollama
     },
 }
 

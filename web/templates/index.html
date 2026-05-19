@@ -1,10 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Mathesis — Каталог{% endblock %}
+{% block title %}Каталог{% endblock %}
 
 {% block content %}
 <div class="hero">
     <h1>Каталог сущностей</h1>
-    <p class="hero-sub">Foundations — аксиоматика вещественных чисел</p>
     <div class="stats-row">
         <div class="stat-chip">{{ axioms|length }} аксиом</div>
         <div class="stat-chip">{{ objects|length }} объектов</div>
@@ -28,7 +27,7 @@
                 <span class="card-system">{{ a.system }}</span>
             </div>
             <h3 class="card-name">{{ a.name }}</h3>
-            <div class="card-formula">${{ a.statement }}$</div>
+            <div class="card-formula">{{ a.statement }}</div>
         </a>
         {% endfor %}
     </div>
@@ -49,7 +48,7 @@
                 <span class="card-module">{{ o.module }}</span>
             </div>
             <h3 class="card-name">{{ o.name }}</h3>
-            <div class="card-formula">${{ o.formal_definition }}$</div>
+            <div class="card-formula">{{ o.formal_definition }}</div>
         </a>
         {% endfor %}
     </div>
@@ -70,7 +69,7 @@
                 <span class="card-module">{{ p.module }}</span>
             </div>
             <h3 class="card-name">{{ p.name }}</h3>
-            <div class="card-formula">${{ p.formal_definition }}$</div>
+            <div class="card-formula">{{ p.formal_definition }}</div>
         </a>
         {% endfor %}
     </div>
@@ -91,7 +90,7 @@
                 <span class="card-arity">arity: {{ op.arity }}</span>
             </div>
             <h3 class="card-name">{{ op.name }}</h3>
-            <div class="card-formula">${{ op.formal_definition }}$</div>
+            <div class="card-formula">{{ op.formal_definition }}</div>
         </a>
         {% endfor %}
     </div>

@@ -1,0 +1,14 @@
+% defined-in: apostol (page 151)
+% entity-id: prop-limit-point
+% entity-type: property
+\entityref{op-hypertarget}{\hypertarget}{prop-limit-point}{}
+\hypertarget{prop-limit-point}{}
+\begin{property}[Limit of a Function]
+\[
+\mForall{\entityref{obj-function}{f} \colon D \mTo \entityref{obj-real-numbers}{\mReal}}
+\mForall{p \in \entityref{obj-limit-point}{D'}}
+\mForall{A \in \entityref{obj-real-numbers}{\mReal}}
+\mathrm{IsLimit}(\entityref{obj-function}{f}, p, A) \mDefinedAs
+\mForall{N_1(A)} \mExists{N_2(p)} \mForall{x \in D} \left( (x \in N_2(p) \entityref{def-logical-connectives}{\land} x \neq p) \mImplies f(x) \in N_1(A) \right)
+\]
+\end{property}

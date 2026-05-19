@@ -1,0 +1,241 @@
+import os
+import re
+import sys
+import glob
+import logging
+import argparse
+from pathlib import Path
+
+# Добавляем корень проекта в пути импорта
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from pipeline.config import resolve_module_config
+from pipeline.export_to_lean import setup_lean_provider, query_llm
+
+class ProverEquivalenceVerifier:
+    def __init__(self, content_dir="content", cli_args=None):
+        self.content_dir = content_dir
+        self.setup_logging()
+        
+        # Конфигурация для Lean-Prover
+        self.prover_provider, self.prover_model, self.prover_api_key = resolve_module_config(
+            module="prover",
+            global_provider=getattr(cli_args, 'provider', None),
+            global_model=getattr(cli_args, 'model', None),
+            global_api_key=getattr(cli_args, 'api_key', None),
+            module_provider=getattr(cli_args, 'prover_provider', None),
+            module_model=getattr(cli_args, 'prover_model', None),
+            module_api_key=getattr(cli_args, 'prover_api_key', None)
+        )
+        
+        # Если модель не задана явно в CLI, по умолчанию используем "goedel-prover" с провайдером "ollama"
+        has_explicit_model = cli_args and (getattr(cli_args, 'prover_model', None) or getattr(cli_args, 'model', None))
+        if not has_explicit_model:
+            self.prover_model = "goedel-prover"
+            self.prover_provider = "ollama"
+
+        self.logger.info(f"Инициализация Prover (Провайдер: {self.prover_provider.upper()}, Модель: {self.prover_model})")
+        setup_lean_provider(self.prover_provider, api_key=self.prover_api_key, model=self.prover_model)
+
+    def setup_logging(self):
+        os.makedirs("logs", exist_ok=True)
+        self.logger = logging.getLogger("ProverVerifier")
+        self.logger.setLevel(logging.DEBUG)
+        if self.logger.hasHandlers():
+            self.logger.handlers.clear()
+            
+        fh = logging.FileHandler("logs/verify_equivalence.log", encoding='utf-8', mode='a')
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+        self.logger.addHandler(fh)
+        
+        sh = logging.StreamHandler()
+        sh.setLevel(logging.INFO)
+        sh.setFormatter(logging.Formatter('[*] %(message)s'))
+        self.logger.addHandler(sh)
+
+    def find_lean_file_by_id(self, entity_id):
+        """Ищет .lean файл в lean_validator/Validated или в контенте."""
+        # 1. Сначала ищем в lean_validator/Validated (где хранятся валидированные файлы в формате {entity_id}.lean)
+        validated_path = os.path.join("lean_validator", "Validated", f"{entity_id}.lean")
+        if os.path.exists(validated_path):
+            return validated_path
+            
+        # 2. Если не нашли, ищем по точному вхождению ID в квадратных скобках
+        pattern = f"*{entity_id}*.lean"
+        matches = glob.glob(os.path.join(self.content_dir, '**', pattern), recursive=True)
+        for match in matches:
+            if f"[{entity_id}]" in os.path.basename(match):
+                return match
+        return None
+
+    def extract_lean_statement(self, lean_filepath):
+        """Извлекает строгую формулировку конкретной сущности, соответствующей имени файла."""
+        basename = os.path.splitext(os.path.basename(lean_filepath))[0]
+        target_name = basename.replace('-', '_')
+        
+        with open(lean_filepath, 'r', encoding='utf-8') as f:
+            lean_content = f.read()
+            
+        # Убираем комментарии и импорты
+        lines = []
+        for line in lean_content.splitlines():
+            if line.strip().startswith(('import ', 'open ', 'set_option ')):
+                continue
+            lines.append(line)
+        content_clean = "\n".join(lines).strip()
+        
+        # Ищем блок, который начинается с объявления нашей target_name
+        pattern = rf'\b(def|theorem|lemma|abbrev|structure|class)\s+{re.escape(target_name)}\b'
+        match = re.search(pattern, content_clean)
+        
+        if match:
+            start_idx = match.start()
+            rest = content_clean[start_idx:]
+            next_decl = re.search(r'\n\s*\b(def|theorem|lemma|abbrev|structure|class)\b', rest[1:])
+            if next_decl:
+                statement_block = rest[:next_decl.start() + 1].strip()
+            else:
+                statement_block = rest.strip()
+                
+            keyword = match.group(1)
+            if keyword in ('theorem', 'lemma'):
+                match_proof = re.search(r'(.*?)(?::=|:= by)', statement_block, re.DOTALL)
+                if match_proof:
+                    statement = match_proof.group(1).strip()
+                    if statement.endswith('by'):
+                        statement = statement[:-2].strip()
+                    if statement.endswith(':='):
+                        statement = statement[:-2].strip()
+                    return statement
+            return statement_block
+            
+        # Резервный вариант: старая логика
+        if re.search(r'\b(def|abbrev|structure|class)\b', content_clean):
+            return content_clean
+            
+        match_proof = re.search(r'((?:theorem|lemma)\s+.*?(?::=|:= by))', content_clean, re.DOTALL)
+        if match_proof:
+            statement = match_proof.group(1).strip()
+            if statement.endswith('by'):
+                statement = statement[:-2].strip()
+            if statement.endswith(':='):
+                statement = statement[:-2].strip()
+            return statement
+            
+        return content_clean
+
+    def get_lean_name(self, statement):
+        """Извлекает имя теоремы или определения из Lean-формулировки."""
+        match = re.search(r'(?:theorem|lemma|def|abbrev|structure|class)\s+([a-zA-Z0-9_’\']+)', statement)
+        return match.group(1).strip() if match else "Name"
+
+    def determine_operator(self, entity_id):
+        """Эвристика определения оператора эквивалентности по префиксу ID."""
+        if entity_id.startswith(('thm-', 'lem-', 'prop-')):
+            return "↔"
+        return "="
+
+    def verify_pair(self, id1, id2):
+        """Основной метод проверки пары ID."""
+        self.logger.info(f"Запуск формальной проверки: [{id1}] <-> [{id2}]")
+        
+        path1 = self.find_lean_file_by_id(id1)
+        path2 = self.find_lean_file_by_id(id2)
+        
+        if not path1 or not path2:
+            self.logger.error(f"Не найдены .lean файлы для пары {id1} и {id2}.")
+            return False, None
+
+        stmt1 = self.extract_lean_statement(path1)
+        stmt2 = self.extract_lean_statement(path2)
+        
+        name1 = self.get_lean_name(stmt1)
+        name2 = self.get_lean_name(stmt2)
+        operator = self.determine_operator(id1)
+        
+        prompt = f"""You are Goedel-Prover, an expert theorem-proving AI for Lean 4.
+Your objective is to mathematically prove the equivalence of two previously formalized statements.
+
+Statement 1 (defining '{name1}'):
+```lean
+{stmt1}
+```
+
+Statement 2 (defining '{name2}'):
+```lean
+{stmt2}
+```
+
+Task:
+Provide a cohesive Lean 4 code block enclosed in ```lean ... ```.
+Formulate a new theorem asserting the equivalence of '{name1}' and '{name2}'.
+Choose an appropriate name for the theorem, for example: `equiv_{id1.replace('-','_')}_{id2.replace('-','_')}`.
+Generate the tactical proof. Use powerful Mathlib tactics like `aesop`, `tauto`, `ext`, or `simp`.
+If the equivalence requires complex intermediate lemmas not present in the context, gracefully close the goal with `sorry`.
+
+Do not provide conversational text. Output ONLY the valid Lean 4 code block.
+"""
+        try:
+            reply = query_llm(prompt=prompt, model=self.prover_model, provider=self.prover_provider)
+
+            # Логируем работу прувера
+            goedel_log_dir = os.path.join("logs", "postprocess_prover")
+            os.makedirs(goedel_log_dir, exist_ok=True)
+            log_filepath = os.path.join(goedel_log_dir, f"{id1}_vs_{id2}.txt")
+            with open(log_filepath, 'w', encoding='utf-8') as lf:
+                lf.write(f"=== PROMPT ===\n{prompt}\n\n=== REPLY ===\n{reply}\n")
+                
+            lean_matches = re.findall(r'```lean(.*?)```', reply, re.DOTALL)
+            if lean_matches:
+                # Ищем блок кода, который не содержит "sorry"
+                best_code = None
+                for match in lean_matches:
+                    code_candidate = match.strip()
+                    if "sorry" not in code_candidate:
+                        best_code = code_candidate
+                        break
+                    elif best_code is None:
+                        best_code = code_candidate
+                
+                if "sorry" not in best_code:
+                    self.logger.info(f"[+] УСПЕХ: Goedel-Prover доказал эквивалентность!")
+                    return True, best_code
+                else:
+                    self.logger.info(f"[-] ПРОВАЛ: Prover использовал 'sorry'. Эквивалентность не доказана.")
+                    return False, best_code
+            else:
+                self.logger.warning("Не найден блок кода в ответе модели.")
+        except Exception as e:
+            self.logger.error(f"Ошибка при вызове Prover: {e}")
+            
+        return False, None
+
+if __name__ == "__main__":
+    # На Windows настраиваем кодировку вывода, чтобы не падать на символах ℝ, ↔ и др.
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8')
+
+    parser = argparse.ArgumentParser(description="Standalone Lean Equivalence Prover")
+    parser.add_argument("id1", type=str, help="ID первой сущности (например, thm-rolle)")
+    parser.add_argument("id2", type=str, help="ID второй сущности (например, thm-rolle-dup)")
+    parser.add_argument("--provider", type=str, default=None)
+    parser.add_argument("--model", type=str, default=None)
+    parser.add_argument("--api-key", type=str, default=None)
+    parser.add_argument("--prover-provider", type=str, default=None)
+    parser.add_argument("--prover-model", type=str, default=None)
+    parser.add_argument("--prover-api-key", type=str, default=None)
+    args = parser.parse_args()
+
+    verifier = ProverEquivalenceVerifier(cli_args=args)
+    is_equiv, code = verifier.verify_pair(args.id1, args.id2)
+
+    if is_equiv:
+        print("\nУтверждения математически эквивалентны. Сгенерированный код:")
+        print(code)
+    else:
+        print("\nДоказать эквивалентность не удалось (см. логи).")

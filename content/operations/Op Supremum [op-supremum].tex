@@ -1,0 +1,11 @@
+% defined-in: zorich (page 52)
+% entity-id: op-supremum
+% entity-type: operation
+
+\entityref{op-hypertarget}{\hypertarget}{op-supremum}{}
+\hypertarget{op-supremum}{}
+\begin{operation}
+\[
+\mathrm{IsSupremum}(s, X) \mDefinedAs \left( \entityref{term-forall}{\forall} x \in X (x \leq s) \entityref{term-conjunction}{\land} \entityref{term-forall}{\forall} s' < s (\entityref{term-exists}{\exists} x' \in X (s' < x')) \right)
+\]
+\end{operation}

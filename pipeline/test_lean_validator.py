@@ -73,6 +73,29 @@ elif r4["status"] == "timeout":
 else:
     safe_print(f"  [FAIL]: error count = {len(r4['errors'])}")
 
+# Test 5: Code with internal imports (should PASS because imports are floated)
+safe_print("\n[Test 5] Internal imports: imports in the middle of text")
+lean4_imports = """
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem op_limit_function (f : ℝ → ℝ) (p A : ℝ) :
+  (∀ ε > 0, ∃ δ > 0, ∀ x, 0 < |x - p| ∧ |x - p| < δ → |f x - A| < ε) ↔
+  (Filter.Tendsto f (nhds p) (nhds A)) := by sorry
+"""
+r5 = validate_entity("op-limit-function", lean4_imports)
+safe_print(f"  Status: {r5['status']}")
+if r5["status"] == "success":
+    safe_print("  [OK] PASSED (Floated imports worked!)")
+else:
+    safe_print(f"  [FAIL]: error count = {len(r5['errors'])}")
+    for e in r5['errors']:
+        safe_print(f"    Line {e['line']}: {e['message']}")
+
 safe_print("\n" + "=" * 60)
 safe_print("All basic tests completed!")
 safe_print("=" * 60)

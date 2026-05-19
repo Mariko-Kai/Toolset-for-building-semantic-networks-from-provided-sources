@@ -1,0 +1,10 @@
+% defined-in: zorich (page 62)
+% entity-id: axm-completeness-real-line
+% entity-type: axiom
+\entityref{op-hypertarget}{\hypertarget}{axm-completeness-real-line}{}
+\hypertarget{axm-completeness-real-line}{}
+\begin{axiom}[Completeness of the Real Line]
+\[
+\mForall{L} \mathrm{IsComplete}(L) \mDefinedAs \mNot \mExists{A, B \subset L} \left( (A \neq \entityref{obj-empty-set}{\\varnothing}) \entityref{def-logical-connectives}{\land} (B \neq \entityref{obj-empty-set}{\\varnothing}) \entityref{def-logical-connectives}{\land} (A \entityref{op-union}{\cup} B = L) \entityref{def-logical-connectives}{\land} (A \entityref{op-intersection}{\cap} B = \entityref{obj-empty-set}{\\varnothing}) \entityref{def-logical-connectives}{\land} \mForall{a \in A} \mForall{b \in B} (a < b) \entityref{def-logical-connectives}{\land} \mNot \mExists{p \in L} ((p \in A) \entityref{def-logical-connectives}{\lor} (p \in B)) \right)
+\]
+\end{axiom}

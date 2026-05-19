@@ -31,7 +31,9 @@ MACRO_TERMINALS = {
     r'\mForall', r'\mExists', r'\mImplies', r'\mIff',
     r'\mAnd', r'\mOr', r'\mNot', r'\mTurnstile',
     r'\mIn', r'\mSubset', r'\mSubseteq',
-    r'\mEmpty', r'\mDefIff', r'\mQED',
+    r'\mEmpty', r'\mDefIff', r'\mQED', r'\mDefinedAs', r'\mathrm',
+    r'\to', r'\mTo', r'\colon',
+    r'\hypertarget', r'\hyperlink',
 }
 
 ALL_TERMINALS = FOL_TERMINALS | ZFC_TERMINALS | RELATIONAL_TERMINALS | NOTATION_TERMINALS | MACRO_TERMINALS

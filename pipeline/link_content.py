@@ -1,11 +1,40 @@
 import os
 import re
+import sys
 import sqlite3
 from pathlib import Path
 
 PROJECT_ROOT = Path(r"f:\Universe\Projects\Учебник по матанализу")
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from pipeline.terminals import ALL_TERMINALS
 CONTENT_DIR = PROJECT_ROOT / "content"
 DB_PATH = PROJECT_ROOT / "mathesis_index.db"
+
+# Standard LaTeX formatting/layout commands to ignore (the whitelist)
+FORMATTING_COMMANDS = {
+    'left', 'right', 'quad', 'qquad', 'colon', 'limits', 'text', 'mathrm', 'mathbb', 
+    'mathcal', 'mathscr', 'begin', 'end', 'label', 'frac', 'sqrt', 'bar', 'tilde', 
+    'hat', 'vec', 'overline', 'underline', 'textit', 'textbf', 'dots', 'cdots', 
+    'vdots', 'ddots', 'square', 'hbar', 'prime', 'mathbf', 'sbox', 'hbox', 'vbox', 
+    'textsf', 'texttt', 'cdot', 'ldots', 'section', 'subsection', 'subsubsection',
+    'input', 'usepackage', 'documentclass', 'label', 'ref', 'cref', 'Cref', 'cite', 
+    'hspace', 'vspace', 'noindent', 'newline', 'break', 'hfill', 'vfill', 'leftskip', 
+    'rightskip', 'par', 'item', 'sub', 'limits', 'tag', 'nonumber', 'nonumbering', 
+    'eqref', 'label', 'ref', 'label', 'begin', 'end', 'proof', 'theorem', 'object', 
+    'property', 'operation', 'axiom', 'lemma', 'corollary', 'aligned', 'equation', 
+    'split', 'cases', 'array', 'matrix', 'pmatrix', 'vmatrix', 'bmatrix', 'Bmatrix',
+    'def', 'newcommand', 'renewcommand'
+}
+
+# Greek variables to ignore (usually used as local variables, NOT as independent entities)
+GREEK_VARIABLES = {
+    'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'iota', 
+    'kappa', 'lambda', 'mu', 'nu', 'xi', 'pi', 'rho', 'sigma', 'tau', 'upsilon', 
+    'phi', 'chi', 'psi', 'omega', 'varepsilon', 'vartheta', 'varpi', 'varrho', 
+    'varsigma', 'varphi'
+}
 
 # Map symbols/terms to (entity_id, display_text)
 # TEXT REPLACEMENTS MUST BE ORDERED BY SPECIFICITY (Longer/More specific first)
@@ -37,6 +66,16 @@ def extract_all_dependencies(content: str) -> list[str]:
     return list(set(entityref_deps + macro_deps))
 
 REPLACEMENTS = [
+    # --- MANUAL OBJECT MACRO CLEARING ---
+    (r"\\mReal(?![a-zA-Z])", "obj-real-numbers", r"\mathbb{R}"),
+    (r"\\mR\b", "obj-real-numbers", r"\mathbb{R}"),
+    (r"\\mNat(?![a-zA-Z])", "obj-natural-numbers", r"\mathbb{N}"),
+    (r"\\mN\b", "obj-natural-numbers", r"\mathbb{N}"),
+    (r"\\mInt(?![a-zA-Z])", "obj-integer-numbers", r"\mathbb{Z}"),
+    (r"\\mZ\b", "obj-integer-numbers", r"\mathbb{Z}"),
+    (r"\\mRat(?![a-zA-Z])", "obj-rational-numbers", r"\mathbb{Q}"),
+    (r"\\mQ\b", "obj-rational-numbers", r"\mathbb{Q}"),
+
     # --- MATH SYMBOLS (Case-sensitive usually, handled by regex) ---
     
     # COMPLEX PATTERNS (Priority 0 - Must match before single symbols)
@@ -63,19 +102,21 @@ REPLACEMENTS = [
     # So f(A) matches. f matches later.
     
     # Logic
-    (r"\\neg(?![a-zA-Z])", "def-logical-connectives", None),
-    (r"\\land(?![a-zA-Z])", "def-logical-connectives", None),
-    (r"\\lor(?![a-zA-Z])", "def-logical-connectives", None),
-    (r"\\Rightarrow(?![a-zA-Z])", "def-logical-connectives", None),
-    (r"\\Longrightarrow(?![a-zA-Z])", "def-logical-connectives", None),
-    (r"\\Leftrightarrow(?![a-zA-Z])", "def-logical-connectives", None),
-    (r"\\Longleftrightarrow(?![a-zA-Z])", "def-logical-connectives", None),
-    (r"\\iff(?![a-zA-Z])", "def-logical-connectives", None),
-    (r"\\implies(?![a-zA-Z])", "def-logical-connectives", None),
+    # Logic
+    (r"\\neg(?![a-zA-Z])", "term-negation", None),
+    (r"\\land(?![a-zA-Z])", "term-conjunction", None),
+    (r"\\lor(?![a-zA-Z])", "term-disjunction", None),
+    (r"\\Rightarrow(?![a-zA-Z])", "term-implication", None),
+    (r"\\Longrightarrow(?![a-zA-Z])", "term-implication", None),
+    (r"\\implies(?![a-zA-Z])", "term-implication", None),
+    (r"\\Leftrightarrow(?![a-zA-Z])", "term-equivalence", None),
+    (r"\\Longleftrightarrow(?![a-zA-Z])", "term-equivalence", None),
+    (r"\\iff(?![a-zA-Z])", "term-equivalence", None),
     
     # Quantifiers
-    (r"\\forall(?![a-zA-Z])", "def-logical-quantifiers", None),
-    (r"\\exists(?![a-zA-Z])", "def-logical-quantifiers", None),
+    (r"\\forall(?![a-zA-Z])", "term-forall", None),
+    (r"\\exists!(?![a-zA-Z])", "term-exists-unique", None),
+    (r"\\exists(?![a-zA-Z])", "term-exists", None),
     
     # Operations
     (r"\\cup(?![a-zA-Z])", "op-union", None),
@@ -191,8 +232,63 @@ def process_file(filepath):
         # But our script generates simple links.
         content = re.sub(r"\\entityref\{" + escaped_id + r"\}\{([^}]+)\}", r"\1", content)
 
+    # Preprocess custom abstract parametric macros to standard LaTeX wrapped in \entityref
+    PARAMETRIC_MACRO_REPLACEMENTS = [
+        (r"\\mSup\{([^}]+)\}", "op-supremum", r"\\sup\\limits_{\1}"),
+        (r"\\mInf\{([^}]+)\}", "op-infimum", r"\\inf\\limits_{\1}"),
+        (r"\\mAbs\{([^}]+)\}", "op-abs-abstract", r"\\mathrm{abs}(\1)"),
+        (r"\\mNorm\{([^}]+)\}", "op-norm-abstract", r"\\mathrm{norm}(\1)"),
+        (r"\\mDist\{([^}]+)\}\{([^}]+)\}", "op-dist-abstract", r"\\mathrm{d}(\1, \2)"),
+        (r"\\mDeriv\{([^}]+)\}\{([^}]+)\}", "op-derivative", r"\\frac{d \1}{d \2}"),
+        (r"\\mIntegral\{([^}]+)\}\{([^}]+)\}\{([^}]+)\}", "op-integral", r"\\int_{\1}^{\2} \3"),
+    ]
+    
+    for pat, entity_id, repl_tmpl in PARAMETRIC_MACRO_REPLACEMENTS:
+        if current_entity_id and entity_id == current_entity_id:
+            content = re.sub(pat, repl_tmpl, content)
+        else:
+            repl_str = f"\\\\entityref{{{entity_id}}}{{{repl_tmpl}}}"
+            content = re.sub(pat, repl_str, content)
+
+    # We will dynamically discover mathematical entities in the content
+    active_replacements = list(REPLACEMENTS)
+    commands = set(re.findall(r"\\([a-zA-Z]+)", content))
+    
+    KNOWN_COMMAND_MAPPINGS = {
+        'sup': 'op-supremum',
+        'inf': 'op-infimum',
+        'lim': 'op-limit',
+        'sum': 'op-sum',
+        'int': 'op-integral',
+        'max': 'op-maximum',
+        'min': 'op-minimum',
+    }
+    
+    existing_patterns = set()
+    for pattern, _, _ in REPLACEMENTS:
+        match = re.match(r"^\\\\([a-zA-Z]+)(?:\(\?!\[a-zA-Z\]\))?$", pattern)
+        if match:
+            existing_patterns.add(match.group(1))
+            
+    for cmd in sorted(commands):
+        backslash_cmd = "\\" + cmd
+        if backslash_cmd in ALL_TERMINALS or backslash_cmd == r"\in" or backslash_cmd == r"\subset":
+            continue
+        if cmd.lower() in FORMATTING_COMMANDS or cmd in GREEK_VARIABLES:
+            continue
+        if cmd in existing_patterns:
+            continue
+            
+        if cmd in KNOWN_COMMAND_MAPPINGS:
+            entity_id = KNOWN_COMMAND_MAPPINGS[cmd]
+        else:
+            entity_id = f"op-{cmd.lower()}"
+            
+        pattern = rf"\\{cmd}(?![a-zA-Z])"
+        active_replacements.insert(0, (pattern, entity_id, None))
+
     # We will process replacements sequentially
-    for pattern, entity_id, replacement_text in REPLACEMENTS:
+    for pattern, entity_id, replacement_text in active_replacements:
         # SKIP SELF-LINKING
         if current_entity_id and entity_id == current_entity_id:
             continue
@@ -236,39 +332,50 @@ def process_file(filepath):
     return content, current_entity_id, entity_type, defined_in
 
 def main():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
+    db_available = False
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=5.0)
+        cursor = conn.cursor()
+        db_available = True
+    except sqlite3.OperationalError:
+        print("[WARNING] SQLite database is locked. DB indexing will be skipped, but content linking will proceed.")
+
     for root, dirs, files in os.walk(CONTENT_DIR):
         for file in files:
-            if file.endswith(".tex") and file != "master.tex" and file != "mathesis.sty":
+            if file.endswith(".tex") and file != "master.tex" and file != "mathesis.sty" and file != "TEMPLATE.tex":
                 filepath = os.path.join(root, file)
                 content, entity_id, entity_type, defined_in = process_file(filepath)
                 
                 # Update DB
-                if entity_id:
-                    # Parse title from filename
-                    match_title = re.search(r'^(.*?) \[', file)
-                    title = match_title.group(1).strip() if match_title else entity_id
-                    rel_path = str(Path(filepath).relative_to(PROJECT_ROOT))
-                    
-                    cursor.execute("INSERT OR REPLACE INTO entities (entity_id, type, title, path) VALUES (?, ?, ?, ?)",
-                                   (entity_id, entity_type, title, rel_path))
-                    
-                    cursor.execute("DELETE FROM formulation_sources WHERE entity_id = ?", (entity_id,))
-                    for src in defined_in:
-                        cursor.execute("INSERT INTO formulation_sources (entity_id, source_book) VALUES (?, ?)", (entity_id, src))
+                if db_available and entity_id:
+                    try:
+                        # Parse title from filename
+                        match_title = re.search(r'^(.*?) \[', file)
+                        title = match_title.group(1).strip() if match_title else entity_id
+                        rel_path = str(Path(filepath).relative_to(PROJECT_ROOT))
                         
-                    # Extract dependencies and insert into entity_dependency table
-                    deps = extract_all_dependencies(content)
-                    cursor.execute("DELETE FROM entity_dependency WHERE source_id = ?", (entity_id,))
-                    for target_id in deps:
-                        if target_id != entity_id: # Avoid self-linking
-                            cursor.execute("INSERT INTO entity_dependency (source_id, target_id) VALUES (?, ?)", (entity_id, target_id))
+                        cursor.execute("INSERT OR REPLACE INTO entities (entity_id, type, title, path) VALUES (?, ?, ?, ?)",
+                                       (entity_id, entity_type, title, rel_path))
+                        
+                        cursor.execute("DELETE FROM formulation_sources WHERE entity_id = ?", (entity_id,))
+                        for src in defined_in:
+                            cursor.execute("INSERT INTO formulation_sources (entity_id, source_book) VALUES (?, ?)", (entity_id, src))
+                            
+                        # Extract dependencies and insert into entity_dependency table
+                        deps = extract_all_dependencies(content)
+                        cursor.execute("DELETE FROM entity_dependency WHERE source_id = ?", (entity_id,))
+                        for target_id in deps:
+                            if target_id != entity_id: # Avoid self-linking
+                                cursor.execute("INSERT INTO entity_dependency (source_id, target_id) VALUES (?, ?)", (entity_id, target_id))
+                        
+                        conn.commit()
+                    except sqlite3.OperationalError:
+                        print("[WARNING] Database locked during update. Disabling SQLite indexing for the rest of this run.")
+                        db_available = False
     
-    conn.commit()
-    conn.close()
-    print("Database indexing complete.")
+    if db_available:
+        conn.close()
+    print("Content linking and processing complete.")
 
 if __name__ == "__main__":
     main()

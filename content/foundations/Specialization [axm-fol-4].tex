@@ -1,0 +1,19 @@
+% entity-id: axm-fol-4
+% entity-type: axiom
+% defined-in: zorich-1, p. 55
+
+\section{Аксиома специализации (Specialization [axm-fol-4])}
+
+\entityref{op-hypertarget}{\hypertarget}{axm-fol-4}{}
+\hypertarget{axm-fol-4}{}
+\begin{axiom}[axm-fol-4]
+\label{entity:axm-fol-4}
+% 1. ОБЪЯВЛЕНИЕ ТИПОВ
+$\entityref{obj-predicate}{\mathcal{B}}$ --- формула логики первого порядка,
+$\entityref{obj-predicate}{t}$ --- терм, свободный для переменной $x$ в $\entityref{obj-predicate}{\mathcal{B}}$
+
+% 2. ТЕЛО АКСИОМЫ
+\[
+(\mForall x \entityref{obj-predicate}{\mathcal{B}}(x)) \entityref{term-implication}{\to} \entityref{obj-predicate}{\mathcal{B}}(\entityref{obj-predicate}{t})
+\]
+\end{axiom}

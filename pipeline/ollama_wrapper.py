@@ -12,8 +12,14 @@ import json
 import urllib.request
 import re
 import sys
+import io
 import difflib
 from pathlib import Path
+
+# Fix Windows console encoding
+if sys.platform == 'win32' and getattr(sys.stdout, 'encoding', '').lower() != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -51,10 +57,71 @@ def get_available_entities():
 
 # ── Keyword Extraction ───────────────────────────────────────────────────────
 
-def extract_keyword(query, model):
+def translate_term(term, model="qwen3:8b", provider=None):
+    """Translates a term into EN and RU using LLM with a robust local dictionary fallback."""
+    term_clean = term.strip().lower()
+    
+    # Standard mathematical dictionary fallback for robust translation
+    MATH_DICT = {
+        "open interval": ("открытый интервал", "open interval"),
+        "open intervals": ("открытые интервалы", "open intervals"),
+        "closed interval": ("замкнутый интервал", "closed interval"),
+        "closed intervals": ("замкнутые интервалы", "closed intervals"),
+        "real number": ("вещественное число", "real number"),
+        "real numbers": ("вещественные числа", "real numbers"),
+        "natural number": ("натуральное число", "natural number"),
+        "natural numbers": ("натуральные числа", "natural numbers"),
+        "rational number": ("рациональное число", "rational number"),
+        "rational numbers": ("рациональные числа", "rational numbers"),
+        "continuous": ("непрерывная", "continuous"),
+        "derivative": ("производная", "derivative"),
+        "derivative at point": ("производная в точке", "derivative at point"),
+        "derivative of a function at a point": ("производная функции в точке", "derivative of a function at a point"),
+        "limit": ("предел", "limit"),
+        "limit cauchy": ("предел по Коши", "limit cauchy"),
+        "limit heine": ("предел по Гейне", "limit heine"),
+        "limit function cauchy": ("предел функции по Коши", "limit function cauchy"),
+        "limit function heine": ("предел функции по Гейне", "limit function heine"),
+        "limit function": ("предел функции", "limit function"),
+        "metric space": ("метрическое пространство", "metric space"),
+        "open set": ("открытое множество", "open set"),
+        "closed set": ("замкнутое множество", "closed set"),
+        "limit point": ("предельная точка", "limit point"),
+        "sequence": ("последовательность", "sequence"),
+        "series": ("ряд", "series"),
+        "function": ("функция", "function"),
+        "neighborhood": ("окрестность", "neighborhood"),
+        "absolute value": ("абсолютная величина", "absolute value"),
+        "riemann integral": ("интеграл Римана", "riemann integral"),
+        "partial order": ("частичный порядок", "partial order"),
+        "ordered set": ("упорядоченное множество", "ordered set"),
+    }
+    
+    if term_clean in MATH_DICT:
+        return MATH_DICT[term_clean]
+
+    prompt = f"""You are a professional mathematical translator.
+Translate the mathematical term '{term}' into:
+1. Russian (term_ru) - MUST be in Russian! E.g. 'производная функции в точке'.
+2. English (term_en) - MUST be in English! E.g. 'derivative of a function at a point'.
+
+Return STRICTLY a JSON object with no other text or explanation:
+{{
+    "term_ru": "exact translation of the mathematical term in Russian",
+    "term_en": "exact translation of the mathematical term in English"
+}}"""
+    resp = query_llm(prompt, model=model, json_mode=True, provider=provider)
+    try:
+        parsed = json.loads(resp)
+        return parsed.get("term_ru", term), parsed.get("term_en", term)
+    except:
+        return term, term
+
+
+def extract_keyword(query, model, provider=None):
     """
     Deterministically extracts a clean mathematical term from the user query.
-    Strips question words to act like a search engine. (Bypasses flaky LLM extraction).
+    Strips question words to act like a search engine, and translates to RU and EN.
     """
     stop_words = [
         "что называется", "что такое", "расскажи про", "дайте определение", 
@@ -70,21 +137,21 @@ def extract_keyword(query, model):
     clean = clean.translate(str.maketrans('', '', string.punctuation))
     clean = " ".join(clean.split())
     
-    # Translate to English using LLM
-    prompt = f"Translate the mathematical term '{clean}' into English. Output ONLY the translated term in lowercase, no quotes, no punctuation, no explanations."
-    en_term = query_llm(prompt, model=model).strip()
+    # Translate clean term to both RU and EN using bilingual translation logic
+    ru_term, en_term = translate_term(clean, model=model, provider=provider)
     
-    # Clean it up just in case
-    en_term = en_term.translate(str.maketrans('', '', string.punctuation)).lower()
+    # Clean them up just in case
+    ru_term = ru_term.translate(str.maketrans('', '', string.punctuation)).lower().strip()
+    en_term = en_term.translate(str.maketrans('', '', string.punctuation)).lower().strip()
     
-    print(f"[*] Целевой термин (RU): '{clean}'")
+    print(f"[*] Целевой термин (RU): '{ru_term}'")
     print(f"[*] Целевой термин (EN): '{en_term}'")
-    return clean, en_term
+    return ru_term, en_term
 
 
 # ── Multi-Result Entity Resolution ───────────────────────────────────────────
 
-def resolve_entities(query, canonical_term, model, available_entities):
+def resolve_entities(query, canonical_term, model, available_entities, provider=None):
     """
     Resolves query against available entities. Returns ALL matches with confidence.
     Returns: (matches: list[dict], keyword: str)
@@ -120,15 +187,24 @@ Return ONLY valid JSON:
     ]
 }}
 """
-    response = query_llm(prompt, model=model, json_mode=True)
+    response = query_llm(prompt, model=model, json_mode=True, provider=provider)
     
     # Strip markdown JSON wrappers if present
     response = re.sub(r'^```json\s*', '', response.strip(), flags=re.MULTILINE)
     response = re.sub(r'^```\s*$', '', response.strip(), flags=re.MULTILINE).strip()
     
+    # Extract just the JSON object/array to handle models appending text
+    match = re.search(r'(\{.*\}|\[.*\])', response, re.DOTALL)
+    if match:
+        response = match.group(1)
+    
     try:
         parsed = json.loads(response)
-        matches = parsed.get("matches", [])
+        if isinstance(parsed, list):
+            # some models return array directly
+            matches = parsed
+        else:
+            matches = parsed.get("matches", [])
     except (json.JSONDecodeError, ValueError) as e:
         print(f"[-] Ошибка парсинга JSON: {e}\nОчищенный ответ модели:\n{response}")
         return [], canonical_term
@@ -156,45 +232,46 @@ Return ONLY valid JSON:
     return validated_matches, canonical_term
 
 
-def translate_term(term, model="qwen3:8b"):
-    """Translates a term into EN and RU using LLM."""
-    prompt = f"""Translate the mathematical term '{term}' into both English and Russian.
-Return strictly JSON:
-{{
-    "term_ru": "russian translation",
-    "term_en": "english translation"
-}}"""
-    # JSON mode is tricky with some models without specific formatting prompts, but handled inside the unified query_llm if possible.
-    # We enforce JSON by explicitly instructing it in the prompt (already done).
-    resp = query_llm(prompt, model=model, json_mode=True)
-    try:
-        parsed = json.loads(resp)
-        return parsed.get("term_ru", term), parsed.get("term_en", term)
-    except:
-        return term, term
+
 
 
 def run_enrichment_pipeline(
     clean_term, *,
     # Extraction module
     extract_provider=None, extract_api_key=None, extract_model=None,
+    # Preview module (fast page scan)
+    preview_provider=None, preview_api_key=None, preview_model=None,
     # Synthesis module
     synth_provider=None, synth_api_key=None, synth_model=None,
     # Lean module
     lean_provider=None, lean_api_key=None, lean_model=None,
     # OCR
     cv_model="glm-ocr",
+    # Skip internal lean validation when synthesizer supports it
+    no_validate=False,
+    canonical_term="",
+    # OCR pages override (skip search, process only these pages)
+    ocr_pages_spec=None,
+    term_ru=None,
 ):
-    """Runs the full extraction → alignment → synthesis pipeline."""
+    """Runs the full extraction → alignment → synthesis pipeline. Returns list of generated entity IDs."""
     print(f"\n[*] === AUTO-ENRICHMENT: Запускаю конвейер обогащения ===")
 
-    term_ru, term_en = translate_term(clean_term, model=extract_model)
+    if term_ru:
+        term_en = clean_term
+    else:
+        if extract_provider:
+            setup_provider(extract_provider, api_key=extract_api_key, model=extract_model)
+        term_ru, term_en = translate_term(clean_term, model=extract_model, provider=extract_provider)
+        
     print(f"[*] Целевой термин (RU): '{term_ru}'")
     print(f"[*] Целевой термин (EN): '{term_en}'")
 
     env = os.environ.copy()
     env['PYTHONIOENCODING'] = 'utf-8'
     env['PYTHONUNBUFFERED'] = '1'
+    env['HF_HUB_OFFLINE'] = '1'
+    env['TRANSFORMERS_OFFLINE'] = '1'
 
     # ── Аргументы для ensemble_extractor (extraction) ────────────────────────
     extract_args = ["--cv-model", cv_model]
@@ -202,11 +279,22 @@ def run_enrichment_pipeline(
         extract_args += ["--extract-provider", extract_provider]
         if extract_api_key: extract_args += ["--extract-api-key", extract_api_key]
         if extract_model:   extract_args += ["--extract-model", extract_model]
+    if preview_provider:
+        extract_args += ["--extract-preview-provider", preview_provider]
+        if preview_api_key: extract_args += ["--extract-preview-api-key", preview_api_key]
+        if preview_model:   extract_args += ["--extract-preview-model", preview_model]
     if lean_provider:
         extract_args += ["--lean-provider", lean_provider]
+    # OCR pages override
+    if ocr_pages_spec:
+        extract_args += ["--ocr-pages", ocr_pages_spec]
 
     # ── Аргументы для canonical_synthesizer (synth) ──────────────────────────
     synth_args = ["--cv-model", cv_model]
+    if no_validate:
+        synth_args += ["--no-validate"]
+    if canonical_term:
+        synth_args += ["--canonical-term", canonical_term]
     if synth_provider:
         synth_args += ["--synth-provider", synth_provider]
         if synth_api_key: synth_args += ["--synth-api-key", synth_api_key]
@@ -225,22 +313,53 @@ def run_enrichment_pipeline(
          [sys.executable, str(SYNTHESIZER_SCRIPT)] + synth_args),
     ]
 
+    generated_entities = []
+    generated_entities_deps = {}
+
     for step_num, step_name, cmd in steps:
         print(f"\n[{step_num}] {step_name}...")
         try:
-            subprocess.run(cmd, env=env, check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"[-] Ошибка на шаге {step_num} (код: {e.returncode})")
-            return False
+            process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8')
+            for line in iter(process.stdout.readline, ''):
+                print(line, end='', flush=True)
+                if step_num == "3/3":
+                    if "[synthesizer] Parsed: entity_id=" in line:
+                        match = re.search(r'entity_id=([^,\s,]+)', line)
+                        if match:
+                            generated_entities.append(match.group(1).strip())
+                    if "[synthesizer] ParsedDeps:" in line:
+                        try:
+                            payload = json.loads(line.split("ParsedDeps: ", 1)[1])
+                            eid = payload.get("entity_id")
+                            deps = payload.get("deps", [])
+                            if eid:
+                                generated_entities_deps[eid] = deps
+                        except Exception:
+                            pass
+            process.wait()
+            if process.returncode != 0:
+                print(f"[-] Ошибка на шаге {step_num} (код: {process.returncode})")
+                return False, [], {}
         except Exception as e:
             print(f"[-] Не удалось запустить шаг {step_num}: {e}")
-            return False
+            return False, [], {}
 
     print(f"\n[+] Конвейер обогащения завершен успешно!")
-    return True
+    return True, generated_entities, generated_entities_deps
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
+
+def get_missing_deps_from_lean_error(error_msgs):
+    """Parses Lean 4 error messages to find missing dependencies."""
+    missing = []
+    for msg in error_msgs:
+        # e.g., "unknown constant 'obj-real-numbers'"
+        match = re.search(r"unknown constant '([^']+)'", msg.get("message", ""))
+        if match:
+            missing.append(match.group(1).strip())
+    return missing
+
 
 def main():
     global _LLM_PROVIDER, _GEMINI_CLIENT, _GEMINI_MODEL_NAME, _OPENAI_CLIENT, _OPENAI_MODEL_NAME, _GROQ_CLIENT, _GROQ_MODEL_NAME
@@ -261,6 +380,10 @@ def main():
     parser.add_argument("--extract-provider", type=str, default=None, choices=PROVIDERS)
     parser.add_argument("--extract-model",    type=str, default=None)
     parser.add_argument("--extract-api-key",  type=str, default=None)
+    # Preview (fast scan) options
+    parser.add_argument("--extract-preview-provider", type=str, default=None, choices=PROVIDERS)
+    parser.add_argument("--extract-preview-model",    type=str, default=None)
+    parser.add_argument("--extract-preview-api-key",  type=str, default=None)
 
     # ── Per-module: Synthesis ─────────────────────────────────────────────────
     parser.add_argument("--synth-provider", type=str, default=None, choices=PROVIDERS)
@@ -271,6 +394,12 @@ def main():
     parser.add_argument("--lean-provider", type=str, default=None, choices=PROVIDERS)
     parser.add_argument("--lean-model",    type=str, default=None)
     parser.add_argument("--lean-api-key",  type=str, default=None)
+    parser.add_argument("--no-validate", action='store_true', help='Disable Lean validation inside synthesizer (default: enabled)')
+    
+    # ── OCR Pages Override ────────────────────────────────────────────────────
+    parser.add_argument("--ocr-pages", type=str, default=None,
+                        help='Skip search and process only specified pages. Format: JSON {"book": "zorich", "pages": [1, 2, 3]} or comma-separated "1,2,3" (first book)')
+
 
     args = parser.parse_args()
 
@@ -279,6 +408,12 @@ def main():
         module="extract",
         global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
         module_provider=args.extract_provider, module_model=args.extract_model, module_api_key=args.extract_api_key,
+    )
+    # Preview config resolution
+    preview_provider, preview_model, preview_api_key = resolve_module_config(
+        module="preview",
+        global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
+        module_provider=args.extract_preview_provider, module_model=args.extract_preview_model, module_api_key=args.extract_preview_api_key,
     )
     synth_provider, synth_model, synth_api_key = resolve_module_config(
         module="synth",
@@ -294,64 +429,192 @@ def main():
     print(f"[*] Анализ запроса (Провайдер: {active_provider_name}, Модель: {extract_model}, CV: {args.cv_model})...")
 
     # Step 1: Extract clean keyword
-    keyword, canonical = extract_keyword(args.query, extract_model)
+    keyword, canonical = extract_keyword(args.query, extract_model, provider=extract_provider)
 
-    # Step 2: Resolve against existing entities
+    # Queues for recursive resolution
+    synthesis_queue = [canonical]
+    validation_queue = []
+    processed_synthesis_terms = set()
+    validated_entities = set()
+    root_generated_ids = [] # IDs generated specifically for the initial query term
+
+
+    import sqlite3
+    from pipeline.lean_validator import validate_entity
+    
+    # Dual-queue loop
+    while synthesis_queue or validation_queue:
+        
+        # ── Phase 1: Process Synthesis Queue ──
+        while synthesis_queue:
+            # We pop from the front to process dependencies first (DFS-like)
+            term = synthesis_queue.pop(0)
+            
+            if term in processed_synthesis_terms:
+                continue
+            processed_synthesis_terms.add(term)
+
+            print(f"\n[Queue] Извлечение и синтез для термина: '{term}'")
+            available = get_available_entities()
+            matches, _ = resolve_entities(term, term, extract_model, available, provider=extract_provider)
+            
+            if matches:
+                print(f"[Queue] Термин '{term}' уже существует в базе:")
+                for m in matches:
+                    print(f"    - {m['entity_id']} (confidence: {m['confidence']})")
+                    # Add to validation queue if not already valid
+                    if m['entity_id'] not in validated_entities and m['entity_id'] not in validation_queue:
+                        validation_queue.append(m['entity_id'])
+                continue
+            
+            # If not in base, trigger enrichment
+            success, generated_ids, generated_deps = run_enrichment_pipeline(
+                term,
+                extract_provider=extract_provider, extract_api_key=extract_api_key, extract_model=extract_model,
+                preview_provider=preview_provider, preview_api_key=preview_api_key, preview_model=preview_model,
+                synth_provider=synth_provider,     synth_api_key=synth_api_key,     synth_model=synth_model,
+                lean_provider=args.lean_provider,  lean_api_key=args.lean_api_key,  lean_model=args.lean_model,
+                cv_model=args.cv_model,
+                no_validate=args.no_validate,
+                canonical_term=term,
+                ocr_pages_spec=args.ocr_pages if hasattr(args, 'ocr_pages') else None,
+                term_ru=keyword if term == canonical else None,
+            )
+            
+            if success:
+                print(f"[Queue] Синтезированы новые сущности: {generated_ids}")
+                if term == canonical:
+                    root_generated_ids.extend(generated_ids)
+                for gid in generated_ids:
+                    if gid not in validation_queue and gid not in validated_entities:
+                        validation_queue.append(gid)
+                # Immediate handling of generated deps: enqueue raw dep strings for synthesis and record pending edges
+                if generated_deps:
+                    import sqlite3 as _sqlite3
+                    db_path = PROJECT_ROOT / "mathesis_index.db"
+                    conn2 = _sqlite3.connect(db_path)
+                    cur2 = conn2.cursor()
+                    cur2.execute("CREATE TABLE IF NOT EXISTS pending_edges (source_id TEXT, raw_dep TEXT, status TEXT DEFAULT 'pending')")
+                    for eid, deps in generated_deps.items():
+                        for dep in deps:
+                            clean_dep = dep.strip() if isinstance(dep, str) else str(dep)
+                            if clean_dep and clean_dep not in processed_synthesis_terms and clean_dep not in synthesis_queue:
+                                synthesis_queue.insert(0, clean_dep)  # prioritize dependencies
+                            cur2.execute("INSERT INTO pending_edges (source_id, raw_dep, status) VALUES (?, ?, 'pending')", (eid, clean_dep))
+                    conn2.commit()
+                    conn2.close()
+            else:
+                print(f"[Queue] [-] Ошибка синтеза для '{term}'. Пропускаю.")
+
+        # ── Phase 2: Process Validation Queue ──
+        if validation_queue:
+            # Take the first one in the queue
+            eid = validation_queue.pop(0)
+            
+            if eid in validated_entities:
+                continue
+                
+            print(f"\n[Queue] Lean-валидация для сущности: '{eid}'")
+            
+            # Load the lean draft saved by the synthesizer
+            lean_file_path = PROJECT_ROOT / "lean_validator" / "Validated" / f"{eid}.lean"
+            if not lean_file_path.exists():
+                print(f"[Queue] [-] Lean файл не найден: {lean_file_path}")
+                # We can't validate it, but it might be a valid entity from text.
+                continue
+                
+            lean_code = lean_file_path.read_text(encoding='utf-8')
+            print(f"  Lean validating: {lean_code[:80]}...")
+            
+            # Run lean_validator logic directly
+            result = validate_entity(eid, lean_code)
+            
+            if result["status"] == "success":
+                print(f"[Queue] [OK] Сущность {eid} успешно прошла валидацию!")
+                validated_entities.add(eid)
+                
+                # Append to SuccessfulEntities
+                success_file = PROJECT_ROOT / "lean_validator" / "SuccessfulEntities.lean"
+                if not success_file.exists():
+                    success_file.write_text("import Mathlib\n\n-- Valid entities generated by Goedel-Formalizer\n\n", encoding='utf-8')
+                with open(success_file, "a", encoding="utf-8") as f:
+                    f.write(f"-- Entity: {eid}\n{lean_code}\n\n")
+                    
+            elif result["status"] == "timeout":
+                print(f"[Queue] [TIMEOUT] Валидация для {eid} превысила время ожидания.")
+                # Could re-queue or skip
+            else:
+                print(f"[Queue] [FAIL] Ошибки валидации для {eid}.")
+                
+                # Log the Lean errors
+                error_feedback = "\n".join([f"Line {e['line']}: {e['message']}" for e in result.get("errors", [])])
+                from pipeline.export_to_lean import log_to_file
+                log_to_file("lean_errors", error_feedback, entity_id=eid)
+                
+                # Check for missing dependencies
+                missing_deps = get_missing_deps_from_lean_error(result["errors"])
+                mathesis_deps = [d for d in missing_deps if any(d.startswith(p) for p in ["obj-", "prop-", "op-", "thm-", "def-"])]
+                
+                if mathesis_deps:
+                    print(f"[Queue] [!] Обнаружены отсутствующие зависимости: {mathesis_deps}")
+                    print(f"[Queue] [+] Добавляю отсутствующие зависимости вне очереди (в начало S-Queue).")
+                    
+                    for dep in mathesis_deps:
+                        # Clean prefix to use as natural language term
+                        clean_dep = dep.replace('def-', '').replace('op-', '').replace('obj-', '').replace('prop-', '').replace('thm-', '').replace('-', ' ')
+                        if clean_dep not in processed_synthesis_terms:
+                            synthesis_queue.insert(0, clean_dep)
+                    
+                    # Re-queue the current entity at the end of the validation queue
+                    print(f"[Queue] [*] Сущность {eid} возвращена в конец V-Queue.")
+                    validation_queue.append(eid)
+                else:
+                    print(f"[Queue] [-] Семантические ошибки без явных пропущенных зависимостей.")
+                    for e in result["errors"][:3]:
+                        print(f"    - {e.get('message', '')}")
+                    # Without dependencies missing, we don't automatically trigger re-synthesis in this wrapper.
+                    # It would require Lean correction logic. We leave it as failed for now.
+
+    print(f"\n[!] Конвейер полностью завершил работу (Очереди пусты).")
+    
+    # Generate the final PDF with the originally requested canonical entity
     available = get_available_entities()
-    matches, _ = resolve_entities(args.query, canonical, extract_model, available)
+    matches, _ = resolve_entities(args.query, canonical, extract_model, available, provider=extract_provider)
+    
+    root_ids = [m["entity_id"] for m in matches]
+    
+    # Fallback 1: use entities that passed Lean validation during this run
+    if not root_ids and validated_entities:
+        print(f"[*] Роутер не нашел точных совпадений, использую успешно валидированные сущности: {validated_entities}")
+        root_ids = list(validated_entities)
+    
+    # Fallback 2: if there are recently synthesized root ids (legacy variable), use them
+    elif not root_ids and 'root_generated_ids' in locals() and root_generated_ids:
+        print(f"[*] Роутер не нашел точных совпадений, использую синтезированные результаты: {root_generated_ids}")
+        root_ids = root_generated_ids
 
-    if matches:
-        print(f"\n[+] Найдено {len(matches)} совпадений:")
-        for i, m in enumerate(matches, 1):
-            print(f"    {i}. [{m['entity_id']}] (confidence: {m['confidence']}) — {m.get('reason', '')}")
-
-        root_ids = [m["entity_id"] for m in matches]
+    if root_ids:
         roots_arg = ",".join(root_ids)
-        print(f"\n[*] Сборка result.pdf для: {roots_arg}")
+        print(f"\n[*] Сборка финального result.pdf для: {roots_arg}")
+        cmd = [sys.executable, str(GENERATE_SCRIPT), "--roots", roots_arg]
+        # Forward all model/provider parameters to maintain configuration in the sub-pipeline
+        for arg_name, arg_val in vars(args).items():
+            if arg_name in ["query", "roots", "root"]:
+                continue
+            if arg_val is True:
+                cmd.append(f"--{arg_name.replace('_', '-')}")
+            elif arg_val is False or arg_val is None:
+                continue
+            else:
+                cmd.extend([f"--{arg_name.replace('_', '-')}", str(arg_val)])
+                
         try:
-            subprocess.run([sys.executable, str(GENERATE_SCRIPT), "--roots", roots_arg], check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"[-] Ошибка генерации: {e}")
-        return
-
-    # Step 3: No matches — trigger enrichment
-    print(f"\n[!] Сущности не найдены. Запускаю обогащение для: '{canonical}'")
-    success = run_enrichment_pipeline(
-        canonical,
-        extract_provider=extract_provider, extract_api_key=extract_api_key, extract_model=extract_model,
-        synth_provider=synth_provider,     synth_api_key=synth_api_key,     synth_model=synth_model,
-        lean_provider=args.lean_provider,  lean_api_key=args.lean_api_key,  lean_model=args.lean_model,
-        cv_model=args.cv_model,
-    )
-
-    if not success:
-        print("[-] Конвейер обогащения завершился с ошибкой.")
-        sys.exit(1)
-
-    # Step 4: Retry after enrichment
-    print(f"\n[*] Повторный поиск в обновленной базе...")
-    available = get_available_entities()
-    matches, _ = resolve_entities(canonical, canonical, extract_model, available)
-
-    if matches:
-        print(f"\n[+] После обогащения найдено {len(matches)} совпадений:")
-        for i, m in enumerate(matches, 1):
-            print(f"    {i}. [{m['entity_id']}] (confidence: {m['confidence']})")
-
-        root_ids = [m["entity_id"] for m in matches]
-        roots_arg = ",".join(root_ids)
-        print(f"\n[*] Сборка result.pdf для: {roots_arg}")
-        try:
-            subprocess.run([sys.executable, str(GENERATE_SCRIPT), "--roots", roots_arg], check=True)
+            subprocess.run(cmd, check=True)
         except subprocess.CalledProcessError as e:
             print(f"[-] Ошибка генерации: {e}")
     else:
-        print("[-] Даже после обогащения сущности не были найдены.")
-
-
-
-
-
+        print("[-] Не удалось найти итоговые сущности для генерации PDF.")
 
 if __name__ == "__main__":
     main()
+

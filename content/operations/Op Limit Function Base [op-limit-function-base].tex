@@ -1,0 +1,23 @@
+% defined-in: zorich-1, p. 133
+% entity-id: op-limit-function-base
+% entity-type: operation
+
+\section{Предел функции по базе (Limit of a Function over a Base)}
+\label{entity:op-limit-function-base}
+
+\textbf{Описание:}
+Число $A$ называется пределом \entityref{obj-function}{функции} $\entityref{obj-function}{f}$ по базе $\mathcal{B}$, если для любого $\varepsilon > 0$ существует такой элемент $B \in \mathcal{B}$ базы $\mathcal{B}$, что для всех $x \in B$ выполняется неравенство $|f(x) - A| < \varepsilon$.
+
+\entityref{op-hypertarget}{\hypertarget}{op-limit-function-base}{}
+\hypertarget{op-limit-function-base}{}
+\begin{operation}
+\[
+\mForall{X \in \mathrm{Set}}
+\mForall{\mathcal{B} \subseteq \mathcal{P}(X)}
+\mForall{\entityref{obj-function}{f} \colon X \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\mForall{A \in \entityref{obj-real-numbers}{\mathbb{R}}}
+\mathrm{IsLimitBase}(\entityref{obj-function}{f}, \mathcal{B}, A) \mDefinedAs
+\mForall{\varepsilon > 0} \mExists{B \in \mathcal{B}} \mForall{x \in B}
+\entityref{op-abs-abstract}{\mathrm{abs}}(f(x) - A) < \varepsilon
+\]
+\end{operation}

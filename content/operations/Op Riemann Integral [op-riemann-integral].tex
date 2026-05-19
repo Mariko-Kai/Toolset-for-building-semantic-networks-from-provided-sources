@@ -1,0 +1,31 @@
+% defined-in: zorich (page 319), zorich (page 543), zorich (page 319), zorich (page 319)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - a, b : \mathbb{R} (a < b)
+%    - f : [a, b] \to \mathbb{R}
+%    - I : \mathbb{R}
+%    - n : \mathbb{N}
+%    - P : \text{Partition}([a, b]) \equiv \{x : \text{Fin}(n+1) \to \mathbb{R} \mid x(0) = a \land x(n) = b \land \forall i < n, x(i) < x(i+1)\}
+%    - \xi : \text{MarkedPoints}(P) \equiv \{\xi : \text{Fin}(n) \to \mathbb{R} \mid \forall i < n, x(i) \leq \xi(i) \leq x(i+1)\}
+%    - \lambda : \text{Partition} \to \mathbb{R} \equiv \lambda(P) = \max_{i < n} (x(i+1) - x(i))
+%    - \sigma : \text{Function} \times \text{Partition} \times \text{MarkedPoints} \to \mathbb{R} \equiv \sum_{i=0}^{n-1} f(\xi(i)) \cdot (x(i+1) - x(i))
+% 2. Data Structures: 
+%    - Partition represented as a strictly increasing function from a finite index set to \mathbb{R}.
+%    - Marked points represented as a function from the index set of sub-intervals to \mathbb{R}.
+% 3. Implicit Bounds: 
+%    - n : \mathbb{N} is the number of sub-intervals.
+%    - i : \text{Fin}(n) is the index of sub-intervals.
+% ========================
+
+% entity-id: op-riemann-integral
+% entity-type: operation
+\begin{operation}[RiemannIntegral]
+\mForall{\entityref{obj-function}{f} \colon \entityref{obj-closed-interval}{[a,b]} \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\mForall{I \colon \entityref{obj-real-numbers}{\mathbb{R}}}
+\mathrm{IsRiemannIntegral}(\entityref{obj-function}{f}, I) \mDefinedAs
+\mForall{\varepsilon \in \entityref{obj-real-numbers}{\mathbb{R}}} \left( \varepsilon > 0 \mImplies 
+\mExists{\delta \in \entityref{obj-real-numbers}{\mathbb{R}}} \left( \delta > 0 \mAnd 
+\mForall{n \in \entityref{obj-natural-numbers}{\mathbb{N}}} \mForall{P \in \entityref{obj-partition}{[a,b]}} \mForall{\xi \in \entityref{obj-marked-points}{P}} 
+\left( \entityref{op-partition-mesh}{\lambda}(P) < \delta \mImplies 
+\entityref{op-abs-abstract}{\mathrm{abs}}(I - \entityref{op-sum}{\sum}_{i=0}^{n-1} f(\xi(i)) \cdot (x(i+1) - x(i))) < \varepsilon \right) \right) \right)
+\end{operation}

@@ -1,0 +1,19 @@
+% defined-in: spivak (page 236)
+% entity-id: thm-rolles-zero-derivative
+% entity-type: theorem
+
+\entityref{op-hypertarget}{\hypertarget}{thm-rolles-zero-derivative}{}
+\hypertarget{thm-rolles-zero-derivative}{}
+\begin{theorem}[Rolle's Theorem on the Zero of a Derivative]
+\mForall{\entityref{obj-function}{f} \colon \entityref{obj-closed-interval}{[0, 1]} \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\left( \entityref{prop-continuous}{f} \mAnd \mForall{a \in \entityref{obj-open-interval}{(0, 1)}} \entityref{op-derivative-at-point}{f'}(a) = 0 \right)
+\mImplies f(0) = f(1)
+\end{theorem}
+
+\begin{proof}[RU]
+Пусть \entityref{obj-function}{g}(x) = \entityref{obj-function}{f}(x) + cx. Так как \entityref{obj-derivative}{g'}(x) = \entityref{obj-derivative}{f'}(x) + c = c, то из \entityref{thm-mean-value-theorem}{теоремы о среднем значении} следует, что \entityref{obj-function}{f}(1) - \entityref{obj-function}{f}(0) > -c. Аналогично, рассматривая \entityref{obj-function}{h}(x) = cx - \entityref{obj-function}{f}(x), получаем \entityref{obj-function}{f}(1) - \entityref{obj-function}{f}(0) < c. Поскольку это верно для любого \entityref{obj-real-numbers}{c} > 0, заключаем, что \entityref{obj-function}{f}(0) = \entityref{obj-function}{f}(1).
+\end{proof}
+
+\begin{proof}[EN]
+Let \entityref{obj-function}{g}(x) = \entityref{obj-function}{f}(x) + cx. Since \entityref{obj-derivative}{g'}(x) = \entityref{obj-derivative}{f'}(x) + c = c, it follows from the \entityref{thm-mean-value-theorem}{Mean Value Theorem} that \entityref{obj-function}{f}(1) - \entityref{obj-function}{f}(0) > -c. Similarly, by considering \entityref{obj-function}{h}(x) = cx - \entityref{obj-function}{f}(x), we obtain \entityref{obj-function}{f}(1) - \entityref{obj-function}{f}(0) < c. Since this holds for any \entityref{obj-real-numbers}{c} > 0, we conclude that \entityref{obj-function}{f}(0) = \entityref{obj-function}{f}(1).
+\end{proof}

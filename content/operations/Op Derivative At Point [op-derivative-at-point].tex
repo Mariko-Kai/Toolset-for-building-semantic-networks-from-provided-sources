@@ -1,0 +1,13 @@
+% defined-in: apostol (page 193), apostol (page 183), spivak (page 170)
+% entity-id: op-derivative-at-point-at-point
+% entity-type: operation
+\entityref{op-hypertarget}{\hypertarget}{op-derivative-at-point-at-point}{}
+\hypertarget{op-derivative-at-point-at-point}{}
+\begin{operation}
+\[
+\mForall{\entityref{obj-function}{f} \colon \entityref{obj-open-interval}{(a, b)} \mTo \entityref{obj-real-numbers}{\mReal}}
+\mForall{x \in (a, b)}
+\mForall{L \in \entityref{obj-real-numbers}{\mReal}}
+\mathrm{IsDerivative}(\entityref{obj-function}{f}, x, L) \mDefinedAs \left( L = \entityref{op-limit-function-cauchy}{\lim}_{\entityref{obj-function}{h} \entityref{op-to}{\to} 0} \frac{f(x + \entityref{obj-function}{h}) - f(x)}{\entityref{obj-function}{h}} \right)
+\]
+\end{operation}

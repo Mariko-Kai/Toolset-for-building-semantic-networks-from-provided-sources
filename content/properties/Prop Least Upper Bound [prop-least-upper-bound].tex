@@ -1,0 +1,16 @@
+% defined-in: apostol (page 47)
+% entity-id: prop-least-upper-bound
+% entity-type: property
+
+\entityref{op-hypertarget}{\hypertarget}{prop-least-upper-bound}{}
+\hypertarget{prop-least-upper-bound}{}
+\begin{property}[Least Upper Bound]
+\[
+\mForall{S \subseteq \entityref{obj-real-numbers}{\mathbb{R}}}
+\mForall{B \in \entityref{obj-real-numbers}{\mathbb{R}}}
+\mathrm{IsLeastUpperBound}(B, S) \mDefinedAs
+\left( S \neq \entityref{obj-empty-set}{\\varnothing} \right) \entityref{term-conjunction}{\land}
+\left( \mForall{x \in S} \quad x \leq B \right) \entityref{term-conjunction}{\land}
+\left( \mForall{y \in \entityref{obj-real-numbers}{\mathbb{R}}} \quad y < B \mImplies \mExists{s \in S} \quad s > y \right)
+\]
+\end{property}

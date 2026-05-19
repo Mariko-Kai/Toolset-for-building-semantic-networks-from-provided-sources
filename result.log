@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 23.10.12) (preloaded format=pdflatex 2024.4.11)  15 MAY 2026 06:32
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 23.10.12) (preloaded format=pdflatex 2024.4.11)  18 MAY 2026 03:25
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -663,80 +663,312 @@ Package hyperref Info: Link coloring ON on input line 6.
 \openout3 = `result.out'.
 
 LaTeX Info: Redefining \th on input line 6.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 14.
 
-Overfull \hbox (3.96423pt too wide) in paragraph at lines 9--10
-\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A/
-cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
- []
-
-
-Overfull \hbox (0.79597pt too wide) in paragraph at lines 16--18
-[][]\T2A/cmr/bx/n/10 Объект 0.1 \T2A/cmr/m/n/10 (obj--set)\T2A/cmr/bx/n/10 . []
-Есте-ствен-ный язык: \T2A/cmr/m/n/10 Мно-же-ство ^^V ба-зо-вое, неопре-
- []
-
-LaTeX Font Info:    Trying to load font information for U+msa on input line 32.
 
 (C:\Users\Talgat\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 32.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 14.
 
 
 (C:\Users\Talgat\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
+Overfull \hbox (2.21556pt too wide) in paragraph at lines 25--26
+[]\T2A/cmr/m/n/10 It suffices to prove that [][]f[][] attains its supremum on $
+\OT1/cmr/m/n/10 [\OML/cmm/m/it/10 a; b\OT1/cmr/m/n/10 ]$\T2A/cmr/m/n/10 . Let $
+\OML/cmm/m/it/10 M \OT1/cmr/m/n/10 =[][] [][][] \OML/cmm/m/it/10 f\OT1/cmr/m/n/
+10 (\OML/cmm/m/it/10 x\OT1/cmr/m/n/10 )$\T2A/cmr/m/n/10 .
+ []
+
+! Extra }, or forgotten $.
+l.45 ...РЅРёСЏ. РЈС‚РІРµСЂР¶РґРµРЅРёРµ $P \land Q}
+                                                  $ РёСЃС‚РёРЅРЅРѕ С‚РѕРіРґР...
+I've deleted a group-closing symbol because it seems to be
+spurious, as in `$x}$'. But perhaps the } is legitimate and
+you forgot something else, as in `\hbox{$x}'. In such cases
+the way to recover is to insert both the forgotten and the
+deleted material, e.g., by typing `I$}'.
+
 [1
 
-{C:/Users/Talgat/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
+{C:/Users/Talgat/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}] [2]
+! Missing $ inserted.
+<inserted text> 
+                $
+l.118 \mForall
+              {S \subseteq \entityref{obj-real-numbers}{\mathbb{R}}}
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
 
-! LaTeX Error: \begin{object} on input line 13 ended by \end{document}.
+
+! LaTeX Error: Command \end{operation} invalid in math mode.
 
 See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.109 \end{document}
+l.135 \end{operation}
+                     
+Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+
+! LaTeX Error: Something's wrong--perhaps a missing \item.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.135 \end{operation}
+                     
+Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+
+! LaTeX Error: Something's wrong--perhaps a missing \item.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.135 \end{operation}
+                     
+Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.135 \end{operation}
+                     
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+
+Overfull \hbox (6.01688pt too wide) in paragraph at lines 118--136
+[][]\T2A/cmr/bx/n/10 Операция 0.2 \T2A/cmr/m/n/10 (Infimum)\T2A/cmr/bx/n/10 . [
+]$\OMS/cmsy/m/n/10 8[]8[][]\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 L; S\OT1/cmr/m/n/1
+0 ) [][]= [] \OMS/cmsy/m/n/10 ^
+ []
+
+
+Overfull \hbox (129.09369pt too wide) detected at line 158
+\OMS/cmsy/m/n/10 8[]8[][]\OT1/cmr/m/n/10 ([][]\OML/cmm/m/it/10 f[][]; x[]\OT1/c
+mr/m/n/10 ) [][]= \OMS/cmsy/m/n/10 8[]9[]8[] [] ) []
+ []
+
+
+Overfull \hbox (0.79597pt too wide) in paragraph at lines 174--176
+[][]\T2A/cmr/bx/n/10 Объект 0.4 \T2A/cmr/m/n/10 (obj--set)\T2A/cmr/bx/n/10 . []
+Есте-ствен-ный язык: \T2A/cmr/m/n/10 Мно-же-ство ^^V ба-зо-вое, неопре-
+ []
+
+
+Overfull \hbox (3.53932pt too wide) in paragraph at lines 192--195
+[]\T2A/cmr/bx/n/10 Формальная се-ман-ти-ка: \T2A/cmr/m/n/10 Пусть $\OML/cmm/m/i
+t/10 P\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 x\OT1/cmr/m/n/10 )$ \T2A/cmr/m/n/10 ^^V
+ пре-ди-кат. Утвер-жде-ние $\OMS/cmsy/m/n/10 9\OML/cmm/m/it/10 x P\OT1/cmr/m/n/
+10 (\OML/cmm/m/it/10 x\OT1/cmr/m/n/10 )$
+ []
+
+[3]
+Overfull \hbox (3.53932pt too wide) in paragraph at lines 217--220
+[]\T2A/cmr/bx/n/10 Формальная се-ман-ти-ка: \T2A/cmr/m/n/10 Пусть $\OML/cmm/m/i
+t/10 P\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 x\OT1/cmr/m/n/10 )$ \T2A/cmr/m/n/10 ^^V
+ пре-ди-кат. Утвер-жде-ние $\OMS/cmsy/m/n/10 8\OML/cmm/m/it/10 x P\OT1/cmr/m/n/
+10 (\OML/cmm/m/it/10 x\OT1/cmr/m/n/10 )$
+ []
+
+
+Overfull \hbox (17.94154pt too wide) in paragraph at lines 229--229
+[]\T2A/cmr/bx/n/14.4 Декартово про-из-ве-де-ние (Cartesian Product) 
+ []
+
+[4]
+! Missing $ inserted.
+<inserted text> 
+                $
+l.358 \mForall
+              {a, b, c, d}
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+! LaTeX Error: Command \end{object} invalid in math mode.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.362 \end{object}
+                  
+Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+
+! LaTeX Error: Something's wrong--perhaps a missing \item.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.362 \end{object}
+                  
+Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+
+! LaTeX Error: Something's wrong--perhaps a missing \item.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.362 \end{object}
+                  
+Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.362 \end{object}
+                  
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+
+Overfull \hbox (120.07124pt too wide) in paragraph at lines 358--363
+[][]\T2A/cmr/bx/n/10 Объект 0.9 \T2A/cmr/m/n/10 (Ordered Pair)\T2A/cmr/bx/n/10 
+. []$\OMS/cmsy/m/n/10 8[][]\OT1/cmr/m/n/10 ((\OML/cmm/m/it/10 a; b\OT1/cmr/m/n/
+10 )\OML/cmm/m/it/10 ; a; b\OT1/cmr/m/n/10 ) [][]= \OMS/cmsy/m/n/10 > []\OT1/cm
+r/m/n/10 ((\OML/cmm/m/it/10 a; b\OT1/cmr/m/n/10 )\OML/cmm/m/it/10 ; \OT1/cmr/m/
+n/10 (\OML/cmm/m/it/10 c; d\OT1/cmr/m/n/10 )) [][]=
+ []
+
+[5]
+
+! LaTeX Error: \begin{object} on input line 171 ended by \end{document}.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.393 \end{document}
                     
 Your command was ignored.
 Type  I <command> <return>  to replace it with another command,
 or  <return>  to continue without it.
 
-[2] (result.aux)
+[6] (result.aux)
  ***********
 LaTeX2e <2023-11-01>
 L3 programming layer <2023-12-11>
  ***********
 Package rerunfilecheck Info: File `result.out' has not changed.
-(rerunfilecheck)             Checksum: 922DAC2528D8FF80E49725B1DF3B82AC;575.
+(rerunfilecheck)             Checksum: 2DAE59CBB5DA7DE11052324C7DC7D6BC;2914.
  )
 (\end occurred inside a group at level 1)
 
-### semi simple group (level 1) entered at line 13 (\begingroup)
+### semi simple group (level 1) entered at line 171 (\begingroup)
 ### bottom level 
 Here is how much of TeX's memory you used:
- 12576 strings out of 474495
- 194917 string characters out of 5743463
- 1933460 words of memory out of 5000000
- 34679 multiletter control sequences out of 15000+600000
- 563341 words of font info for 49 fonts, out of 8000000 for 9000
+ 12644 strings out of 474495
+ 196148 string characters out of 5743463
+ 1940460 words of memory out of 5000000
+ 34700 multiletter control sequences out of 15000+600000
+ 565491 words of font info for 51 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 90i,5n,93p,545b,690s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 90i,7n,93p,1335b,739s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-pdfTeX warning (dest): name{term-log-conn} has been referenced but does not exi
-st, replaced by a fixed one
+pdfTeX warning (dest): name{def-logical-connectives} has been referenced but do
+es not exist, replaced by a fixed one
 
- <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tcrm1
-000.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\
-larm1000.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dp
-i600\labx1000.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t
-2a/dpi600\labx1440.pk><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/type
-1/public/amsfonts/cm/cmmi10.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/
-fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/Talgat/AppData/Local/Program
-s/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb>
-Output written on result.pdf (2 pages, 86185 bytes).
+
+pdfTeX warning (dest): name{term-disjunction} has been referenced but does not 
+exist, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{obj-ordered-pair} has been referenced but does not 
+exist, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{op-mid} has been referenced but does not exist, rep
+laced by a fixed one
+
+
+pdfTeX warning (dest): name{obj-natural-numbers} has been referenced but does n
+ot exist, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{op-abs-abstract} has been referenced but does not e
+xist, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{obj-cartesian-product} has been referenced but does
+ not exist, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{term-exists} has been referenced but does not exist
+, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{term-forall} has been referenced but does not exist
+, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{obj-set} has been referenced but does not exist, re
+placed by a fixed one
+
+
+pdfTeX warning (dest): name{op-infimum} has been referenced but does not exist,
+ replaced by a fixed one
+
+
+pdfTeX warning (dest): name{term-conjunction} has been referenced but does not 
+exist, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{op-supremum} has been referenced but does not exist
+, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{prop-continuous} has been referenced but does not e
+xist, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{obj-real-numbers} has been referenced but does not 
+exist, replaced by a fixed one
+
+
+pdfTeX warning (dest): name{obj-function} has been referenced but does not exis
+t, replaced by a fixed one
+
+ <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\lati100
+0.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\la
+rm1000.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi6
+00\labx1000.pk> <C:\Users\Talgat\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a
+/dpi600\labx1440.pk><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/type1/
+public/amsfonts/cm/cmex10.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fo
+nts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/Talgat/AppData/Local/Programs
+/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/Talgat/AppData/Local
+/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/Talgat/AppD
+ata/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/Tal
+gat/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:
+/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy
+7.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfont
+s/symbols/msbm10.pfb>
+Output written on result.pdf (6 pages, 201657 bytes).
 PDF statistics:
- 228 PDF objects out of 1000 (max. 8388607)
- 14 named destinations out of 1000 (max. 500000)
- 41 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 490 PDF objects out of 1000 (max. 8388607)
+ 59 named destinations out of 1000 (max. 500000)
+ 145 words of extra memory for PDF output out of 10000 (max. 10000000)
 

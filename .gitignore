@@ -35,8 +35,14 @@ build/
 
 # Byte-compiled
 *.pyc
+# Local data directories
+/sources/
+/books/
+/llama/
+/logs/
 
-content
-sources
-books
-llama
+# Binaries
+/tools/cloudflared.exe
+
+# Temporary validator files
+/lean_validator/temp_check.lean

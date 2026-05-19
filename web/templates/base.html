@@ -13,27 +13,75 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
-        onload="renderMathInElement(document.body, {
+        onload="{% raw %}renderMathInElement(document.body, {
             delimiters: [
                 {left: '$$', right: '$$', display: true},
                 {left: '$', right: '$', display: false},
-                {left: '\\\\(', right: '\\\\)', display: false},
-                {left: '\\\\[', right: '\\\\]', display: true}
+                {left: '\\(', right: '\\)', display: false},
+                {left: '\\[', right: '\\]', display: true}
             ],
-            throwOnError: false
-        });">
+            throwOnError: false,
+            trust: true,
+            macros: {
+                '\\entityref': '\\href{/objects/#1}{\\color{##e74c3c}{#2}}',
+                '\\mForall': '\\forall',
+                '\\mExists': '\\exists',
+                '\\mImplies': '\\Rightarrow',
+                '\\mIff': '\\Leftrightarrow',
+                '\\mDefIff': '\\stackrel{\\mathrm{def}}{\\iff}',
+                '\\mDefinedAs': '\\coloneqq',
+                '\\mQED': '\\qed',
+                '\\mAnd': '\\land',
+                '\\mOr': '\\lor',
+                '\\mNot': '\\lnot',
+                '\\mTurnstile': '\\vdash',
+                '\\mSet': '\\{#1\\}',
+                '\\mIn': '\\in',
+                '\\mSubset': '\\subset',
+                '\\mSubseteq': '\\subseteq',
+                '\\mEmpty': '\\varnothing',
+                '\\mReal': '\\mathbb{R}',
+                '\\mNat': '\\mathbb{N}',
+                '\\mInt': '\\mathbb{Z}',
+                '\\mComplex': '\\mathbb{C}',
+                '\\mTo': '\\to',
+                '\\mMap': '#1 \\colon #2 \\mTo #3',
+                '\\mAbs': '|#1|',
+                '\\mNorm': '\\|#1\\|',
+                '\\mInner': '\\langle #1, #2 \\rangle',
+                '\\mDist': 'd(#1, #2)',
+                '\\mSup': '\\sup',
+                '\\mInf': '\\inf',
+                '\\mDeriv': '\\frac{d}{dx}',
+                '\\mIntegral': '\\int'
+            }
+        });{% endraw %}">
     </script>
 
     <!-- Styles -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <nav class="navbar">
-        <a href="/" class="navbar-brand">
+    <nav class="navbar" style="z-index: 9999; position: relative;">
+        <a href="/" class="navbar-brand" style="pointer-events: auto !important; position: relative; z-index: 10000;">
             <span class="brand-icon">M</span>
-            <span class="brand-text">Mathesis</span>
         </a>
-        <span class="navbar-tagline">Mathematical Knowledge Base</span>
+        <div class="navbar-nav" style="pointer-events: auto !important; position: relative; z-index: 10000;">
+            <a href="/catalog" class="nav-link">Каталог</a>
+            <a href="/master.pdf" class="nav-link nav-link-highlight" target="_blank">PDF Версия</a>
+        </div>
+
+        <!-- Cloudflare Tunnel Status Banner -->
+        <div class="cloudflare-status-banner" id="cf-banner" style="pointer-events: auto !important; position: relative; z-index: 10000;">
+            <span class="cf-dot {% if request.app.state.cloudflare_url %}cf-dot-active{% endif %}" id="cf-dot"></span>
+            <span class="cf-text" id="cf-text">
+                {% if request.app.state.cloudflare_url %}
+                Public: <a href="{{ request.app.state.cloudflare_url }}" target="_blank" class="cf-link">{{ request.app.state.cloudflare_url }}</a>
+                {% else %}
+                Tunnel: <span style="color: var(--text-muted);" id="cf-conn-text">connecting...</span>
+                {% endif %}
+            </span>
+        </div>
     </nav>
 
     <main class="container">

@@ -1,0 +1,19 @@
+% entity-id: axm-completeness
+% entity-type: axiom
+% defined-in: zorich-1, p. 77
+
+\section{Аксиома полноты (Completeness Axiom)}
+
+\entityref{op-hypertarget}{\hypertarget}{axm-completeness}{}
+\hypertarget{axm-completeness}{}
+\begin{axiom}[axm-completeness]
+\label{entity:axm-completeness}
+% 1. ОБЪЯВЛЕНИЕ ТИПОВ
+$\entityref{obj-set}{X, Y} \subset \entityref{obj-real-numbers}{\mReal}$
+
+% 2. ТЕЛО АКСИОМЫ
+\[
+(\mForall x \in \entityref{obj-set}{X} \mAnd \mForall y \in \entityref{obj-set}{Y} \colon x \entityref{prop-partial-order}{\le} y) \mImplies 
+(\mExists c \in \entityref{obj-real-numbers}{\mReal} \mForall x \in \entityref{obj-set}{X}, \mForall y \in \entityref{obj-set}{Y} \colon x \entityref{prop-partial-order}{\le} c \entityref{prop-partial-order}{\le} y)
+\]
+\end{axiom}

@@ -35,10 +35,25 @@ def init_db():
         CREATE TABLE IF NOT EXISTS formulation_raw_cache (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             discipline TEXT,
-            source_book TEXT,
-            raw_text TEXT,
-            embedding BLOB,
-            temp_cluster_id TEXT
+            source_book TEXT NOT NULL,
+            raw_text TEXT NOT NULL,
+            entity_type TEXT DEFAULT 'definition',
+            has_proof INTEGER DEFAULT 0,
+            page_ref INTEGER,
+            raw_deps TEXT,
+            temp_cluster_id TEXT,
+            embedding BLOB
+        )
+    """)
+
+    # Table for entity dependencies
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS entity_dependency (
+            source_id TEXT,
+            target_id TEXT,
+            PRIMARY KEY (source_id, target_id),
+            FOREIGN KEY (source_id) REFERENCES entities(entity_id),
+            FOREIGN KEY (target_id) REFERENCES entities(entity_id)
         )
     """)
 

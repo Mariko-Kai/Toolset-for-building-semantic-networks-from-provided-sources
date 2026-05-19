@@ -8,6 +8,7 @@ Supports incremental validation (saves validated files individually).
 """
 import sqlite3
 import re
+import os
 import json
 import urllib.request
 import time
@@ -33,9 +34,68 @@ try:
 except ImportError:
     GRADIO_AVAILABLE = False
 
-from lean_validator import validate_entity
+try:
+    from llama_cpp import Llama
+    LLAMA_CPP_AVAILABLE = True
+except Exception:
+    LLAMA_CPP_AVAILABLE = False
 
+import datetime
+from pipeline.lean_validator import validate_entity
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+def log_to_file(category: str, content: str, entity_id: str = None, attempt: int = None):
+    """
+    Saves content into a log file in logs/<category>/...
+    And also appends to logs/pipeline_realtime.log in real-time with immediate disk flush.
+    """
+    import os
+    import sys
+    try:
+        logs_dir = PROJECT_ROOT / "logs" / category
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        
+        # 1. Write the individual category log file
+        parts = [timestamp]
+        if entity_id:
+            safe_eid = "".join(c for c in str(entity_id) if c.isalnum() or c in "-_")
+            parts.append(safe_eid)
+        if attempt is not None:
+            parts.append(f"attempt_{attempt}")
+            
+        filename = "_".join(parts) + ".txt"
+        file_path = logs_dir / filename
+        
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+            f.flush()
+            try:
+                os.fsync(f.fileno())
+            except OSError:
+                pass
+                
+        # 2. Append to the real-time unified streaming log file
+        realtime_log = PROJECT_ROOT / "logs" / "pipeline_realtime.log"
+        header = f"\n=== [{datetime.datetime.now().isoformat()}] CATEGORY: {category.upper()} | ENTITY: {entity_id} | ATTEMPT: {attempt} ===\n"
+        with open(realtime_log, "a", encoding="utf-8") as f:
+            f.write(header)
+            f.write(content)
+            f.write("\n" + "="*80 + "\n")
+            f.flush()
+            try:
+                os.fsync(f.fileno())
+            except OSError:
+                pass
+                
+        # 3. Flush standard output buffers for instant console response
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except Exception as e:
+        print(f"  [logging-error] Failed to write log to category {category}: {e}")
+        sys.stdout.flush()
+
 DB_PATH = PROJECT_ROOT / "mathesis_index.db"
 CONTENT_DIR = PROJECT_ROOT / "content"
 LEAN_DIR = PROJECT_ROOT / "lean_validator"
@@ -54,6 +114,14 @@ _GROQ_CLIENT = None
 _GROQ_MODEL_NAME = None
 _HF_CLIENT = None
 _HF_MODEL_NAME = None
+_LLAMA_CPP_CLIENT = None
+_LLAMA_CPP_MODEL = None
+_PREVIEW_LLAMA_CPP_CLIENT = None
+_PREVIEW_LLAMA_CPP_MODEL = None
+_LEAN_LLAMA_CPP_CLIENT = None
+_LEAN_LLAMA_CPP_MODEL = None
+# Suppress repeated llama.cpp "not initialized" warnings (print only once per run)
+_LLAMA_CPP_WARNED = False
 
 # Secondary (Lean) provider config
 _LEAN_PROVIDER = None # If None, use _LLM_PROVIDER
@@ -70,7 +138,7 @@ _LEAN_HF_MODEL = None
 
 def setup_provider(provider, api_key=None, model=None):
     """External setup for other modules to configure LLM provider."""
-    global _LLM_PROVIDER, _OLLAMA_MODEL, _GEMINI_CLIENT, _GEMINI_MODEL_NAME, _OPENAI_CLIENT, _OPENAI_MODEL_NAME, _GROQ_CLIENT, _GROQ_MODEL_NAME, _HF_CLIENT, _HF_MODEL_NAME
+    global _LLM_PROVIDER, _OLLAMA_MODEL, _GEMINI_CLIENT, _GEMINI_MODEL_NAME, _OPENAI_CLIENT, _OPENAI_MODEL_NAME, _GROQ_CLIENT, _GROQ_MODEL_NAME, _HF_CLIENT, _HF_MODEL_NAME, _LLAMA_CPP_CLIENT, _LLAMA_CPP_MODEL
     _LLM_PROVIDER = provider
     
     if _LLM_PROVIDER == "gemini":
@@ -83,13 +151,15 @@ def setup_provider(provider, api_key=None, model=None):
         if not OPENAI_AVAILABLE:
             print("ERROR: openai not installed.")
             return
-        _OPENAI_CLIENT = openai.OpenAI(api_key=api_key) if api_key else openai.OpenAI()
+        active_key = api_key or os.environ.get("OPENAI_API_KEY") or "none"
+        _OPENAI_CLIENT = openai.OpenAI(api_key=active_key)
         if model: _OPENAI_MODEL_NAME = model
     elif _LLM_PROVIDER == "groq":
         if not OPENAI_AVAILABLE:
             print("ERROR: openai/groq compatible SDK not installed.")
             return
-        _GROQ_CLIENT = openai.OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1") if api_key else openai.OpenAI(base_url="https://api.groq.com/openai/v1")
+        active_key = api_key or os.environ.get("GROQ_API_KEY") or "none"
+        _GROQ_CLIENT = openai.OpenAI(api_key=active_key, base_url="https://api.groq.com/openai/v1")
         if model: _GROQ_MODEL_NAME = model
     elif _LLM_PROVIDER == "hf":
         if not GRADIO_AVAILABLE:
@@ -97,31 +167,111 @@ def setup_provider(provider, api_key=None, model=None):
             return
         _HF_CLIENT = GradioClient(model, token=api_key) if api_key else GradioClient(model)
         if model: _HF_MODEL_NAME = model
+    elif _LLM_PROVIDER == "llama_cpp":
+        if not LLAMA_CPP_AVAILABLE:
+            print("  [lean-export] ERROR: llama-cpp-python not installed. Run: pip install llama-cpp-python")
+            return
+        try:
+            if model:
+                _LLAMA_CPP_CLIENT = Llama(model_path=model)
+                _LLAMA_CPP_MODEL = model
+            else:
+                _LLAMA_CPP_MODEL = model
+        except Exception as e:
+            print(f"  [lean-export] ERROR initializing llama.cpp client: {e}")
+            return
     elif _LLM_PROVIDER == "ollama":
         if model: _OLLAMA_MODEL = model
 
 def setup_lean_provider(provider, api_key=None, model=None):
     """Configure a separate provider for Lean generation."""
-    global _LEAN_PROVIDER, _LEAN_GEMINI_CLIENT, _LEAN_GEMINI_MODEL, _LEAN_OPENAI_CLIENT, _LEAN_OPENAI_MODEL, _LEAN_GROQ_CLIENT, _LEAN_GROQ_MODEL, _LEAN_OLLAMA_MODEL, _LEAN_HF_CLIENT, _LEAN_HF_MODEL
+    global _LEAN_PROVIDER, _LEAN_GEMINI_CLIENT, _LEAN_GEMINI_MODEL, _LEAN_OPENAI_CLIENT, _LEAN_OPENAI_MODEL, _LEAN_GROQ_CLIENT, _LEAN_GROQ_MODEL, _LEAN_OLLAMA_MODEL, _LEAN_HF_CLIENT, _LEAN_HF_MODEL, _LEAN_LLAMA_CPP_CLIENT, _LEAN_LLAMA_CPP_MODEL
     _LEAN_PROVIDER = provider
     
     if _LEAN_PROVIDER == "gemini":
         _LEAN_GEMINI_CLIENT = genai.Client(api_key=api_key) if api_key else genai.Client()
         _LEAN_GEMINI_MODEL = model
     elif _LEAN_PROVIDER == "openai":
-        _LEAN_OPENAI_CLIENT = openai.OpenAI(api_key=api_key) if api_key else openai.OpenAI()
+        active_key = api_key or os.environ.get("OPENAI_API_KEY") or "none"
+        _LEAN_OPENAI_CLIENT = openai.OpenAI(api_key=active_key)
         _LEAN_OPENAI_MODEL = model
     elif _LEAN_PROVIDER == "groq":
-        _LEAN_GROQ_CLIENT = openai.OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1") if api_key else openai.OpenAI(base_url="https://api.groq.com/openai/v1")
+        active_key = api_key or os.environ.get("GROQ_API_KEY") or "none"
+        _LEAN_GROQ_CLIENT = openai.OpenAI(api_key=active_key, base_url="https://api.groq.com/openai/v1")
         _LEAN_GROQ_MODEL = model
     elif _LEAN_PROVIDER == "ollama":
         _LEAN_OLLAMA_MODEL = model
+    elif _LEAN_PROVIDER == "llama_cpp":
+        if not LLAMA_CPP_AVAILABLE:
+            print("  [lean-export] ERROR: llama-cpp-python not installed. Run: pip install llama-cpp-python")
+            return
+        try:
+            if model:
+                _LEAN_LLAMA_CPP_CLIENT = Llama(model_path=model)
+                _LEAN_LLAMA_CPP_MODEL = model
+            else:
+                _LEAN_LLAMA_CPP_MODEL = model
+            print(f"  [lean-export] Initialized local llama.cpp client for Lean provider: {model}")
+        except Exception as e:
+            print(f"  [lean-export] ERROR initializing llama.cpp client for lean provider: {e}")
     elif _LEAN_PROVIDER == "hf":
         if not GRADIO_AVAILABLE:
             print("  [lean-export] ERROR: gradio_client not installed. Run: pip install gradio_client")
             return
         _LEAN_HF_CLIENT = GradioClient(model, token=api_key) if api_key else GradioClient(model)
         if model: _LEAN_HF_MODEL = model
+
+
+def setup_preview_provider(provider, api_key=None, model=None):
+    """Configure a separate provider for preview (fast page scanning)."""
+    global _PREVIEW_PROVIDER, _PREVIEW_GEMINI_CLIENT, _PREVIEW_GEMINI_MODEL, _PREVIEW_OPENAI_CLIENT, _PREVIEW_OPENAI_MODEL, _PREVIEW_GROQ_CLIENT, _PREVIEW_GROQ_MODEL, _PREVIEW_OLLAMA_MODEL, _PREVIEW_HF_CLIENT, _PREVIEW_HF_MODEL, _PREVIEW_LLAMA_CPP_CLIENT, _PREVIEW_LLAMA_CPP_MODEL
+    # Initialize globals if not defined
+    try:
+        _ = _PREVIEW_PROVIDER
+    except NameError:
+        _PREVIEW_PROVIDER = None
+        _PREVIEW_GEMINI_CLIENT = None
+        _PREVIEW_GEMINI_MODEL = None
+        _PREVIEW_OPENAI_CLIENT = None
+        _PREVIEW_OPENAI_MODEL = None
+        _PREVIEW_GROQ_CLIENT = None
+        _PREVIEW_GROQ_MODEL = None
+        _PREVIEW_OLLAMA_MODEL = None
+        _PREVIEW_HF_CLIENT = None
+        _PREVIEW_HF_MODEL = None
+        _PREVIEW_LLAMA_CPP_CLIENT = None
+        _PREVIEW_LLAMA_CPP_MODEL = None
+
+    _PREVIEW_PROVIDER = provider
+    if _PREVIEW_PROVIDER == "gemini":
+        _PREVIEW_GEMINI_CLIENT = genai.Client(api_key=api_key) if api_key else genai.Client()
+        _PREVIEW_GEMINI_MODEL = model
+    elif _PREVIEW_PROVIDER == "openai":
+        active_key = api_key or os.environ.get("OPENAI_API_KEY") or "none"
+        _PREVIEW_OPENAI_CLIENT = openai.OpenAI(api_key=active_key)
+        _PREVIEW_OPENAI_MODEL = model
+    elif _PREVIEW_PROVIDER == "groq":
+        active_key = api_key or os.environ.get("GROQ_API_KEY") or "none"
+        _PREVIEW_GROQ_CLIENT = openai.OpenAI(api_key=active_key, base_url="https://api.groq.com/openai/v1")
+        _PREVIEW_GROQ_MODEL = model
+    elif _PREVIEW_PROVIDER == "ollama":
+        _PREVIEW_OLLAMA_MODEL = model
+    elif _PREVIEW_PROVIDER == "llama_cpp":
+        if not LLAMA_CPP_AVAILABLE:
+            print("  [lean-export] ERROR: llama-cpp-python not installed. Run: pip install llama-cpp-python")
+            return
+        try:
+            _PREVIEW_LLAMA_CPP_CLIENT = Llama(model_path=model) if model else None
+            _PREVIEW_LLAMA_CPP_MODEL = model
+            print(f"  [lean-export] Initialized local llama.cpp client for Preview provider: {model}")
+        except Exception as e:
+            print(f"  [lean-export] ERROR initializing preview llama.cpp client: {e}")
+    elif _PREVIEW_PROVIDER == "hf":
+        if not GRADIO_AVAILABLE:
+            print("  [lean-export] ERROR: gradio_client not installed. Run: pip install gradio_client")
+            return
+        _PREVIEW_HF_CLIENT = GradioClient(model, token=api_key) if api_key else GradioClient(model)
+        if model: _PREVIEW_HF_MODEL = model
 
 
 
@@ -132,15 +282,26 @@ def query_ollama(prompt, model="goedel:latest", system_prompt=None, json_mode=Fa
         from pipeline.config import get_default_model
         model = get_default_model("extract", "ollama")
     url = "http://localhost:11434/api/generate"
+    
+    # Configure Ollama options dynamically:
+    # Goedel-Formalizer requires large context, high prediction limit, and custom sampling.
+    options = {
+        "num_ctx": 8192,
+        "num_predict": 2048,  # Increased default to prevent truncation
+        "temperature": 0.0,
+    }
+    
+    if "goedel" in model.lower() and "prover" not in model.lower():
+        options["num_ctx"] = 16384
+        options["num_predict"] = 4096
+        options["temperature"] = 0.9
+        options["top_k"] = 20
+        
     data = {
         "model": model, 
         "prompt": prompt, 
         "stream": False,
-        "options": {
-            "num_ctx": 8192, 
-            "num_predict": 512,
-            "temperature": 0.0,  # Zero temperature for maximum determinism
-        }
+        "options": options
     }
     if system_prompt:
         data["system"] = system_prompt
@@ -150,7 +311,7 @@ def query_ollama(prompt, model="goedel:latest", system_prompt=None, json_mode=Fa
     try:
         req = urllib.request.Request(url, json.dumps(data).encode('utf-8'),
                                      headers={'Content-Type': 'application/json'})
-        with urllib.request.urlopen(req, timeout=120) as response:
+        with urllib.request.urlopen(req, timeout=600) as response:
             result = json.loads(response.read().decode('utf-8'))
             resp_text = result.get('response', '').strip()
             # Extract and log thinking if any
@@ -158,6 +319,7 @@ def query_ollama(prompt, model="goedel:latest", system_prompt=None, json_mode=Fa
             if think_match:
                 think_content = think_match.group(1).strip()
                 print(f"  [LLM Think]: {think_content}")
+                log_to_file("think", think_content)
             resp_text = re.sub(r'<think>.*?</think>', '', resp_text, flags=re.DOTALL).strip()
             return resp_text
     except Exception as e:
@@ -232,9 +394,9 @@ def query_gemini(prompt, system_prompt=None, client=None, model=None, json_mode=
                     wait_time = 30 + (attempt * 10)
                     print(f"  [gemini] Rate limit hit (429). Retry {attempt+1}/5, sleeping {wait_time}s...")
                     time.sleep(wait_time)
-                elif "500" in err_str:
+                elif "500" in err_str or "503" in err_str:
                     wait_time = 5 + (attempt * 3)
-                    print(f"  [gemini] Internal error (500). Retry {attempt+1}/5, sleeping {wait_time}s...")
+                    print(f"  [gemini] Server error ({'500' if '500' in err_str else '503'}). Retry {attempt+1}/5, sleeping {wait_time}s...")
                     time.sleep(wait_time)
                 else:
                     raise e
@@ -268,14 +430,23 @@ def query_openai(prompt, system_prompt=None, client=None, model=None, json_mode=
             prompt += "\nReturn strictly JSON format."
         messages.append({"role": "user", "content": prompt})
         
+        # Configure OpenAI-compatible options dynamically
+        kwargs = {
+            "model": target_model,
+            "messages": messages,
+            "temperature": 0.0,
+            "max_tokens": 1024,
+        }
+        
+        if target_model and "goedel" in target_model.lower():
+            kwargs["temperature"] = 0.9
+            kwargs["max_tokens"] = 4096
+            # Support top_k for local OpenAI-compatible llama.cpp / vLLM / Ollama API servers
+            kwargs["extra_body"] = {"top_k": 20}
+            
         for attempt in range(5):
             try:
-                response = target_client.chat.completions.create(
-                    model=target_model,
-                    messages=messages,
-                    temperature=0.0,
-                    max_tokens=1024,
-                )
+                response = target_client.chat.completions.create(**kwargs)
                 return response.choices[0].message.content.strip()
             except openai.RateLimitError as e:
                 wait_time = 30 + (attempt * 10)
@@ -478,33 +649,96 @@ def query_hf(prompt, system_prompt=None, client=None, model=None, json_mode=Fals
         return ""
 
 
-def query_llm(prompt, model="goedel:latest", system_prompt=None, json_mode=False):
-    """Routes to the active LLM provider (ollama, gemini, openai, groq, or hf)."""
-    # Use Lean provider if set, otherwise use main provider
-    active_provider = _LEAN_PROVIDER or _LLM_PROVIDER
+def query_llm(prompt, model=None, system_prompt=None, json_mode=False, provider=None):
+    """Routes to the active LLM provider (ollama, gemini, openai, groq, or hf).
+    If provider == 'preview', routes to the configured preview provider (setup_preview_provider).
+    """
+    # Use explicit provider, otherwise main provider
+    use_preview = False
+    if provider == 'preview':
+        # route to preview provider settings
+        active_provider = _PREVIEW_PROVIDER
+        use_preview = True
+    else:
+        active_provider = provider or _LLM_PROVIDER
     
     if active_provider == "gemini":
-        client = _LEAN_GEMINI_CLIENT or _GEMINI_CLIENT
-        model_name = _LEAN_GEMINI_MODEL or _GEMINI_MODEL_NAME or model
+        if use_preview:
+            client = _PREVIEW_GEMINI_CLIENT or _GEMINI_CLIENT
+            model_name = _PREVIEW_GEMINI_MODEL or _GEMINI_MODEL_NAME or model
+        else:
+            client = _LEAN_GEMINI_CLIENT or _GEMINI_CLIENT
+            model_name = _LEAN_GEMINI_MODEL or _GEMINI_MODEL_NAME or model
         result = query_gemini(prompt, system_prompt=system_prompt, client=client, model=model_name, json_mode=json_mode)
     elif active_provider == "openai":
-        client = _LEAN_OPENAI_CLIENT or _OPENAI_CLIENT
-        model_name = _LEAN_OPENAI_MODEL or _OPENAI_MODEL_NAME or model
+        if use_preview:
+            client = _PREVIEW_OPENAI_CLIENT or _OPENAI_CLIENT
+            model_name = _PREVIEW_OPENAI_MODEL or _OPENAI_MODEL_NAME or model
+        else:
+            client = _LEAN_OPENAI_CLIENT or _OPENAI_CLIENT
+            model_name = _LEAN_OPENAI_MODEL or _OPENAI_MODEL_NAME or model
         result = query_openai(prompt, system_prompt=system_prompt, client=client, model=model_name, json_mode=json_mode)
     elif active_provider == "groq":
-        client = _LEAN_GROQ_CLIENT or _GROQ_CLIENT
-        model_name = _LEAN_GROQ_MODEL or _GROQ_MODEL_NAME or model
+        if use_preview:
+            client = _PREVIEW_GROQ_CLIENT or _GROQ_CLIENT
+            model_name = _PREVIEW_GROQ_MODEL or _GROQ_MODEL_NAME or model
+        else:
+            client = _LEAN_GROQ_CLIENT or _GROQ_CLIENT
+            model_name = _LEAN_GROQ_MODEL or _GROQ_MODEL_NAME or model
         result = query_groq(prompt, system_prompt=system_prompt, client=client, model=model_name, json_mode=json_mode)
     elif active_provider == "hf":
-        client = _LEAN_HF_CLIENT or _HF_CLIENT
-        model_name = _LEAN_HF_MODEL or _HF_MODEL_NAME or model
+        if use_preview:
+            client = _PREVIEW_HF_CLIENT or _HF_CLIENT
+            model_name = _PREVIEW_HF_MODEL or _HF_MODEL_NAME or model
+        else:
+            client = _LEAN_HF_CLIENT or _HF_CLIENT
+            model_name = _LEAN_HF_MODEL or _HF_MODEL_NAME or model
         result = query_hf(prompt, system_prompt=system_prompt, client=client, model=model_name, json_mode=json_mode)
+    elif active_provider == "llama_cpp":
+        # Local llama.cpp via llama-cpp-python
+        if use_preview:
+            client = _PREVIEW_LLAMA_CPP_CLIENT or _LLAMA_CPP_CLIENT
+            model_name = _PREVIEW_LLAMA_CPP_MODEL or _LLAMA_CPP_MODEL or model
+        else:
+            client = _LEAN_LLAMA_CPP_CLIENT or _LLAMA_CPP_CLIENT
+            model_name = _LEAN_LLAMA_CPP_MODEL or _LLAMA_CPP_MODEL or model
+        global _LLAMA_CPP_WARNED
+        if not client:
+            if not _LLAMA_CPP_WARNED:
+                print("  [lean-export] llama.cpp client not initialized! Skipping local llama.cpp calls.")
+                _LLAMA_CPP_WARNED = True
+            result = ""
+        else:
+            try:
+                # Limit max_tokens to avoid exceeding model context window (small models like reranker)
+                max_tokens_req = 32 if use_preview else 256
+                resp = client(prompt=prompt, max_tokens=max_tokens_req, temperature=0.0)
+                if isinstance(resp, dict):
+                    choices = resp.get('choices', [])
+                    if choices:
+                        result = str(choices[0].get('text', '')).strip()
+                    else:
+                        result = str(resp.get('text', '')).strip()
+                else:
+                    result = str(resp).strip()
+            except Exception as e:
+                if not _LLAMA_CPP_WARNED:
+                    print(f"  [lean-export] llama.cpp error: {e}")
+                    _LLAMA_CPP_WARNED = True
+                result = ""
     else:
-        model_name = _LEAN_OLLAMA_MODEL or _OLLAMA_MODEL or model
+        if use_preview:
+            model_name = _PREVIEW_OLLAMA_MODEL or _OLLAMA_MODEL or model
+        else:
+            model_name = _LEAN_OLLAMA_MODEL or _OLLAMA_MODEL or model
         result = query_ollama(prompt, model=model_name, system_prompt=system_prompt, json_mode=json_mode)
 
     # Strip `<think>...</think>` tags globally to prevent reasoning blocks from breaking JSON or text parsers
     if result and "<think>" in result:
+        think_match = re.search(r'<think>(.*?)</think>', result, flags=re.DOTALL)
+        if think_match:
+            think_content = think_match.group(1).strip()
+            log_to_file("think", think_content)
         result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
     return result
 
@@ -576,10 +810,30 @@ def topological_sort(nodes, edges):
 
 # ── LLM Translation ─────────────────────────────────────────────────────────
 
-def translate_to_lean_via_llm(entity_id, entity_type, tex_content, model="goedel:latest", mathlib_hints="", error_feedback=None, previous_code=None):
+def is_semantic_error(lean_code: str, errors: list, entity_type: str) -> bool:
     """
-    Translates LaTeX to Lean 4 using Ollama, supporting error feedback for self-correction.
+    Determines if Lean compiler errors or generated code indicate a structural/semantic flaw
+    that requires fixing the original LaTeX formulation (e.g. missing assumptions).
     """
+    # Check compiler errors for structural hints
+    for err in errors:
+        msg = err.get("message", "").lower()
+        if "type mismatch" in msg:
+            return True
+        if "failed to synthesize instance" in msg:
+            return True
+        if "don't know how to synthesize placeholder" in msg:
+            return True
+            
+    return False
+
+
+def translate_to_lean_via_llm(entity_id, entity_type, tex_content, model="goedel:latest", mathlib_hints="", error_feedback=None, previous_code=None, attempt=None):
+    """
+    Translates LaTeX to Lean 4 using LLM, supporting error feedback for self-correction.
+    """
+    global _LEAN_PROVIDER, _LEAN_OLLAMA_MODEL, _LEAN_GEMINI_MODEL, _LEAN_OPENAI_MODEL, _LEAN_GROQ_MODEL, _LEAN_HF_MODEL, _LEAN_LLAMA_CPP_MODEL, _LLM_PROVIDER
+    
     tex_clean = re.sub(r'\\begin\{proof\}.*?\\end\{proof\}', '', tex_content, flags=re.DOTALL)
     tex_clean = re.sub(r'^%.*$', '', tex_clean, flags=re.MULTILINE).strip()
     if not tex_clean:
@@ -587,19 +841,166 @@ def translate_to_lean_via_llm(entity_id, entity_type, tex_content, model="goedel
 
     lean_name = entity_id.replace('-', '_')
 
-    system_prompt = """You are an expert in Lean 4 and Mathlib.
-Your task is to translate mathematical statements into valid Lean 4 declarations.
-RULES:
-1. Output ONLY valid Lean 4 code. No markdown formatting, no explanations, no `import` statements.
-2. Use Mathlib types: ℝ, ℕ, ℤ, Set, Prop, Type.
-3. Axioms: `axiom <name> : <statement>`
-4. Theorems: `theorem <name> : <statement> := sorry`
-5. Definitions: `def <name> : <type> := sorry`
-6. ALL variables must be bound explicitly (∀ or ∃).
-7. Do NOT use LaTeX commands (\\forall, \\in, \\mathbb, etc.)."""
+    # Resolve target provider and model for Lean generation
+    target_provider = _LEAN_PROVIDER or _LLM_PROVIDER
+    target_model = model
+    
+    if _LEAN_PROVIDER:
+        if _LEAN_PROVIDER == "ollama" and _LEAN_OLLAMA_MODEL:
+            target_model = _LEAN_OLLAMA_MODEL
+        elif _LEAN_PROVIDER == "gemini" and _LEAN_GEMINI_MODEL:
+            target_model = _LEAN_GEMINI_MODEL
+        elif _LEAN_PROVIDER == "openai" and _LEAN_OPENAI_MODEL:
+            target_model = _LEAN_OPENAI_MODEL
+        elif _LEAN_PROVIDER == "groq" and _LEAN_GROQ_MODEL:
+            target_model = _LEAN_GROQ_MODEL
+        elif _LEAN_PROVIDER == "hf" and _LEAN_HF_MODEL:
+            target_model = _LEAN_HF_MODEL
+        elif _LEAN_PROVIDER == "llama_cpp" and _LEAN_LLAMA_CPP_MODEL:
+            target_model = _LEAN_LLAMA_CPP_MODEL
 
-    if error_feedback and previous_code:
-        user_prompt = f"""The following Lean 4 code generated for entity '{lean_name}' produced compiler errors.
+    if not target_model:
+        target_model = "goedel:latest"
+
+    # Decryption guide of custom LaTeX macros used in the project
+    latex_decryption_guide = """=== LaTeX Project Macro Translation Guide ===
+Our LaTeX formulas use custom macro abbreviations that must be translated to standard Lean 4 syntax:
+* \\mForall{x \\in X} or \\mForall{x \\colon X} -> universal quantifier (∀ x ∈ X, ...) or (∀ x : X, ...)
+* \\mExists{x \\in X} or \\mExists{x \\colon X} -> existential quantifier (∃ x ∈ X, ...) or (∃ x : X, ...)
+* \\mIff -> logical equivalence / iff (↔)
+* \\mImplies -> logical implication (→)
+* \\entityref{entity-id}{text} -> represents a reference to a core mathematical object/type. Translate to appropriate Lean types:
+  - \\entityref{obj-real-numbers}{\\mathbb{R}} -> Real numbers (ℝ)
+  - \\entityref{obj-natural-numbers}{\\mathbb{N}} -> Natural numbers (ℕ)
+  - \\entityref{obj-rational-numbers}{\\mathbb{Q}} -> Rational numbers (Rat)
+  - \\entityref{op-abs-abstract}{\\mathrm{abs}}(x) -> Absolute value function (|x| or Real.abs x)
+* \\left( and \\right) -> standard parentheses ( and )"""
+
+    # Declaration rules based on Entity Type
+    declaration_rules = f"""=== Lean 4 Declaration Mapping Rules ===
+The target entity has type: '{entity_type}'. You MUST follow these strict mapping rules based on this type:
+1. If the type is 'operation', 'definition', 'object' or 'property':
+   - Declare EXACTLY ONE `def`. 
+   - EXAMPLE OF EXPECTED OUTPUT:
+     ```lean4
+     def {lean_name} (f : ℝ → ℝ) (x L : ℝ) : Prop := ...
+     ```
+   - CRITICAL: DO NOT create any additional `theorem` or `lemma` blocks! Stop generation right after the `def`.
+   - CRITICAL: DO NOT attempt to prove equivalence to Mathlib concepts (like Filter.Tendsto).
+   - If the LaTeX contains \\mIff or \\mDefinedAs, extract the right-hand side and use it as the body of your `def`.
+   - DO NOT use sorry under any circumstances!
+   - ANTI-SHADOWING RULE: Never use the same variable name for a collection and its element (e.g., instead of `∃ B ∈ B`, you MUST use `∃ B' ∈ B` or `∃ U ∈ B`).
+2. If the type is 'theorem':
+   - Declare it as a `theorem`. Format: `theorem {lean_name} ... : ... := by sorry`
+   - `sorry` is ALLOWED for theorem proofs.
+3. If the type is 'axiom' or 'foundation':
+   - Declare it as an `axiom`. Format: `axiom {lean_name} ... : ...`"""
+
+    # Detect if we are using the Goedel-Formalizer model
+    is_goedel = "goedel" in target_model.lower()
+
+    if is_goedel:
+        problem_name = lean_name
+        informal_statement_content = f"We define a mathematical {entity_type}.\n"
+        informal_statement_content += f"Formal definition/theorem in LaTeX:\n${tex_clean}$\n"
+        if mathlib_hints:
+            informal_statement_content += f"\nRelevant Mathlib signatures:\n{mathlib_hints}\n"
+            
+        informal_statement_content += f"\n{declaration_rules}\n\n{latex_decryption_guide}\n"
+        system_prompt = None
+
+        # Смена фрейма и Prefix Forcing для определений
+        if entity_type in ["object", "operation", "definition", "property"]:
+            system_intro = f"Please formalize the following mathematical definition in Lean 4 as a pure `def`. Use the following definition name: {problem_name}"
+            prefix_hint = f"\n\nCRITICAL: Output ONLY the Lean code. You MUST start your code exactly like this:\n```lean4\ndef {lean_name}"
+        else:
+            system_intro = f"Please autoformalize the following natural language problem statement in Lean 4. Use the following theorem name: {problem_name}"
+            prefix_hint = ""
+
+        if error_feedback and previous_code:
+            user_prompt = f"""{system_intro}
+The natural language statement is: 
+{informal_statement_content}
+
+CRITICAL: The previous Lean 4 attempt produced compiler errors. 
+Previous Lean 4 code:
+{previous_code}
+
+Compiler Errors:
+{error_feedback}
+
+Please correct the Lean 4 code so it compiles successfully.
+Think before you provide the lean statement.{prefix_hint}"""
+        else:
+            user_prompt = f"""{system_intro}
+The natural language statement is: 
+{informal_statement_content}
+Think before you provide the lean statement.{prefix_hint}"""
+    else:
+        # Standard system prompt for general instruction models
+        system_prompt = f"""You are an expert mathematician and a Lean 4 formalization specialist.
+Your task is to translate mathematical statements into valid Lean 4 declarations.
+
+Textbooks use informal Set Theory (ZFC) and often abuse notation. Your target environment (Lean 4) uses strict Type Theory (Calculus of Inductive Constructions). You must bridge this gap by performing a rigorous semantic translation before generating the final code.
+
+CRITICAL HEURISTICS & ANTI-PATTERNS TO AVOID:
+1. Types vs. Sets (The \colon vs \in rule): 
+   Never confuse belonging to a fundamental type with belonging to a subset. 
+   - BAD: "x \in \mathbb{R}" when declaring a variable. 
+   - GOOD: "x \colon \mathbb{R}" (in LaTeX) or "(x : ℝ)" (in Lean). Use "\in" ONLY for subsets, e.g., "x \in [a, b]".
+
+2. Analytical vs. Computational Structures (The List rule):
+   Never use computational data structures like `List` or `Array` to represent continuous mathematical concepts (partitions, sequences, covers).
+   - BAD: Representing a partition as `P : List ℝ`.
+   - GOOD: Representing a partition as a function `(n : ℕ) (t : ℕ → ℝ)` bounded by `Finset.range n`.
+
+3. Unpacking Informal Notation (The Ellipsis rule):
+   Textbooks use informal ellipses like "{{t_0, ..., t_n}}". You must explicitly unpack these into rigorous functions and index bounds. Identify implicit dependencies (e.g., if a sequence is finite, you must introduce its length `n : ℕ` as a separate variable).
+
+4. Tautology & Complexity Check:
+   If you find yourself writing repetitive logical tautologies (e.g., `x ≠ y → x ≠ y`) or overly complex index bounds, your underlying type choice is wrong. Stop and re-evaluate your data structures.
+
+5. Strict Semantic Identifiers (The Self-Describing ID Rule):
+   When generating \entityref{id}{text} or defining a new entity-id, the `id` MUST be globally unambiguous, self-documenting, and resistant to namespace collisions. 
+   
+   NEVER use bare, generic nouns or adjectives. You MUST include the domain or the parent mathematical object in the ID.
+   
+   Format: {type}-{domain_or_parent}-{concept}
+   
+   - BAD: `op-mesh` (Mesh of what? A graph? A 3D model? A partition?)
+   - GOOD: `op-partition-mesh` (Clearly states this is the mesh of a partition)
+   
+   - BAD: `prop-bounded` (Is a function bounded? A set? A sequence?)
+   - GOOD: `prop-function-bounded` or `prop-set-bounded`
+   
+   - BAD: `op-addition` 
+   - GOOD: `op-real-addition` or `op-matrix-addition` (Unless using the Late Binding abstract pattern like `op-add-abstract`)
+
+   If a concept belongs to a specific mathematical domain, prefix it explicitly to help the Lean 4 translator map it to the correct Mathlib namespace.
+
+OUTPUT FORMAT:
+Before writing the final Lean 4 code, you MUST output a `<semantic_mapping>` block where you explicitly map the informal concepts to their strict Type Theory equivalents:
+
+<semantic_mapping>
+1. Variables & Types: [List all variables and state whether they are Types (:) or Sets (∈)]
+2. Data Structures: [Explain how you will represent complex objects like partitions or sequences]
+3. Implicit Bounds: [List any hidden variables, like `n : ℕ`, needed to make the definition strict]
+</semantic_mapping>
+
+[Your final Lean 4 code block follows here enclosed in ```lean ... ```]
+
+{declaration_rules}
+
+{latex_decryption_guide}
+
+RULES:
+1. Output the `<semantic_mapping>` block first, then the valid Lean 4 code block. No additional markdown formatting, no explanations outside these blocks, no `import` statements.
+2. Use Mathlib types: ℝ, ℕ, ℤ, Set, Prop, Type.
+3. ALL variables must be bound explicitly (∀ or ∃).
+4. Do NOT use LaTeX commands (\\forall, \\in, \\mathbb, etc.)."""
+
+        if error_feedback and previous_code:
+            user_prompt = f"""The following Lean 4 code generated for entity '{lean_name}' produced compiler errors.
 Code:
 {previous_code}
 
@@ -607,8 +1008,8 @@ Compiler Errors:
 {error_feedback}
 
 Fix the Lean 4 code. Output ONLY the fixed code."""
-    else:
-        user_prompt = f"""Entity Type: {entity_type}
+        else:
+            user_prompt = f"""Entity Type: {entity_type}
 Name: {lean_name}
 
 LaTeX Source:
@@ -619,15 +1020,104 @@ Mathlib Hints:
 
 Lean 4 Code:"""
 
-    response = query_llm(user_prompt, model=model, system_prompt=system_prompt)
+        if error_feedback and previous_code:
+            user_prompt = f"""The following Lean 4 code generated for entity '{lean_name}' produced compiler errors.
+Code:
+{previous_code}
+
+Compiler Errors:
+{error_feedback}
+
+Fix the Lean 4 code. Output ONLY the fixed code."""
+        else:
+            user_prompt = f"""Entity Type: {entity_type}
+Name: {lean_name}
+
+LaTeX Source:
+{tex_clean}
+
+Mathlib Hints:
+{mathlib_hints}
+
+Lean 4 Code:"""
+
+    response = query_llm(user_prompt, model=target_model, system_prompt=system_prompt, provider=target_provider)
     
-    # Clean up artifacts
-    response = re.sub(r'^```(lean)?\s*', '', response, flags=re.MULTILINE)
-    response = re.sub(r'^```\s*$', '', response, flags=re.MULTILINE)
-    response = response.strip()
+    # Log synthesis prompt and response
+    synth_log = f"=== SYSTEM PROMPT ===\n{system_prompt}\n\n=== PROMPT ===\n{user_prompt}\n\n=== RESPONSE ===\n{response}\n"
+    log_to_file("synthesis/lean", synth_log, entity_id=entity_id, attempt=attempt)
     
+    # Extract Lean code blocks robustly
+    prompt_ends_in_code_block = is_goedel and entity_type in ["object", "operation", "definition", "property"]
+    
+    parts = re.split(r'```(?:lean|lean4)?\s*', response, flags=re.IGNORECASE)
+    blocks = []
+    if prompt_ends_in_code_block:
+        # Segment 0 is the immediate completion of the prefix
+        if parts[0].strip():
+            blocks.append(parts[0].strip())
+        # Other segments are in between backticks
+        for i in range(2, len(parts), 2):
+            blocks.append(parts[i].strip())
+    else:
+        for i in range(1, len(parts), 2):
+            blocks.append(parts[i].strip())
+            
+    if not blocks:
+        clean = re.sub(r'^```(?:lean|lean4)?\s*', '', response, flags=re.MULTILINE | re.IGNORECASE)
+        clean = re.sub(r'^```\s*$', '', clean, flags=re.MULTILINE)
+        if clean.strip():
+            blocks.append(clean.strip())
+            
+    # Select the best block containing actual Lean declarations
+    if blocks:
+        best_block = blocks[-1]
+        for b in reversed(blocks):
+            if "def " in b or "theorem " in b or "axiom " in b:
+                best_block = b
+                break
+                
+        if prompt_ends_in_code_block and best_block == blocks[0]:
+            response = f"def {lean_name} {best_block}"
+        else:
+            response = best_block
+    else:
+        response = response.strip()
+        
+    # Clean up LLM completion prefix junk (like '4', 'lean', 'lean4') on the first line
+    lines = response.splitlines()
+    if lines and lines[0].strip() in ("4", "lean", "lean4"):
+        lines = lines[1:]
+    response = "\n".join(lines).strip()
+    
+    # Auto-heal cheat patterns where reasoning models define helper defs and theorem equivalents
+    if entity_type in ["object", "property", "operation"]:
+        helper_matches = re.findall(r'\bdef\s+([A-Za-z0-9_]+)\b', response)
+        helpers = [h for h in helper_matches if h != lean_name]
+        
+        if helpers and lean_name not in helper_matches:
+            has_theorem = re.search(rf'\b(theorem|lemma)\s+{lean_name}\b', response)
+            if has_theorem:
+                helper_to_rename = helpers[0]
+                print(f"  [Auto-Heal] Renaming helper '{helper_to_rename}' to target '{lean_name}' and removing theorem.")
+                response = re.sub(rf'\bdef\s+{helper_to_rename}\b', f'def {lean_name}', response)
+                response = re.sub(rf'\b(theorem|lemma)\s+{lean_name}\b.*', '', response, flags=re.DOTALL).strip()
+                
+        elif not re.search(r'\bdef\b', response) and re.search(rf'\b(theorem|lemma)\s+{lean_name}\b', response):
+            print(f"  [Auto-Heal] Changing theorem '{lean_name}' to def.")
+            response = re.sub(rf'\b(theorem|lemma)\s+{lean_name}\b', f'def {lean_name}', response)
+    
+    # Log Lean code
+    if response:
+        log_to_file("lean_code", response, entity_id=entity_id, attempt=attempt)
+        
     print(f"  [lean-export] Сгенерированный код Lean:\n{response}\n")
-    
+
+    # Forbid 'noncomputable' in generated Lean code per policy
+    if 'noncomputable' in response.lower():
+        print(f"  [lean-export] REJECTING: 'noncomputable' used in generated code (forbidden).")
+        return ""
+
     if '\\' in response and ('\\mathcal' in response or '\\in' in response or '\\mForall' in response):
         print(f"  [lean-export] LLM output still contains LaTeX. Rejecting.")
         return ""
@@ -647,30 +1137,50 @@ def translate_to_lean_regex(entity_id, entity_type, tex_content):
     lean_name = entity_id.replace('-', '_')
 
     replacements = [
+        # Quantifiers (Parameterized)
         (r'\\mForall\{([^}]+)\}', r'∀ \1, '),
         (r'\\mExists\{([^}]+)\}', r'∃ \1, '),
-        (r'\\mImplies', '→'),
-        (r'\\mIff', '↔'),
-        (r'\\mDefIff', ':='),
+        
+        # Mappings
+        (r'\\mMap\{([^}]+)\}\{([^}]+)\}\{([^}]+)\}', r'\1 : \2 → \3'),
+
+        # Quantifiers (Standalone)
+        (r'\\mForall', '∀'), (r'\\forall', '∀'),
+        (r'\\mExists', '∃'), (r'\\exists', '∃'),
+
+        # Logic Connectives
+        (r'\\mImplies', '→'), (r'\\Rightarrow', '→'), (r'\\implies', '→'),
+        (r'\\mIff', '↔'), (r'\\Leftrightarrow', '↔'), (r'\\iff', '↔'),
+        (r'\\mDefIff', ':='), (r'\\mDefinedAs', ':='),
         (r'\\mAnd', '∧'), (r'\\land', '∧'),
         (r'\\mOr', '∨'), (r'\\lor', '∨'),
         (r'\\mNot', '¬'), (r'\\lnot', '¬'),
+        (r'\\mTurnstile', '⊢'), (r'\\vdash', '⊢'),
+
+        # Sets
         (r'\\mIn', '∈'), (r'\\in', '∈'),
+        (r'\\mSubseteq', '⊆'), (r'\\subseteq', '⊆'),
         (r'\\mSubset', '⊆'), (r'\\subset', '⊆'),
+        (r'\\mEmpty', '∅'), (r'\\varnothing', '∅'), (r'\\emptyset', '∅'),
+
+        # Number Sets
+        (r'\\mReal', 'ℝ'), (r'\\mathbb\{R\}', 'ℝ'),
+        (r'\\mNat', 'ℕ'), (r'\\mathbb\{N\}', 'ℕ'),
+        (r'\\mInt', 'ℤ'), (r'\\mathbb\{Z\}', 'ℤ'),
+        (r'\\mComplex', 'ℂ'), (r'\\mathbb\{C\}', 'ℂ'),
+
+        # Formatting / Structural
         (r'\\entityref\{[^}]+\}\{(.*?)\}', r'\1'),
         (r'\\quad', ' '), (r'\\;', ' '),
         (r'\\text\{([^}]+)\}', r'\1'),
         (r'\\left', ''), (r'\\right', ''),
-        (r'\\mathbb\{R\}', 'ℝ'), (r'\\mReal', 'ℝ'),
-        (r'\\mathbb\{N\}', 'ℕ'), (r'\\mNat', 'ℕ'),
-        (r'\\mathbb\{Z\}', 'ℤ'), (r'\\mInt', 'ℤ'),
         (r'\\colon', ':'),
-        (r'\\to', '→'),
+        (r'\\mTo', '→'), (r'\\to', '→'),
+
+        # Relational / Variables
         (r'\\neq', '≠'),
         (r'\\leq', '≤'), (r'\\le', '≤'),
         (r'\\geq', '≥'), (r'\\ge', '≥'),
-        (r'\\forall', '∀'), (r'\\exists', '∃'),
-        (r'\\Rightarrow', '→'), (r'\\Leftrightarrow', '↔'),
         (r'\\varepsilon', 'ε'), (r'\\delta', 'δ'),
         (r'\\infty', '∞'),
         (r'\\mathcal\{([^}]+)\}', r'\1'),
@@ -710,7 +1220,8 @@ def attempt_generation_with_repair(eid, entity_type, tex_content, model="goedel:
             eid, entity_type, tex_content, 
             model=model,
             error_feedback=error_feedback, 
-            previous_code=lean_code
+            previous_code=lean_code,
+            attempt=attempt
         )
         
         if not lean_code:
@@ -726,6 +1237,7 @@ def attempt_generation_with_repair(eid, entity_type, tex_content, model="goedel:
             errors = validation_result.get("errors", [])
             error_feedback = "\n".join([f"Line {e['line']}: {e['message']}" for e in errors])
             print(f"  [!] {eid} ошибка (Попытка {attempt}/{max_attempts}). Отправляем фидбек модели...")
+            log_to_file("lean_errors", error_feedback, entity_id=eid, attempt=attempt)
             
     return lean_code, False
 

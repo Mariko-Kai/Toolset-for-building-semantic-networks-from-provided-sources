@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}{{ entity.name }} — Mathesis{% endblock %}
+{% block title %}{{ entity.name }}{% endblock %}
 
 {% block content %}
 <div class="breadcrumb">
-    <a href="/">Каталог</a>
+    <a href="/catalog">Каталог</a>
     <span class="bc-sep">/</span>
-    <a href="/#{{ entity_type }}s">{{ meta.name_ru }}</a>
+    <a href="/catalog#{{ entity_type }}s">{{ meta.name_ru }}</a>
     <span class="bc-sep">/</span>
     <span class="bc-current">{{ entity.name }}</span>
 </div>
@@ -26,6 +26,9 @@
                 {% endif %}
             </div>
         </div>
+        <a href="/master.pdf#{{ entity.id }}" target="_blank" class="pdf-action-btn">
+            <span class="pdf-btn-icon">📄</span> PDF Версия
+        </a>
     </div>
 
     <!-- Aliases -->
@@ -45,9 +48,9 @@
         <h2>Формулировка</h2>
         <div class="formula-block">
             {% if entity.statement is defined %}
-            $${{ entity.statement }}$$
+            {{ entity.statement }}
             {% elif entity.formal_definition is defined %}
-            $${{ entity.formal_definition }}$$
+            {{ entity.formal_definition }}
             {% endif %}
         </div>
     </div>
@@ -57,7 +60,7 @@
     <div class="detail-section">
         <h2>Интуиция</h2>
         <div class="intuition-block">
-            ${{ extra.intuition }}$
+            {{ extra.intuition }}
         </div>
     </div>
     {% endif %}

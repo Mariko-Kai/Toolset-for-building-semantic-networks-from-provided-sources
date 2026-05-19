@@ -1,0 +1,26 @@
+% entity-id: thm-partial-order
+% entity-type: theorem
+\entityref{op-hypertarget}{\hypertarget}{thm-partial-order}{}
+\hypertarget{thm-partial-order}{}
+\begin{theorem}[Partial Order Properties]
+\[
+\mForall{S \in \entityref{obj-set}{\text{Set}}}
+\mForall{R \subseteq S \entityref{obj-cartesian-product}{\times} S}
+\left(
+\entityref{prop-partial-order}{\mathrm{IsPartialOrder}}(R, S) \mIff
+\left(
+\left( \mForall{a \in S} \quad (a, a) \in R \right) \mAnd
+\left( \mForall{a, b \in S} \quad ((a, b) \in R \mAnd (b, a) \in R) \mImplies a = b \right) \mAnd
+\left( \mForall{a, b, c \in S} \quad ((a, b) \in R \mAnd (b, c) \in R) \mImplies (a, c) \in R \right)
+\right)
+\right)
+\]
+\end{theorem}
+
+\begin{proof}[RU]
+Отношение \entityref{prop-partial-order}{частичного порядка} на \entityref{obj-set}{множестве} $S$ — это бинарное отношение $R$, которое одновременно является рефлексивным, антисимметричным и транзитивным.
+\end{proof}
+
+\begin{proof}[EN]
+A partial order on a set $S$ is a binary relation $R$ that is simultaneously reflexive, antisymmetric, and transitive.
+\end{proof}

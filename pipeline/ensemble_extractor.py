@@ -9,11 +9,17 @@ import sqlite3
 import argparse
 import re
 import sys
+import io
 import json
 import urllib.request
 import time
 from pathlib import Path
 import fitz  # PyMuPDF
+
+# Fix Windows console encoding
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -245,8 +251,8 @@ def get_section_page_range(toc: list, target_page: int) -> tuple:
 
 # ── Phase 2: Full-Text Search ────────────────────────────────────────────────
 
-def search_fulltext(pdf_path: Path, roots: list, max_pages=5) -> list:
-    """Scans all pages for root co-occurrence. Ranks pages by number of matching roots."""
+def search_fulltext(pdf_path: Path, roots: list, max_pages=None) -> list:
+    """Scans all pages for root co-occurrence. Returns list of matching page indices (all matches by default)."""
     try:
         doc = fitz.open(pdf_path)
     except Exception:
@@ -280,7 +286,8 @@ def search_fulltext(pdf_path: Path, roots: list, max_pages=5) -> list:
     scored_results.sort(key=lambda x: (-x[0], x[1]))
     
     results = []
-    for score, page, matched in scored_results[:max_pages]:
+    iter_list = scored_results if max_pages is None else scored_results[:max_pages]
+    for score, page, matched in iter_list:
         print(f"  [fulltext] стр.{page+1}: совпали {len(matched)}/{len(roots)} — {matched} (score: {score})")
         results.append(page)
 
@@ -322,7 +329,7 @@ def extract_context_window(pdf_path: Path, center_page: int, entity_type: str) -
 # ── LLM Parsing ──────────────────────────────────────────────────────────────
 
 def parse_with_llm(raw_text: str, query: str, entity_type: str, model="llama3.1:8b") -> dict:
-    """Uses LLM to extract structured formulation from raw PDF text."""
+    """Uses LLM to extract structured formulation from raw PDF text. MUST return a JSON object including a 'deps' array."""
     prompt = f"""Ты — математический редактор. Извлеки из сырого текста учебника формулировку для термина: "{query}".
 Тип: {entity_type}.
 
@@ -330,15 +337,15 @@ def parse_with_llm(raw_text: str, query: str, entity_type: str, model="llama3.1:
 {raw_text[:6000]}
 
 ИНСТРУКЦИИ:
-1. СОХРАНИ ключевые слова "{query}" в поле statement.
-2. "context": Вводные условия (например: "Пусть f — функция...").
-3. "statement": Полная формулировка определения или теоремы.
-4. "proof": Текст доказательства (только для теорем, иначе null).
+1. "context": Вводные условия (например: "Пусть f — функция...").
+2. "statement": Полная формулировка определения или теоремы.
+3. "proof": Текст доказательства (только для теорем, иначе null).
+4. "deps": Список коротких строк — имена/фразы зависимостей (пример: ["limit of a function", "point"]). Если зависимостей нет — верни пустой массив [].
 5. "found": Если в тексте НЕТ именно этого объекта — false.
 6. "page_ref": Номер страницы из заголовков "--- PAGE N ---".
 
 Верни СТРОГО JSON:
-{{ "found": true, "context": "...", "statement": "...", "proof": "...", "page_ref": 0 }}
+{{ "found": true, "context": "...", "statement": "...", "proof": "...", "deps": [], "page_ref": 0 }}
 """
     response = query_llm(prompt, model=model, json_mode=True)
     
@@ -348,20 +355,169 @@ def parse_with_llm(raw_text: str, query: str, entity_type: str, model="llama3.1:
     
     try:
         result = json.loads(response)
-        # Gemma models sometimes return a list instead of a dict
+        # Some models return a list instead of a dict
         if isinstance(result, list):
-            result = result[0] if result else {"found": False}
+            result = result[0] if result else {"found": False, "deps": []}
         if not isinstance(result, dict):
-            return {"found": False}
+            return {"found": False, "deps": []}
+        # Ensure deps key exists
+        if 'deps' not in result:
+            result['deps'] = []
         return result
     except (json.JSONDecodeError, ValueError):
-        return {"found": False}
+        return {"found": False, "deps": []}
 
 
 # ── Main Pipeline ────────────────────────────────────────────────────────────
 
+def preview_scan(pdf_path: Path, query: str, preview_provider: str, preview_model: str, candidate_pages: list | None = None, entity_type: str = "definition") -> list:
+    """Scan selected pages using preview LLM or Hybrid Search Cross-Encoder to find candidate pages.
+
+    If candidate_pages is provided, only those pages are scanned. Otherwise all pages are scanned.
+    Returns list of (page_index, score) tuples sorted by score descending.
+    """
+    if not preview_model or not preview_provider:
+        return []
+    
+    import fitz
+    
+    doc = fitz.open(pdf_path)
+    pages_to_scan = list(candidate_pages) if candidate_pages is not None else list(range(len(doc)))
+    
+    # Check if the preview configuration targets a Cross-Encoder Reranker
+    is_cross_encoder = (
+        preview_provider == "llama_cpp" or 
+        "reranker" in preview_model.lower() or 
+        "gte-multilingual" in preview_model.lower()
+    )
+
+    if is_cross_encoder:
+        print(f"  [Preview] Using Two-Stage Cross-Encoder Reranker ({preview_model})...")
+        try:
+            from pipeline.hybrid_search import HybridSearchPipeline
+            
+            # Resolve backend and model name/REST api URL
+            backend = "local"
+            model_name = "BAAI/bge-reranker-v2-m3"
+            api_url = None
+            server_model_path = None
+            
+            if preview_provider == "llama_cpp":
+                # Check for running local server at standard ports (e.g. native llama-server)
+                import urllib.request
+                server_urls = [
+                    "http://localhost:8080/rerank",
+                    "http://localhost:8080/v1/rerank",
+                    "http://localhost:8000/v1/rerank"
+                ]
+                for url in server_urls:
+                    try:
+                        req = urllib.request.Request(url, data=b"{}", headers={'Content-Type': 'application/json'})
+                        with urllib.request.urlopen(req, timeout=0.3) as conn:
+                            pass
+                        api_url = url
+                        backend = "rest"
+                        print(f"  [Preview] Detected active local reranker server at {url}. Using REST backend.")
+                        break
+                    except Exception:
+                        continue
+                
+                # If no running server is found, instead of spawning a buggy background server,
+                # we run in-process using PyTorch CPU in-memory! This completely avoids port conflicts,
+                # deadlocks, and FastAPI 404 routing errors.
+                if backend == "local":
+                    print("  [Preview] No active local reranker REST server found. Running Cross-Encoder in-process (in-memory PyTorch CPU)...")
+                    if ".gguf" in preview_model.lower() or "/" in preview_model or "\\" in preview_model:
+                        # Map local GGUF path to public model name for PyTorch execution
+                        if "bge-reranker-v2-m3" in preview_model.lower():
+                            model_name = "BAAI/bge-reranker-v2-m3"
+                        elif "gte-multilingual" in preview_model.lower():
+                            model_name = "Alibaba-NLP/gte-multilingual-reranker-base"
+                        else:
+                            model_name = "BAAI/bge-reranker-v2-m3"
+                    else:
+                        model_name = preview_model
+            else:
+                if not ("/" in preview_model or "\\" in preview_model or ".gguf" in preview_model):
+                    model_name = preview_model
+
+            # Prepare page data as list of (page_num, text)
+            page_data = []
+            for i in pages_to_scan:
+                if 0 <= i < len(doc):
+                    page_data.append((i, doc[i].get_text("text")))
+            
+            doc.close()
+
+            # Execute with context manager to automatically start and stop the server
+            with HybridSearchPipeline(
+                backend=backend, 
+                model_name=model_name, 
+                api_url=api_url, 
+                server_model_path=server_model_path
+            ) as pipeline:
+                # Run the hybrid search
+                top_results = pipeline.search(query, entity_type, page_data, top_k=10)
+            
+            # Map back to expected output: [(page_index, score), ...]
+            candidates = [(res["page_num"], res["score"]) for res in top_results]
+            print(f"  [Preview] Cross-Encoder Reranker completed. Found {len(candidates)} candidate pages.", flush=True)
+            return candidates
+        except Exception as e:
+            print(f"  [Preview] Cross-Encoder initialization/search failed: {e}. Returning empty candidate list.")
+            return []
+
+    # Standard Generative Prompt (Old Fallback logic)
+    from pipeline.export_to_lean import query_llm
+    candidates = []
+
+    print(f"  [Preview] Scanning {len(pages_to_scan)} pages (generative prompt)...")
+    consecutive_failures = 0
+    for i in pages_to_scan:
+        if i < 0 or i >= len(doc):
+            continue
+        max_text_len = 1000 if preview_provider == "llama_cpp" else 4000
+        text = doc[i].get_text("text").replace('\n', ' ')[:max_text_len]
+        prompt = (
+            "Задача: определить, содержит ли эта страница вводящую формулировку для термина '%s', где сущность непосредственно задаётся. "
+            "ИЩИ явные маркеры: заголовки \"Определение\"/\"Definition\", вводные фразы \"называется\", \"будем называть\", \"определяется как\", \"обозначим\", записи вида \"X := ...\" или конструкции \"X - это ...\". "
+            "Верни ТОЛЬКО корректный JSON: {\"found\": true, \"confidence\": 0.0-1.0, \"reason\": \"короткое объяснение, например 'заголовок + называется'\", \"snippet\": \"до 400 символов\", \"page_ref\": N}.\n\n"
+            "Page text:\n%s"
+        ) % (query, text)
+        
+        try:
+            resp = query_llm(prompt, model=preview_model, json_mode=True, provider='preview')
+            if not resp:
+                consecutive_failures += 1
+                if consecutive_failures >= 3:
+                    print(f"  [Preview] WARNING: Preview model '{preview_model}' is returning empty responses. Is it pulled/running?")
+                    break
+                continue
+                
+            parsed = json.loads(resp)
+            consecutive_failures = 0
+            if isinstance(parsed, dict) and parsed.get('found'):
+                try:
+                    score = float(parsed.get('confidence', 0.5))
+                except Exception:
+                    score = 0.5
+                candidates.append((i, score))
+                print(f"  [Preview] Page {i+1}: MATCH (confidence: {score:.2f})")
+        except Exception as e:
+            consecutive_failures += 1
+            if consecutive_failures >= 3:
+                print(f"  [Preview] WARNING: Preview scan failing repeatedly: {e}. Aborting scan.")
+                break
+    
+    doc.close()
+    
+    candidates.sort(key=lambda x: x[1], reverse=True)
+    print(f"  [Preview] Found {len(candidates)} candidate pages.")
+    return candidates
+
+
 def process_single_book(pdf_path: Path, query: str, entity_type: str, roots: list,
-                        model: str) -> list:
+                        model: str, preview_provider: str = None, preview_model: str = None) -> list:
     """
     Two-phase search on a single PDF.
     Returns list of extracted formulations.
@@ -373,29 +529,75 @@ def process_single_book(pdf_path: Path, query: str, entity_type: str, roots: lis
     book_id = extract_book_id(pdf_path)
     print(f"\n  ── {book_id} ({pdf_path.name}) ──")
 
-    # Phase 1: ToC search
-    toc = build_toc_index(pdf_path)
     target_pages = []
+    
+    # Preview: build candidate pages from top-scored fitz matches and sample 20 random from them
+    candidate_pages = None
+    if preview_model and preview_provider:
+        print("  [Preview] Building candidate page set from fitz matches...")
+        try:
+            import fitz, random
+            doc = fitz.open(pdf_path)
+            scored_pages = []
+            
+            for i in range(len(doc)):
+                text = doc[i].get_text("text").lower().replace('\n', ' ')
+                matched_roots = [r.lower() for r in roots if r.lower() in text]
+                if matched_roots:
+                    score = len(matched_roots)
+                    scored_pages.append((score, i))
+            
+            doc.close()
 
-    if toc:
-        toc_hits = search_toc(toc, roots)
-        if toc_hits:
-            print(f"  [ToC] Совпадения в оглавлении: {[t[1] for t in toc_hits[:3]]}")
-            for page, title in toc_hits[:3]:
-                # Get section range for more targeted extraction
-                start, end = get_section_page_range(toc, page)
-                target_pages.append(page)
+            if scored_pages:
+                # Sort by score descending then page ascending
+                scored_pages.sort(key=lambda x: (-x[0], x[1]))
+                # Include ALL matched pages (no sampling) per user request
+                candidate_pages = [p for s, p in scored_pages]
+                print(f"  [Preview] {len(scored_pages)} pages matched roots; including all {len(candidate_pages)} pages for preview.")
+            else:
+                # Fallback: scan all pages
+                doc = fitz.open(pdf_path)
+                total = len(doc)
+                doc.close()
+                candidate_pages = list(range(total))
+                print(f"  [Preview] No root matches; scanning all {total} pages.")
 
-    # Phase 2: Full-text fallback
+            print("  [Preview] Running preview scan on sampled pages...", flush=True)
+            try:
+                preview_hits = preview_scan(pdf_path, query, preview_provider, preview_model, candidate_pages=candidate_pages, entity_type=entity_type)
+                if preview_hits:
+                    # preview_hits is list of (page, score) tuples sorted by score desc
+                    top_n = 10
+                    print(f"  [Preview] Candidate pages (top {top_n} by confidence): {[ (p+1, f'{s:.2f}') for p,s in preview_hits[:top_n]]}", flush=True)
+                    target_pages = [p for p, s in preview_hits[:top_n]]
+            except Exception as e:
+                print(f"  [Preview] Error during preview scan: {e}", flush=True)
+        except Exception as e:
+            print(f"  [Preview] Error building candidates: {e}", flush=True)
+
+    # Fallback to ToC/fulltext only if preview is disabled or returned nothing
     if not target_pages:
-        print(f"  [*] ToC не дал результатов, полнотекстовый поиск по корням {roots}...")
-        target_pages = search_fulltext(pdf_path, roots, max_pages=3)
+        print("  [Search] Using traditional search (ToC + fulltext)...")
+        toc = build_toc_index(pdf_path)
+        
+        if toc:
+            toc_hits = search_toc(toc, roots)
+            if toc_hits:
+                print(f"  [ToC] Совпадения в оглавлении: {[t[1] for t in toc_hits]}")
+                for page, title in toc_hits:
+                    target_pages.append(page)
+        
+        # Fallback to fulltext if still empty
+        if not target_pages:
+            print(f"  [Fulltext] Searching by roots {roots}...")
+            target_pages = search_fulltext(pdf_path, roots, max_pages=7)
 
     if not target_pages:
-        print(f"  [SKIP] Термин не найден.")
+        print(f"  [SKIP] Термин не найден.", flush=True)
         return []
 
-    print(f"  [+] Целевые страницы: {[p + 1 for p in target_pages]}")
+    print(f"  [+] Целевые страницы: {[p + 1 for p in target_pages]}", flush=True)
 
     # Extract and parse
     results = []
@@ -406,7 +608,7 @@ def process_single_book(pdf_path: Path, query: str, entity_type: str, roots: lis
         seen_pages.add(page_idx)
 
         raw_text = extract_context_window(pdf_path, page_idx, entity_type)
-        print(f"  [*] LLM-анализ стр. {page_idx + 1}...")
+        print(f"  [*] LLM-анализ стр. {page_idx + 1}...", flush=True)
         parsed = parse_with_llm(raw_text, query, entity_type, model=model)
 
         if parsed.get("found"):
@@ -418,12 +620,70 @@ def process_single_book(pdf_path: Path, query: str, entity_type: str, roots: lis
                 "source": book_id,
                 "page_ref": page_ref,
             })
-            print(f"  [OK] Извлечено (стр. {page_ref}).")
+            print(f"  [OK] Извлечено (стр. {page_ref}).", flush=True)
         else:
-            print(f"  [SKIP] LLM: нерелевантный фрагмент.")
+            print(f"  [SKIP] LLM: нерелевантный фрагмент.", flush=True)
 
     return results
 
+
+def gather_implicit_assumptions(book_id: str, page_idx: int, query: str, model="llama3.1:8b") -> str:
+    """
+    Looks back at previous pages (up to 5 pages) to find implicit type assumptions
+    and mathematical context for the current entity (e.g. 'Let f be a continuous function').
+    """
+    pdf_map = {
+        "zorich": "Zorich, V.A. - Mathematical Analysis Vol 1 - (RU) - [10th ed].pdf",
+        "apostol": "Apostol, T.M. - Calculus Vol 1 - (EN) - [1991].pdf",
+        "spivak": "Spivak, M. - Calculus - (EN).pdf"
+    }
+    
+    if book_id not in pdf_map:
+        return ""
+        
+    pdf_path = BOOKS_DIR / pdf_map[book_id]
+    if not pdf_path.exists():
+        return ""
+        
+    start_page = max(0, page_idx - 5)
+    
+    import fitz
+    doc = fitz.open(pdf_path)
+    end_page = min(len(doc) - 1, page_idx)
+    
+    text_blocks = []
+    for p in range(start_page, end_page + 1):
+        page = doc[p]
+        text = page.get_text()
+        # Very simple heuristic: stop going back if we hit a chapter boundary
+        # We process pages forward, so if chapter is found, we truncate earlier pages.
+        if re.search(r'\b(Chapter|Глава)\s+\d+', text, re.IGNORECASE):
+            text_blocks = [] # Reset, only take from this chapter forward
+        text_blocks.append(text)
+        
+    doc.close()
+    
+    combined_text = "\n".join(text_blocks)
+    if not combined_text.strip():
+        return ""
+        
+    prompt = f"""You are a mathematical context analyzer.
+We are trying to formulate a rigorous definition/theorem for: "{query}".
+However, the author might have defined variables or conventions earlier in the chapter.
+
+Read the following preceding pages from the textbook:
+{combined_text[:8000]}
+
+Task: Extract any IMPLICIT ASSUMPTIONS, TYPE DECLARATIONS, or GLOBAL CONVENTIONS that apply to the current context.
+For example: "Throughout this section, f is a continuous function from R to R" or "Let V be a vector space".
+Return ONLY the extracted mathematical conditions as plain text. If none are found, return exactly: NONE.
+"""
+    response = query_llm(prompt, model=model)
+    
+    if not response or response.strip().upper() == "NONE":
+        return ""
+        
+    return response.strip()
 
 def main():
     parser = argparse.ArgumentParser(description="Ensemble PDF Extractor v2 — Global Search")
@@ -445,11 +705,22 @@ def main():
                         help="Модель LLM для модуля извлечения")
     parser.add_argument("--extract-api-key",  type=str, default=None,
                         help="API ключ для модуля извлечения")
+    # ── Preview (fast page scan) provider for scanning all pages before full parse
+    parser.add_argument("--extract-preview-provider", type=str, default=None, choices=PROVIDERS,
+                        help="Провайдер LLM для предпросмотра (быстрая фильтрация страниц)")
+    parser.add_argument("--extract-preview-model",    type=str, default=None,
+                        help="Модель LLM для предпросмотра")
+    parser.add_argument("--extract-preview-api-key",  type=str, default=None,
+                        help="API ключ для предпросмотра")
 
     # ── Lean-аргументы (для консистентности при запуске через ollama_wrapper) -
     parser.add_argument("--lean-provider", type=str, default=None, choices=PROVIDERS, help="Игнорируется в этом модуле")
     parser.add_argument("--lean-api-key",  type=str, default=None, help="Игнорируется в этом модуле")
     parser.add_argument("--lean-model",    type=str, default=None, help="Игнорируется в этом модуле")
+    
+    # ── OCR Pages Override ────────────────────────────────────────────────────
+    parser.add_argument("--ocr-pages", type=str, default=None,
+                        help='Skip search and process only specified pages. Format: JSON {"book": "zorich", "pages": [1, 2, 3]} or comma-separated "1,2,3" (first book)')
 
     args = parser.parse_args()
 
@@ -464,13 +735,37 @@ def main():
         module_api_key=args.extract_api_key,
     )
 
+    # Preview provider config
+    preview_provider, preview_model, preview_api_key = resolve_module_config(
+        module="preview",
+        global_provider=args.provider,
+        global_model=args.model,
+        global_api_key=args.api_key,
+        module_provider=args.extract_preview_provider,
+        module_model=args.extract_preview_model,
+        module_api_key=args.extract_preview_api_key,
+    )
+
     # Initialize LLM provider via shared logic
     setup_provider(provider, api_key=api_key, model=model)
-
+    # Initialize preview provider (separate client) - bypass if it is a Cross-Encoder
+    is_cross_encoder = False
+    if preview_provider:
+        is_cross_encoder = (
+            preview_provider == "llama_cpp" or 
+            (preview_model and "reranker" in preview_model.lower()) or 
+            (preview_model and "gte-multilingual" in preview_model.lower())
+        )
+    
+    from pipeline.export_to_lean import setup_preview_provider
+    if preview_provider and not is_cross_encoder:
+        setup_preview_provider(preview_provider, api_key=preview_api_key, model=preview_model)
 
     from pipeline.export_to_lean import _LLM_PROVIDER
     active_provider_name = (_LLM_PROVIDER or "OLLAMA").upper()
     print(f"[*] Провайдер: {active_provider_name} ({model})")
+    if preview_provider:
+        print(f"[*] Preview провайдер: {preview_provider.upper()} ({preview_model})")
 
     # Parse dual-language query if provided
     if "|" in args.query:
@@ -502,58 +797,161 @@ def main():
             raw_text TEXT NOT NULL,
             entity_type TEXT DEFAULT 'definition',
             has_proof INTEGER DEFAULT 0,
+            page_ref INTEGER,
+            raw_deps TEXT,
             temp_cluster_id TEXT
         )
     """)
+    # Ensure legacy DBs have the new columns
+    cols = [r[1] for r in cursor.execute("PRAGMA table_info(formulation_raw_cache)").fetchall()]
+    if 'entity_type' not in cols:
+        try:
+            cursor.execute("ALTER TABLE formulation_raw_cache ADD COLUMN entity_type TEXT DEFAULT 'definition'")
+        except Exception:
+            pass
+    if 'has_proof' not in cols:
+        try:
+            cursor.execute("ALTER TABLE formulation_raw_cache ADD COLUMN has_proof INTEGER DEFAULT 0")
+        except Exception:
+            pass
+    if 'page_ref' not in cols:
+        try:
+            cursor.execute("ALTER TABLE formulation_raw_cache ADD COLUMN page_ref INTEGER")
+        except Exception:
+            pass
+    if 'raw_deps' not in cols:
+        try:
+            cursor.execute("ALTER TABLE formulation_raw_cache ADD COLUMN raw_deps TEXT")
+        except Exception:
+            pass
+
     # Clear stale cache from previous (possibly interrupted) runs
     cursor.execute("DELETE FROM formulation_raw_cache")
     conn.commit()
     print(f"[*] Кэш формулировок очищен.")
 
     total_count = 0
+    
+    # Parse OCR pages override if provided
+    ocr_pages_override = None
+    if args.ocr_pages:
+        try:
+            if args.ocr_pages.startswith('{'):
+                # JSON format: {"book": "zorich", "pages": [1, 2, 3]}
+                ocr_spec = json.loads(args.ocr_pages)
+                target_book = ocr_spec.get("book", "").lower()
+                ocr_pages_override = {
+                    "book": target_book,
+                    "pages": set(ocr_spec.get("pages", []))
+                }
+            else:
+                # Comma-separated format: "1,2,3" (first book)
+                page_list = [int(p.strip()) - 1 for p in args.ocr_pages.split(",") if p.strip().isdigit()]  # Convert to 0-indexed
+                ocr_pages_override = {
+                    "book": extract_book_id(all_books[0]) if all_books else "",
+                    "pages": set(page_list)
+                }
+            if ocr_pages_override:
+                print(f"[*] OCR-страницы переопределены: книга '{ocr_pages_override['book']}', страницы: {sorted(ocr_pages_override['pages'])}")
+        except Exception as e:
+            print(f"[-] Ошибка парсинга --ocr-pages: {e}. Игнорирую и продолжу обычный поиск.")
+            ocr_pages_override = None
+    
     for pdf_path in all_books:
-        # Route term based on book language tag in filename
-        filename = pdf_path.name.upper()
-        if "(EN)" in filename:
-            active_query = query_en
-            active_roots = roots_en
-        elif "(RU)" in filename:
-            active_query = query_ru
-            active_roots = roots_ru
+        # If OCR pages override is specified, check if this is the target book
+        if ocr_pages_override:
+            book_id = extract_book_id(pdf_path)
+            if book_id != ocr_pages_override["book"]:
+                print(f"\n  ── {book_id} ({pdf_path.name}) [SKIP: not in OCR override] ──")
+                continue
+            
+            # Process only specified pages
+            print(f"\n  ── {book_id} ({pdf_path.name}) [OCR override: processing {len(ocr_pages_override['pages'])} pages] ──")
+            target_pages = sorted(list(ocr_pages_override["pages"]))
         else:
-            # Fallback based on alphabet detection
-            if any("\u0400" <= c <= "\u04FF" for c in query_ru):
+            # Route term based on book language tag in filename
+            filename = pdf_path.name.upper()
+            if "(EN)" in filename:
+                active_query = query_en
+                active_roots = roots_en
+            elif "(RU)" in filename:
                 active_query = query_ru
                 active_roots = roots_ru
             else:
-                active_query = query_en
-                active_roots = roots_en
+                # Fallback based on alphabet detection
+                if any("\u0400" <= c <= "\u04FF" for c in query_ru):
+                    active_query = query_ru
+                    active_roots = roots_ru
+                else:
+                    active_query = query_en
+                    active_roots = roots_en
 
-        results = process_single_book(pdf_path, active_query, entity_type, active_roots, model)
+            # Normal search flow (not OCR override)
+            results = process_single_book(pdf_path, active_query, entity_type, active_roots, model, preview_provider=preview_provider, preview_model=preview_model)
+            
+            for res in results:
+                text_parts = []
+                if res["context"]:
+                    text_parts.append(f"[КОНТЕКСТ]: {res['context']}")
+                text_parts.append(f"[ФОРМУЛИРОВКА]: {res['statement']}")
 
-        for res in results:
-            text_parts = []
-            if res["context"]:
-                text_parts.append(f"[КОНТЕКСТ]: {res['context']}")
-            text_parts.append(f"[ФОРМУЛИРОВКА]: {res['statement']}")
+                has_proof = 0
+                if res.get("proof"):
+                    text_parts.append(f"[ДОКАЗАТЕЛЬСТВО]: {res['proof']}")
+                    has_proof = 1
 
-            has_proof = 0
-            if res.get("proof"):
-                text_parts.append(f"[ДОКАЗАТЕЛЬСТВО]: {res['proof']}")
-                has_proof = 1
+                # Skip theorems without proofs
+                if entity_type == "theorem" and not has_proof:
+                    print(f"  [SKIP] Теорема из {res['source']} без доказательства.")
+                    continue
 
-            # Skip theorems without proofs
-            if entity_type == "theorem" and not has_proof:
-                print(f"  [SKIP] Теорема из {res['source']} без доказательства.")
-                continue
-
-            full_text = "\n\n".join(text_parts)
-            cursor.execute(
-                "INSERT INTO formulation_raw_cache (discipline, source_book, raw_text, entity_type, has_proof) "
-                "VALUES (?, ?, ?, ?, ?)",
-                ("global", res["source"], full_text, entity_type, has_proof)
-            )
-            total_count += 1
+                full_text = "\n\n".join(text_parts)
+                cursor.execute(
+                    "INSERT INTO formulation_raw_cache (discipline, source_book, raw_text, entity_type, has_proof, page_ref, raw_deps) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    ("global", res["source"], full_text, entity_type, has_proof, res.get("page_ref", 0), json.dumps(res.get("deps", []), ensure_ascii=False))
+                )
+                total_count += 1
+            
+            continue  # Move to next book (search mode)
+        
+        # OCR override mode: process specified pages directly
+        if ocr_pages_override:
+            for page_idx in target_pages:
+                try:
+                    import fitz
+                    doc = fitz.open(pdf_path)
+                    if page_idx < 0 or page_idx >= len(doc):
+                        print(f"  [SKIP] Страница {page_idx+1} вне пределов PDF.")
+                        continue
+                    
+                    raw_text = extract_context_window(pdf_path, page_idx, entity_type)
+                    result = parse_with_llm(raw_text, query_ru or query_en, entity_type, model=model)
+                    
+                    if result.get("found"):
+                        result["source"] = extract_book_id(pdf_path)
+                        print(f"  [OK] Страница {page_idx+1}: извлечено.")
+                        
+                        text_parts = []
+                        if result.get("context"):
+                            text_parts.append(f"[КОНТЕКСТ]: {result['context']}")
+                        text_parts.append(f"[ФОРМУЛИРОВКА]: {result['statement']}")
+                        if result.get("proof"):
+                            text_parts.append(f"[ДОКАЗАТЕЛЬСТВО]: {result['proof']}")
+                        
+                        full_text = "\n\n".join(text_parts)
+                        cursor.execute(
+                            "INSERT INTO formulation_raw_cache (discipline, source_book, raw_text, entity_type, has_proof, page_ref, raw_deps) "
+                            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                            ("global", result["source"], full_text, entity_type, int(bool(result.get("proof"))), result.get("page_ref", page_idx+1), json.dumps(result.get("deps", []), ensure_ascii=False))
+                        )
+                        total_count += 1
+                    else:
+                        print(f"  [SKIP] Страница {page_idx+1}: не найдено соответствие.")
+                    
+                    doc.close()
+                except Exception as e:
+                    print(f"  [ERROR] Страница {page_idx+1}: {e}")
 
     conn.commit()
     conn.close()

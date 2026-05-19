@@ -133,6 +133,11 @@ def _parse_lean_output(stdout: str, stderr: str) -> tuple[list, list]:
             continue
         try:
             err_data = json.loads(line)
+            # Filter warnings/errors to only include those from the target validation file (not Mathlib background compiles!)
+            file_path = err_data.get('file') or err_data.get('fileName') or ""
+            if file_path and "TempValidation" not in file_path and "temp" not in file_path:
+                continue
+
             severity = err_data.get('severity')
             message = err_data.get('data') or err_data.get('message') or '(no message)'
             
@@ -142,7 +147,7 @@ def _parse_lean_output(stdout: str, stderr: str) -> tuple[list, list]:
                 "message": str(message)[:500]  # Truncate long messages
             }
             
-            if severity == 'error':
+            if severity in ('error', 'warning'):
                 errors.append(entry)
             elif severity == 'information':
                 infos.append(entry)
@@ -155,13 +160,26 @@ def _parse_lean_output(stdout: str, stderr: str) -> tuple[list, list]:
 def validate_entity(entity_id: str, lean_code: str) -> dict:
     """
     Convenience function: writes lean_code to a temp file, validates, cleans up.
+    Ensures all 'import' statements appear strictly at the very top of the file before any comments or code.
     """
     temp_file = LEAN_DIR / "TempValidation.lean"
     try:
+        imports = {"import Mathlib"}
+        body_lines = []
+        
+        for line in lean_code.splitlines():
+            trimmed = line.strip()
+            if trimmed.startswith("import "):
+                imports.add(trimmed)
+            else:
+                body_lines.append(line)
+                
         with open(temp_file, 'w', encoding='utf-8') as f:
-            f.write("import Mathlib\n\n")
-            f.write(f"-- Validation for {entity_id}\n")
-            f.write(lean_code + "\n")
+            for imp in sorted(imports):
+                f.write(imp + "\n")
+            f.write("\n")
+            f.write(f"-- Validation for {entity_id}\n\n")
+            f.write("\n".join(body_lines) + "\n")
 
         return validate_semantics_with_lean(str(temp_file))
     finally:

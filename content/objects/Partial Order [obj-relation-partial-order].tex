@@ -1,0 +1,25 @@
+% entity-id: obj-relation-partial-order
+% entity-type: object
+% defined-in: zorich-1, p. 12
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: X is a Set, R is a relation on X (R \subset X \times X).
+% 2. Data Structures: Binary relation represented as a set of ordered pairs.
+% 3. Implicit Bounds: Reflexivity, antisymmetry, and transitivity conditions are explicitly quantified.
+% ========================
+
+\section{Частичный порядок (Partial Order)}
+
+\hypertarget{obj-relation-partial-order}{}
+\begin{object}[Partial Order]
+\label{entity:obj-relation-partial-order}
+% 1. ОБЪЯВЛЕНИЕ ТИПОВ
+\mForall{X \colon \entityref{obj-set}{\mathrm{Set}}}
+\mForall{R \subset \entityref{obj-cartesian-product}{X \times X}}
+
+% 2. ТЕЛО ОПРЕДЕЛЕНИЯ
+\mathrm{IsPartialOrder}(R, X) \mDefinedAs \left(
+    \entityref{prop-relation-reflexive}{\mathrm{IsReflexive}}(R, X) \mAnd
+    \entityref{prop-relation-antisymmetric}{\mathrm{IsAntisymmetric}}(R, X) \mAnd
+    \entityref{prop-relation-transitive}{\mathrm{IsTransitive}}(R, X)
+\right)
+\end{object}

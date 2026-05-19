@@ -1,0 +1,20 @@
+% entity-id: axm-zfc-choice
+% entity-type: axiom
+% defined-in: vereshchagin-shen
+
+\entityref{op-hypertarget}{\hypertarget}{axm-zfc-choice}{}
+\hypertarget{axm-zfc-choice}{}
+\begin{axiom}[axm-zfc-choice] % Аксиома выбора (Axiom of Choice)
+
+
+
+\[
+\mForall{\mathcal{F}}
+\left(
+  \mForall{A, B} \left( A \in \mathcal{F} \entityref{term-conjunction}{\land} B \in \mathcal{F} \entityref{term-conjunction}{\land} A \neq B \mImplies \lnot \mExists{x} (x \in A \entityref{term-conjunction}{\land} x \in B) \right)
+  \entityref{term-conjunction}{\land} \lnot(\entityref{axm-zfc-pairing}{\\varnothing} \in \mathcal{F})
+\right)
+\mImplies
+\mExists{C} \mForall{A} \left( A \in \mathcal{F} \mImplies \mExists{! x} (x \in A \entityref{term-conjunction}{\land} x \in C) \right)
+\]
+\end{axiom}

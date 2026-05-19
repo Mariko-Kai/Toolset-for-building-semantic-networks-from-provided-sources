@@ -11,3 +11,496 @@ axiom obj_predicate : Type
 -- Entity: obj-wff-fol (Regex Fallback)
 axiom obj_wff_fol : Type
 
+
+-- Entity: prop-uniform-convergence-sequence | Type: property
+import Mathlib.Data.Real.Basic
+import Mathlib.Topology.Basic
+
+/--
+The property of uniform convergence for a sequence of functions f_n to a function f on a set A.
+-/
+def UniformConvergence {A : Set ℝ} (f_n : ℕ → A → ℝ) (f : A → ℝ) : Prop :=
+  ∀ ε > 0, ∃ N : ℕ, ∀ n ≥ N, ∀ x : A, |f_n n x - f x| < ε
+
+theorem prop_uniform_convergence_sequence 
+  (A : Set ℝ) 
+  (f_n : ℕ → A → ℝ) 
+  (f : A → ℝ) : 
+  UniformConvergence f_n f ↔ ∀ ε > 0, ∃ N : ℕ, ∀ n ≥ N, ∀ x : A, |f_n n x - f x| < ε := by
+  rfl
+
+
+-- Entity: op-derivative-at-point
+def op_derivative_at_point (f : ℝ → ℝ) (x : ℝ) (L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ h : ℝ, 0 < |h| ∧ |h| < δ → |(f (x + h) - f x) / h - L| < ε
+
+
+
+
+-- Entity: prop-neighborhood | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsNeighborhood (N : Set ℝ) (p : ℝ) : Prop := 
+  ∃ r : ℝ, r > 0 ∧ N = {x : ℝ | p - r < x ∧ x < p + r}
+
+-- Entity: op-derivative-at-point
+def op_derivative_at_point (f : ℝ → ℝ) (x : ℝ) (L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ h : ℝ, 0 < |h| ∧ |h| < δ → |(f (x + h) - f x) / h - L| < ε
+
+-- Entity: op-derivative-at-point
+def op_derivative_at_point (f : ℝ → ℝ) (x : ℝ) (L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ h : ℝ, 0 < |h| ∧ |h| < δ → |(f (x + h) - f x) / h - L| < ε
+
+-- Entity: op-derivative-at-point
+def op_derivative_at_point (f : ℝ → ℝ) (x : ℝ) (L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ h : ℝ, 0 < |h| ∧ |h| < δ → |(f (x + h) - f x) / h - L| < ε
+
+-- Entity: op-derivative-at-point
+def op_derivative_at_point (f : ℝ → ℝ) (x : ℝ) (L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ h : ℝ, 0 < |h| ∧ |h| < δ → |(f (x + h) - f x) / h - L| < ε
+
+-- Entity: op-derivative-at-point
+def op_derivative_at_point (f : ℝ → ℝ) (x : ℝ) (L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ h : ℝ, 0 < |h| ∧ |h| < δ → |(f (x + h) - f x) / h - L| < ε
+
+-- Entity: prop-limit-point | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLimit (f : ℝ → ℝ) (p L : ℝ) : Prop :=
+  ∀ A : Set ℝ, IsOpen A → L ∈ A → 
+  ∃ B : Set ℝ, IsOpen B ∧ p ∈ B ∧ 
+  ∀ x ∈ B, x ≠ p → f x ∈ A
+
+theorem prop_limit_point_eq (f : ℝ → ℝ) (p L : ℝ) : 
+  IsLimit f p L ↔ Filter.Tendsto f (nhds p) (nhds L) := by sorry
+
+-- Entity: thm-cauchy-criterion-limit-base | Type: theorem
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem thm_cauchy_criterion_limit_base (f : ℝ → ℝ) :
+  (∃ L : ℝ, ∀ ε > 0, ∃ δ > 0, ∀ x, |x| < δ → |f x - L| < ε) ↔ 
+  (∃ L : ℝ, ∀ ε > 0, ∃ B : Set ℝ, (∀ x ∈ B, |x| < 1) ∧ ∀ x ∈ B, |f x - L| < ε) := by sorry
+
+-- Entity: prop-limit-function | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLimit (f : ℝ → ℝ) (a A : ℝ) : Prop := 
+  ∀ ε > 0, ∃ δ > 0, ∀ x : ℝ, (0 < abs (x - a) ∧ abs (x - a) < δ) → abs (f x - A) < ε
+
+-- Entity: op-derivative-at-point
+def op_derivative_at_point (f : ℝ → ℝ) (x : ℝ) (L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ h : ℝ, 0 < |h| ∧ |h| < δ → |(f (x + h) - f x) / h - L| < ε
+
+-- Entity: prop-limit-point | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLimit (f : ℝ → ℝ) (p L : ℝ) : Prop := 
+  ∀ ε > 0, ∃ δ > 0, ∀ x, (x ≠ p ∧ dist x p < δ) → dist (f x) L < ε
+
+-- Entity: thm-cauchy-criterion-limit-base | Type: theorem
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem thm_cauchy_criterion_limit_base 
+  (X : Type*) 
+  (B : Set (Set X)) 
+  (f : X → ℝ) 
+  (hB : ∀ B' ∈ B, B'.Nonempty) 
+  (hB_base : ∀ x : X, ∃ B' ∈ B, x ∈ B') : 
+  (∃ A : ℝ, ∀ ε > 0, ∃ B' ∈ B, ∀ x ∈ B', |f x - A| < ε) ↔ 
+  (∀ ε > 0, ∃ B' ∈ B, ∀ x₁ x₂ : X, x₁ ∈ B' → x₂ ∈ B' → |f x₁ - f x₂| < ε) := by sorry
+
+-- Entity: prop-limit-function | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLimit (f : ℝ → ℝ) (a L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ x : ℝ, (0 < abs (x - a) ∧ abs (x - a) < δ) → abs (f x - L) < ε
+
+theorem IsLimit_iff : 
+  ∀ f : ℝ → ℝ, ∀ a L : ℝ, IsLimit f a L ↔ Filter.Tendsto f (nhds a) (nhds L) := by sorry
+
+-- Entity: thm-cauchy-criterion-vector-valued | Type: theorem
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem thm_cauchy_criterion_vector_valued (X : Type*) [Nonempty X] (n : ℕ) (f : X → (Fin n → ℝ)) :
+  ∀ L : (Fin n → ℝ), (∀ x : X, f x = L) ↔ 
+  ∀ ε > 0, ∃ B : Set X, ∀ x₁ x₂ : X, x₁ ∈ B → x₂ ∈ B → 
+    ‖f x₁ - f x₂‖ < ε := by sorry
+
+-- Entity: prop-limit-of-numerical-sequence | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLimit (a : ℕ → ℝ) (L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ N : ℕ, ∀ n : ℕ, n > N → |a n - L| < ε
+
+theorem IsLimit_eq (a : ℕ → ℝ) (L : ℝ) : 
+  (∀ ε > 0, ∃ N : ℕ, ∀ n : ℕ, n > N → |a n - L| < ε) ↔ 
+  Filter.Tendsto a Filter.atTop (nhds L) := by sorry
+
+-- Entity: prop-limit-of-sequence | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def HasLimit (f : ℝ → ℝ) (L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ N : ℝ, N > 0 ∧ ∀ n : ℕ, n > N → |f n - L| < ε
+
+-- Entity: prop-limit-numerical-sequence | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLimit (x : ℕ → ℝ) (A : ℝ) : Prop :=
+  ∀ ε > 0, ∃ N : ℕ, ∀ n : ℕ, n > N → |x n - A| < ε
+
+theorem limit_converges (x : ℕ → ℝ) (A : ℝ) : 
+  IsLimit x A ↔ Filter.Tendsto x Filter.atTop (nhds A) := by sorry
+
+-- Entity: prop-limit-of-numerical-sequence
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLimit (a : ℕ → ℝ) (L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ N : ℕ, ∀ n : ℕ, n > N → |a n - L| < ε
+
+theorem IsLimit_eq (a : ℕ → ℝ) (L : ℝ) : 
+  (∀ ε > 0, ∃ N : ℕ, ∀ n : ℕ, n > N → |a n - L| < ε) ↔ 
+  Filter.Tendsto a Filter.atTop (nhds L) := by sorry
+
+-- Entity: prop-limit-of-sequence
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def HasLimit (f : ℝ → ℝ) (L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ N : ℝ, N > 0 ∧ ∀ n : ℕ, n > N → |f n - L| < ε
+
+-- Entity: prop-limit-numerical-sequence
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLimit (x : ℕ → ℝ) (A : ℝ) : Prop :=
+  ∀ ε > 0, ∃ N : ℕ, ∀ n : ℕ, n > N → |x n - A| < ε
+
+theorem limit_converges (x : ℕ → ℝ) (A : ℝ) : 
+  IsLimit x A ↔ Filter.Tendsto x Filter.atTop (nhds A) := by sorry
+
+-- Entity: prop-continuous | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def prop_continuous (f : ℝ → ℝ) (x₀ : ℝ) : 
+  (∀ ε > 0, ∃ δ > 0, ∀ x, |x - x₀| < δ → |f x - f x₀| < ε) ↔ 
+  ContinuousAt f x₀ := by sorry
+
+-- Entity: axm-completeness-real-line | Type: axiom
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem axm_completeness_real_line (L : Type*) [LinearOrder L] [Nonempty L] :
+  ¬∃ (A B : Set L), 
+    (A.Nonempty) ∧ 
+    (B.Nonempty) ∧ 
+    (A ∪ B = Set.univ) ∧ 
+    (A ∩ B = ∅) ∧ 
+    (∀ a ∈ A, ∀ b ∈ B, a < b) ∧ 
+    (¬∃ p : L, p ∈ A ∨ p ∈ B) := by sorry
+
+-- Entity: prop-least-upper-bound | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLeastUpperBound (B : ℝ) (S : Set ℝ) : Prop :=
+  S.Nonempty ∧ 
+  (∀ x ∈ S, x ≤ B) ∧ 
+  (∀ y : ℝ, y < B → ∃ s ∈ S, s > y)
+
+theorem IsLeastUpperBound.BoundedAbove (S : Set ℝ) (B : ℝ) : 
+  IsLeastUpperBound B S → BddAbove S := by sorry
+
+-- Entity: op-supremum | Type: operation
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def op_supremum (s : ℝ) (X : Set ℝ) : Prop :=
+  (∀ x ∈ X, x ≤ s) ∧ (∀ s' < s, ∃ x ∈ X, s' < x)
+
+-- Entity: prop-infimum | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def prop_infimum (S : Set ℝ) (L : ℝ) : Prop := 
+  (∀ s ∈ S, L ≤ s) ∧ ¬(∃ L' : ℝ, L' > L ∧ ∀ s ∈ S, L' ≤ s)
+
+-- Entity: op-infimum | Type: operation
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def op_infimum (L : ℝ) (S : Set ℝ) : Prop :=
+  (∀ s ∈ S, L ≤ s) ∧ (∀ y : ℝ, (∀ s ∈ S, y ≤ s) → y ≤ L)
+
+-- Entity: op-upper-riemann-integral | Type: operation
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+-- Define what it means for a function to be a step function
+def IsStepFunction (f : ℝ → ℝ) : Prop := sorry
+
+-- Define the upper Riemann integral
+def IsUpperIntegral (f : ℝ → ℝ) (I : ℝ) : Prop :=
+  I = ⨅ (g : ℝ → ℝ) (h : IsStepFunction g) (k : ∀ x, f x ≤ g x), 
+      ∫ x in (0 : ℝ)..(1 : ℝ), g x
+
+-- Define the upper Riemann integral operation
+def op_upper_riemann_integral (f : ℝ → ℝ) : Prop := 
+  ∃ I : ℝ, IsUpperIntegral f I
+
+-- Entity: obj-ordered-pair | Type: object
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+-- Definition of ordered pair (structure and equality)
+def obj_ordered_pair (p : ℝ × ℝ) : Prop := True
+
+def IsEqualOrderedPair (p q : ℝ × ℝ) : Prop := p.1 = q.1 ∧ p.2 = q.2
+
+-- Entity: prop-complex-number-equality | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsEqual (z₁ z₂ : ℂ) : Prop := z₁.re = z₂.re ∧ z₁.im = z₂.im
+
+theorem equality_of_complex_numbers : 
+  ∀ z₁ z₂ : ℂ, IsEqual z₁ z₂ ↔ z₁.re = z₂.re ∧ z₁.im = z₂.im := by sorry
+
+-- Entity: obj-complex-number | Type: object
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def obj_complex_number : 
+  ∀ z : ℂ, ∃ (a b : ℝ), z = Complex.mk a b ∧ Complex.re z = a ∧ Complex.im z = b := by sorry
+
+-- Entity: obj-function | Type: object
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def obj_function (f : ℝ → ℝ) : 
+  (∀ x y : ℝ, f x = f y → x = y) := by sorry
+
+-- Entity: prop-neighborhood | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsNeighborhood (N : Set ℝ) (p : ℝ) : Prop := 
+  ∃ ε > 0, N = Set.Ioo (p - ε) (p + ε)
+
+theorem neighborhood_equivalence (N : Set ℝ) (p : ℝ) : 
+  IsNeighborhood N p ↔ IsOpen N ∧ p ∈ N ∧ ∀ x ∈ N, ∃ ε > 0, |x - p| < ε := by sorry
+
+-- Entity: obj-interval-midpoint | Type: object
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def obj_interval_midpoint (a b m : ℝ) : Prop := m = (a + b) / 2
+
+-- Entity: op-logical-connective | Type: operation
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+-- Define the type of logical operations
+inductive LogicalOperation
+| negation
+| conjunction  
+| disjunction
+| implication
+
+-- Define what it means for something to be a logical connective
+def op_logical_connective (op : LogicalOperation) : Prop := sorry
+
+-- The main theorem characterizing logical connectives
+
+-- Entity: thm-rolles-theorem | Type: theorem
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem thm_rolles_theorem (f : ℝ → ℝ) (a b : ℝ) (hab : a < b) 
+  (hcont : ContinuousOn f (Set.Icc a b))
+  (hdiff : DifferentiableOn ℝ f (Set.Ioo a b))
+  (heq : f a = f b) :
+  ∃ c ∈ Set.Ioo a b, deriv f c = 0 := by sorry
+
+-- Entity: thm-rolles-zero-derivative | Type: theorem
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem thm_rolles_zero_derivative (f : ℝ → ℝ) 
+  (hcont : ContinuousOn f (Set.Icc 0 1))
+  (hderiv : ∀ x ∈ Set.Ioo 0 1, deriv f x = 0) :
+  f 0 = f 1 := by sorry
+
+-- Entity: thm-rolles-theorem
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem thm_rolles_theorem (f : ℝ → ℝ) (a b : ℝ) (hab : a < b) 
+  (hcont : ContinuousOn f (Set.Icc a b))
+  (hdiff : DifferentiableOn ℝ f (Set.Ioo a b))
+  (heq : f a = f b) :
+  ∃ c ∈ Set.Ioo a b, deriv f c = 0 := by sorry
+
+-- Entity: thm-rolles-zero-derivative
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem thm_rolles_zero_derivative (f : ℝ → ℝ) 
+  (hcont : ContinuousOn f (Set.Icc 0 1))
+  (hderiv : ∀ x ∈ Set.Ioo 0 1, deriv f x = 0) :
+  f 0 = f 1 := by sorry
+
+-- Entity: obj-relation-partial-order | Type: object
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def obj_relation_partial_order {α : Type*} (R : α → α → Prop) : Prop :=
+  (∀ x, R x x) ∧ 
+  (∀ x y, R x y → R y x → x = y) ∧ 
+  (∀ x y z, R x y → R y z → R x z)
+
+
