@@ -1,0 +1,20 @@
+% defined-in: apostol (page 174), apostol (page 174), apostol (page 209), spivak (page 88), spivak (page 161)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - a, b : \entityref{obj-real-numbers}{\mathbb{R}}
+%    - c : \entityref{obj-real-numbers}{\mathbb{R}}
+%    - I : \entityref{obj-closed-interval}{\mathbb{R}}
+% 2. Data Structures: 
+%    - I is represented as the set \{x \in \entityref{obj-real-numbers}{\mathbb{R}} \mid a \leq x \leq b\} where a \leq b.
+% 3. Implicit Bounds: 
+%    - The condition a \leq b is required for the interval to be well-defined.
+% ========================
+
+% entity-id: op-interval-midpoint
+% entity-type: operation
+
+\begin{operation}[Midpoint]
+\[
+\mathrm{IsMidpoint}(a, b, c) \mDefinedAs \left( c \mDefinedAs \frac{\entityref{op-real-addition}{a} + \entityref{op-real-addition}{b}}{\entityref{op-real-number}{2}} \right)
+\]
+\end{operation}

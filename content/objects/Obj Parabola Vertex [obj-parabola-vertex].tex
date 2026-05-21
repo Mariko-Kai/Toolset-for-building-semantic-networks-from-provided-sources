@@ -1,0 +1,17 @@
+% defined-in: apostol (page 530)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [F : \entityref{obj-euclidean-space-2d}{\mathbb{R}^2}, L : \entityref{obj-line-2d}{\mathcal{L}}, V : \entityref{obj-euclidean-space-2d}{\mathbb{R}^2}]
+% 2. Data Structures: [The parabola is defined as a set of points equidistant from F and L. The vertex V is the midpoint of the segment connecting F to the orthogonal projection of F onto L.]
+% 3. Implicit Bounds: [Let P_L(F) be the orthogonal projection of F onto L.]
+% ========================
+
+% entity-id: obj-parabola-vertex
+% entity-type: object
+
+\begin{object}[ParabolaVertex]
+\mForall{F \colon \entityref{obj-euclidean-space-2d}{\mathbb{R}^2}}
+\mForall{L \colon \entityref{obj-line-2d}{\mathcal{L}}}
+\mForall{V \colon \entityref{obj-euclidean-space-2d}{\mathbb{R}^2}}
+\mathrm{IsVertex}(V, F, L) \mDefinedAs 
+\left( V = \frac{1}{2} \left( F + \entityref{op-orthogonal-projection}{P_L}(F) \right) \right)
+\end{object}

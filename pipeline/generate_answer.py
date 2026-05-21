@@ -5,6 +5,7 @@ import subprocess
 import shutil
 import sys
 import io
+import json
 
 # Fix Windows console encoding
 if sys.platform == 'win32' and getattr(sys.stdout, 'encoding', '').lower() != 'utf-8':
@@ -62,17 +63,174 @@ NL_DESCRIPTIONS = {
     "obj-set": r"Множество — базовое, неопределяемое напрямую понятие математики. Множество представляет собой совокупность объектов произвольной природы, называемых его элементами. Все свойства множеств строго выводятся из аксиом системы Цермело-Френкеля (ZFC).",
 }
 
-TEMPLATE = r"""\documentclass{report}
-\usepackage{mathesis}
+TEMPLATE = r"""\documentclass[12pt,a4paper]{report}
 \usepackage[utf8]{inputenc}
 \usepackage[russian]{babel}
+\usepackage{mathesis}
+\usepackage{geometry}
+\geometry{left=3cm,right=2cm,top=2cm,bottom=2cm}
+
+\title{\textbf{Справочник математических сущностей}}
+\author{Конвейер компиляции Mathesis}
+\date{\today}
 
 \begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
 
 %(content)s
 
 \end{document}
 """
+
+def parse_bilingual_title(title):
+    title = title.strip()
+    match = re.match(r"^([^(]+)\s*\(([^)]+)\)$", title)
+    if match:
+        ru_part = match.group(1).strip()
+        en_part = match.group(2).strip()
+        en_part = re.sub(r"\s*\[[^\]]+\]", "", en_part).strip()
+        en_part = en_part.replace('[', '').replace(']', '').strip()
+        return ru_part, en_part
+    else:
+        cleaned = re.sub(r"\s*\[[^\]]+\]", "", title).strip()
+        cleaned = cleaned.replace('[', '').replace(']', '').strip()
+        return cleaned, None
+
+def is_id_or_placeholder(name):
+    if not name:
+        return True
+    name_lower = name.lower()
+    if any(prefix in name_lower for prefix in ["obj-", "op-", "prop-", "thm-", "axm-", "def-", "axm-fol-"]):
+        return True
+    if name_lower.startswith("название сущности"):
+        return True
+    return False
+
+def humanize_id(eid):
+    parts = eid.split('-', 1)
+    if len(parts) > 1:
+        return parts[1].replace('-', ' ').title()
+    return eid.replace('-', ' ').title()
+
+def synthesize_entity_details(data, provider, model, api_key):
+    ru_name, en_name = parse_bilingual_title(data["title"])
+    if is_id_or_placeholder(ru_name):
+        ru_name = None
+    if is_id_or_placeholder(en_name):
+        en_name = None
+
+    desc_ru = NL_DESCRIPTIONS.get(data["id"], "").strip()
+    if not desc_ru:
+        desc_ru = data.get("nl_desc", "").strip()
+
+    if desc_ru:
+        desc_ru = re.sub(r"\s*\[[^\]]+\]", "", desc_ru).strip()
+        desc_ru = desc_ru.replace('[', '').replace(']', '').strip()
+
+    if not provider:
+        try:
+            config_path = Path(__file__).resolve().parent.parent / "api_config.json"
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                    provider = cfg.get("providers", {}).get("synth", "gemini")
+                    model = cfg.get("models", {}).get("synth", "gemini-2.5-flash-lite")
+                    api_key = cfg.get("api_keys", {}).get(provider, "")
+        except Exception as e:
+            print(f"[Warning] Failed to load provider settings from api_config.json: {e}")
+            provider = "gemini"
+            model = "gemini-2.5-flash-lite"
+            api_key = ""
+
+    print(f"  [Synth] Synthesizing bilingual details for {data['id']} using {provider} ({model})...")
+
+    try:
+        from pipeline.export_to_lean import setup_provider
+        setup_provider(provider=provider, api_key=api_key, model=model)
+    except Exception as e:
+        print(f"[Warning] Failed to setup LLM provider: {e}")
+        provider = "ollama"
+
+    prompt = f"""You are a world-class mathematician and textbook editor.
+We are compiling a high-quality mathematical analysis textbook/handbook.
+Your task is to synthesize/translate/clean up the bilingual names and natural language descriptions for the following mathematical entity.
+
+ENTITY DETAILS:
+- ID: {data["id"]}
+- Type: {data["type"]}
+- Parsed RU Name: {ru_name or "Not provided"}
+- Parsed EN Name: {en_name or "Not provided"}
+- Existing RU Description: {desc_ru or "Not provided"}
+- Canonical Math Block (LaTeX):
+{data.get("full_body", "")}
+
+INSTRUCTIONS:
+1. Names ("name_ru" and "name_en"):
+   - Must be the standard, clean mathematical textbook names (e.g., "Частичный порядок" / "Partial Order").
+   - If they are already parsed and valid (not empty/placeholder), use them. If only one is valid, translate it to the other language. If none are valid, generate them professionally based on standard mathematical terminology for this entity.
+   - Absolutely HIDE/REMOVE any IDs (like `[axm-fol-4]` or `op-riemann-integral`) or internal codes.
+
+2. Descriptions ("desc_ru" and "desc_en"):
+   - "desc_ru" must be a clean, beautiful, mathematically rigorous formulation/definition of this entity in Russian, using standard inline LaTeX math mode (e.g., $f(x)$, $[a, b]$). If "Existing RU Description" is provided, clean it up (removing any IDs or brackets). If not provided, generate it from the Canonical Math Block.
+   - "desc_en" must be a high-quality, professional mathematical English translation/equivalent of "desc_ru".
+   - Do NOT include headers like "Формулировка на русском языке" or "Математическая формулировка" inside the description fields.
+   - Make sure absolutely NO internal IDs or reference codes appear in either description.
+
+Return ONLY a valid JSON object with the following schema:
+{{
+    "name_ru": "...",
+    "name_en": "...",
+    "desc_ru": "...",
+    "desc_en": "..."
+}}
+"""
+
+    try:
+        from pipeline.export_to_lean import query_llm
+        response = query_llm(prompt, model=model, json_mode=True, provider=provider)
+        
+        response = re.sub(r'^```json\s*', '', response.strip(), flags=re.MULTILINE)
+        response = re.sub(r'^```\s*$', '', response.strip(), flags=re.MULTILINE).strip()
+        
+        match = re.search(r'(\{.*\})', response, re.DOTALL)
+        if match:
+            response = match.group(1)
+            
+        res = json.loads(response)
+        
+        synth_ru_name = res.get("name_ru", "").strip()
+        synth_en_name = res.get("name_en", "").strip()
+        synth_desc_ru = res.get("desc_ru", "").strip()
+        synth_desc_en = res.get("desc_en", "").strip()
+        
+        if is_id_or_placeholder(synth_ru_name):
+            synth_ru_name = ru_name or humanize_id(data["id"])
+        if is_id_or_placeholder(synth_en_name):
+            synth_en_name = en_name or humanize_id(data["id"])
+            
+        synth_ru_name = re.sub(r"\s*\[[^\]]+\]", "", synth_ru_name).strip()
+        synth_en_name = re.sub(r"\s*\[[^\]]+\]", "", synth_en_name).strip()
+        synth_desc_ru = re.sub(r"\s*\[[^\]]+\]", "", synth_desc_ru).strip()
+        synth_desc_en = re.sub(r"\s*\[[^\]]+\]", "", synth_desc_en).strip()
+        
+        print(f"  [Synth Success] Name RU: {synth_ru_name} | Name EN: {synth_en_name}")
+        return synth_ru_name, synth_en_name, synth_desc_ru, synth_desc_en
+        
+    except Exception as e:
+        print(f"  [Synth Failed] Error: {e}. Using robust fallbacks.")
+        final_ru_name = ru_name or humanize_id(data["id"])
+        final_en_name = en_name or humanize_id(data["id"])
+        final_desc_ru = desc_ru or ""
+        final_desc_en = ""
+        
+        final_ru_name = re.sub(r"\s*\[[^\]]+\]", "", final_ru_name).strip()
+        final_en_name = re.sub(r"\s*\[[^\]]+\]", "", final_en_name).strip()
+        
+        return final_ru_name, final_en_name, final_desc_ru, final_desc_en
 
 def parse_canonical(filepath):
     with open(filepath, "r", encoding="utf-8") as f:
@@ -167,6 +325,7 @@ def bfs_collect(root_id, args=None):
     visited = []
     queue = [root_id]
     seen = set()
+    no_enrich = getattr(args, 'no_enrich', False) if args else False
     
     while queue:
         eid = queue.pop(0)
@@ -176,6 +335,9 @@ def bfs_collect(root_id, args=None):
         
         fpath = find_entity_file(eid)
         if fpath is None:
+            if no_enrich:
+                print(f"  [SKIP] {eid} — file not found (--no-enrich mode).")
+                continue
             print(f"  [MISSING] {eid} — file not found. Triggering Pipeline v2 enrichment...")
             # Преобразуем ID в человеческий запрос (например, 'prop-partial-order' -> 'partial order')
             human_query = eid.split('-', 1)[1].replace('-', ' ') if '-' in eid else eid
@@ -227,7 +389,8 @@ def bfs_collect(root_id, args=None):
                 import traceback
                 print(f"  [ERROR] Failed to run enrichment pipeline: {e}", flush=True)
                 traceback.print_exc(file=sys.stdout)
-                sys.exit(1)
+                print(f"  [SKIP] {eid} — enrichment failed, skipping.")
+                continue
             
             if success:
                 fpath = find_entity_file(eid)
@@ -290,6 +453,7 @@ def main():
     parser.add_argument("--lean-model",    type=str, default=None)
     parser.add_argument("--lean-api-key",  type=str, default=None)
     parser.add_argument("--no-validate", action='store_true')
+    parser.add_argument("--no-enrich", action='store_true', help='Skip enrichment of missing entities; compile only existing content')
 
     args = parser.parse_args()
 
@@ -324,58 +488,62 @@ def main():
 
     entities = multi_root_bfs_collect(root_ids, args)
 
-    print(f"\nCollected {len(entities)} unique entities. Running Lean validation and recursive enrichment...\n")
+    print(f"\nCollected {len(entities)} unique entities.\n")
 
     # Recursive lean-validation loop: discover missing mathesis dependencies and trigger enrichment
-    from pipeline.lean_validator import validate_entity
-    from pipeline.ollama_wrapper import get_missing_deps_from_lean_error, run_enrichment_pipeline
+    # Skip entirely if --no-validate or --no-enrich is set
+    if args.no_validate or args.no_enrich:
+        print("[SKIP] Lean validation/enrichment loop skipped (--no-validate or --no-enrich).\n")
+    else:
+        from pipeline.lean_validator import validate_entity
+        from pipeline.ollama_wrapper import get_missing_deps_from_lean_error, run_enrichment_pipeline
 
-    max_iters = 5
-    iter_count = 0
-    roots_changed = True
-    while iter_count < max_iters and roots_changed:
-        iter_count += 1
-        roots_changed = False
-        missing_terms = []
-        for ent in entities:
-            eid = ent["id"]
-            lean_path = PROJECT_ROOT / "lean_validator" / "Validated" / f"{eid}.lean"
-            if not lean_path.exists():
-                continue
-            lean_code = lean_path.read_text(encoding='utf-8')
-            result = validate_entity(eid, lean_code)
-            if result.get("status") != "success":
-                # Log the Lean compile errors
-                error_feedback = "\n".join([f"Line {e['line']}: {e['message']}" for e in result.get("errors", [])])
-                from pipeline.export_to_lean import log_to_file
-                log_to_file("lean_errors", error_feedback, entity_id=eid)
-                
-                missing = get_missing_deps_from_lean_error(result.get("errors", []))
-                mathesis_deps = [d for d in missing if any(d.startswith(p) for p in ["obj-", "prop-", "op-", "thm-", "def-"]) ]
-                for dep in mathesis_deps:
-                    human = dep.split('-',1)[1].replace('-', ' ')
-                    if human not in missing_terms:
-                        missing_terms.append(human)
-        if not missing_terms:
-            break
-        print(f"[Validation loop {iter_count}] Found missing dependencies to enrich: {missing_terms}")
-        for term in missing_terms:
-            ok, gen, _ = run_enrichment_pipeline(
-                term,
-                extract_provider=extract_provider, extract_api_key=extract_api_key, extract_model=extract_model,
-                preview_provider=preview_provider, preview_api_key=preview_api_key, preview_model=preview_model,
-                synth_provider=synth_provider,     synth_api_key=synth_api_key,     synth_model=synth_model,
-                lean_provider=args.lean_provider,  lean_api_key=args.lean_api_key,  lean_model=args.lean_model,
-                cv_model=args.cv_model,
-                no_validate=args.no_validate,
-            )
-            if ok:
-                roots_changed = True
-        if roots_changed:
-            # rebuild entities graph to include newly synthesized entities
-            entities = multi_root_bfs_collect(root_ids, args)
+        max_iters = 5
+        iter_count = 0
+        roots_changed = True
+        while iter_count < max_iters and roots_changed:
+            iter_count += 1
+            roots_changed = False
+            missing_terms = []
+            for ent in entities:
+                eid = ent["id"]
+                lean_path = PROJECT_ROOT / "lean_validator" / "Validated" / f"{eid}.lean"
+                if not lean_path.exists():
+                    continue
+                lean_code = lean_path.read_text(encoding='utf-8')
+                result = validate_entity(eid, lean_code)
+                if result.get("status") != "success":
+                    # Log the Lean compile errors
+                    error_feedback = "\n".join([f"Line {e['line']}: {e['message']}" for e in result.get("errors", [])])
+                    from pipeline.export_to_lean import log_to_file
+                    log_to_file("lean_errors", error_feedback, entity_id=eid)
+                    
+                    missing = get_missing_deps_from_lean_error(result.get("errors", []))
+                    mathesis_deps = [d for d in missing if any(d.startswith(p) for p in ["obj-", "prop-", "op-", "thm-", "def-"]) ]
+                    for dep in mathesis_deps:
+                        human = dep.split('-',1)[1].replace('-', ' ')
+                        if human not in missing_terms:
+                            missing_terms.append(human)
+            if not missing_terms:
+                break
+            print(f"[Validation loop {iter_count}] Found missing dependencies to enrich: {missing_terms}")
+            for term in missing_terms:
+                ok, gen, _ = run_enrichment_pipeline(
+                    term,
+                    extract_provider=extract_provider, extract_api_key=extract_api_key, extract_model=extract_model,
+                    preview_provider=preview_provider, preview_api_key=preview_api_key, preview_model=preview_model,
+                    synth_provider=synth_provider,     synth_api_key=synth_api_key,     synth_model=synth_model,
+                    lean_provider=args.lean_provider,  lean_api_key=args.lean_api_key,  lean_model=args.lean_model,
+                    cv_model=args.cv_model,
+                    no_validate=args.no_validate,
+                )
+                if ok:
+                    roots_changed = True
+            if roots_changed:
+                # rebuild entities graph to include newly synthesized entities
+                entities = multi_root_bfs_collect(root_ids, args)
 
-    print(f"Validation/enrichment loop finished after {iter_count} iterations.")
+        print(f"Validation/enrichment loop finished after {iter_count} iterations.")
 
     # Build and log the final graph structure for this query
     from pipeline.export_to_lean import log_to_file
@@ -405,28 +573,67 @@ def main():
 
     content = ""
     for data in entities:
-        book_key = data["source"].split(",")[0].strip()
-        citation = BOOK_CITATIONS.get(book_key, data["source"])
+        # Synthesize bilingual details and natural language descriptions
+        synth_ru, synth_en, desc_ru, desc_en = synthesize_entity_details(
+            data=data,
+            provider=synth_provider,
+            model=synth_model,
+            api_key=synth_api_key
+        )
+        
+        title_bilingual = f"{synth_ru} / {synth_en}"
+        
+        # Resolve book citation base key
+        book_key = data["source"].split(",")[0].strip().lower()
+        book_key_base = re.sub(r'[-\d]', '', book_key).strip()
+        citation = BOOK_CITATIONS.get(book_key_base, BOOK_CITATIONS.get(book_key, data["source"]))
         page_info = data["source"]
+        if "," in page_info:
+            page_info = page_info.split(",", 1)[1].strip()
+        citation_full = f"{citation}, {page_info}"
         
-        nl = NL_DESCRIPTIONS.get(data["id"], "")
-        if not nl:
-            nl = data.get("nl_desc", "")
+        # Map type to Russian textbook terminology
+        TYPE_MAPPING = {
+            "object": "Объект",
+            "operation": "Операция",
+            "property": "Свойство",
+            "axiom": "Аксиома",
+            "theorem": "Теорема",
+            "lemma": "Лемма",
+            "corollary": "Следствие",
+        }
+        type_ru = TYPE_MAPPING.get(data["type"].lower(), data["type"].capitalize())
         
-        block = f"\\section{{{data['title']}}}\\label{{entity:{data['id']}}}\n"
-        block += f"\\textbf{{Тип:}} {data['type']}\\quad "
-        if data.get('module'):
-            block += f"\\textbf{{Модуль:}} {data['module']}\\quad "
-        block += f"\\textbf{{Источник:}} {citation} ({page_info})\n\n"
+        # Assembly of a highly readable and clean bilingual chapter block
+        block = f"\\chapter{{{title_bilingual}}}\\label{{entity:{data['id']}}}\n"
+        block += f"\\textbf{{Тип:}} {type_ru} \\hfill \\textbf{{Источник:}} {citation_full}\n\n"
+        block += "\\vspace{0.5em}\n\\hrule\n\\vspace{1em}\n\n"
         
-        block += "\\textbf{Каноническая запись:}\n"
-        block += f"\n{data.get('full_body', '')}\n\n"
+        # 1. Russian formulation (first)
+        block += "\\section*{Формулировка на русском языке}\n"
+        if desc_ru:
+            block += f"{desc_ru}\n\n"
+        else:
+            block += "Формулировка отсутствует.\n\n"
+            
+        # 2. English formulation (second)
+        block += "\\section*{Formulation in English}\n"
+        if desc_en:
+            block += f"{desc_en}\n\n"
+        else:
+            block += "Formulation is not available.\n\n"
+            
+        # 3. Mathematical formulation (third)
+        block += "\\section*{Математическая формулировка}\n"
+        # Strip internal ID leaks (op-hypertarget and math env arguments)
+        clean_body = data.get("full_body", "")
+        clean_body = re.sub(r'\\entityref\{op-hypertarget\}\{\\hypertarget\}\{[^}]*\}\{\}\s*', '', clean_body)
+        clean_body = re.sub(r'\\begin\{(object|operation|property|axiom|theorem|lemma|corollary)\}\[[^\]]+\]', r'\\begin{\1}', clean_body)
         
-        if nl:
-            block += f"\n\\textbf{{Естественный язык:}}\n{nl}\n"
+        block += f"{clean_body}\n\n"
         
-        block += "\n\\vspace{1em}\n\\hrule\n\\vspace{1em}\n\n"
         content += block
+    
     
     result_tex = PROJECT_ROOT / "result.tex"
     with open(result_tex, "w", encoding="utf-8") as f:

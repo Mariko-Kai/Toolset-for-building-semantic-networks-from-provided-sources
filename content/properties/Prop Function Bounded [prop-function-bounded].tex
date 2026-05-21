@@ -1,0 +1,14 @@
+% defined-in: apostol (page 96)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f : [a, b] → ℝ, a : ℝ, b : ℝ, M : ℝ, x : ℝ]
+% 2. Data Structures: [Interval [a, b] represented as a subtype of ℝ]
+% 3. Implicit Bounds: [M > 0 is a strict existential constraint]
+% ========================
+
+% entity-id: prop-function-bounded
+% entity-type: property
+
+\begin{property}
+\mForall{f \colon \entityref{obj-closed-interval}{[a, b]} \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\mathrm{IsBounded}(f) \mDefinedAs \mExists{M \in \entityref{obj-real-numbers}{\mathbb{R}}} \left( (M > 0) \mAnd \mForall{x \in \entityref{obj-closed-interval}{[a, b]}} \left( \entityref{op-abs-abstract}{\mathrm{abs}}(f(x)) < M \right) \right)
+\end{property}

@@ -1,0 +1,17 @@
+% defined-in: apostol (page 154), apostol (page 149), apostol (page 149)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f : D → ℝ, where D : Type; p : D; x : D]
+% 2. Data Structures: [The neighborhood is represented as a subset U ⊆ D such that p ∈ U]
+% 3. Implicit Bounds: [The limit is defined over the filter of neighborhoods of p]
+% ========================
+
+% entity-id: prop-function-discontinuous
+% entity-type: property
+
+\begin{property}[Discontinuity]
+\mForall{D \colon \mathrm{Type}}
+\mForall{f \colon D \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\mForall{p \colon D}
+\mathrm{IsDiscontinuous}(f, p) \mDefinedAs \mNot \left( \entityref{prop-function-continuous-at-point}{f, p} \right)
+\mAnd \left( \mNot \left( \exists{y \colon \entityref{obj-real-numbers}{\mathbb{R}}} \left( \entityref{op-limit}{\lim}_{x \to p} f(x) = y \right) \right) \mOr \left( \entityref{op-limit}{\lim}_{x \to p} f(x) \neq f(p) \right) \right)
+\end{property}

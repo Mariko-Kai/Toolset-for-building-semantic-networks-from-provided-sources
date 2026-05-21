@@ -1,0 +1,15 @@
+% defined-in: spivak (page 545)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f : D → ℂ, where D : Type (domain), a : D, z : D]
+% 2. Data Structures: [The domain D is treated as a subset of ℂ, represented as a Type with an inclusion map to ℂ]
+% 3. Implicit Bounds: [The limit is taken over the filter of punctured neighborhoods of a in D]
+% ========================
+
+% entity-id: prop-complex-function-discontinuous
+% entity-type: property
+
+\begin{property}[Discontinuity]
+\[
+\mathrm{IsDiscontinuous}(f, a) \mDefinedAs \mNot \left( \entityref{op-limit}{\lim}_{z \to a} f(z) = f(a) \right)
+\]
+\end{property}

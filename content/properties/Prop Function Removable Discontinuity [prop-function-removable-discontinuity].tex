@@ -1,0 +1,16 @@
+% defined-in: spivak (page 140)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f : D → ℝ, where D ⊆ ℝ; a : D; L : ℝ]
+% 2. Data Structures: [The limit is represented as a functional operator on the domain D]
+% 3. Implicit Bounds: [The domain D must be such that a is a limit point of D \ {a}]
+% ========================
+
+% entity-id: prop-function-removable-discontinuity
+% entity-type: property
+
+\begin{property}
+\mForall{f \colon D \to \entityref{obj-real-numbers}{\mathbb{R}}}
+\mForall{a \in D}
+\mathrm{IsRemovableDiscontinuity}(f, a) \mDefinedAs
+\left( \mExists{L \in \entityref{obj-real-numbers}{\mathbb{R}}} \left( L = \entityref{op-limit}{\lim}_{x \to a} f(x) \right) \right) \mAnd \left( \entityref{op-limit}{\lim}_{x \to a} f(x) \neq f(a) \right)
+\end{property}

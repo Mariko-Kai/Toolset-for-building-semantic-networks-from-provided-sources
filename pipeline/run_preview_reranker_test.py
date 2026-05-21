@@ -5,6 +5,8 @@ from pathlib import Path
 # Local test for preview-reranker: monkeypatch query_llm to deterministic heuristic and run preview_scan
 
 repo_root = Path(__file__).resolve().parent.parent
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
 pdf_path = repo_root / "Books" / "Apostol, T.M. - Calculus Vol 1 - (EN) - [1991].pdf"
 
 if not pdf_path.exists():

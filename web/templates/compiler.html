@@ -30,9 +30,12 @@
             </datalist>
         </div>
 
+        <div class="compiler-actions">
         <button id="compile-btn" class="btn-compile">
             <span class="btn-text">Скомпилировать PDF</span>
         </button>
+        <button id="cancel-btn" class="btn-cancel" type="button" disabled>Прервать</button>
+        </div>
 
         <div class="form-group" style="flex-grow: 1; display: flex; flex-direction: column;">
             <label>Логи компиляции</label>
@@ -59,6 +62,7 @@
 
 <script>
     const compileBtn = document.getElementById('compile-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
     const entityInput = document.getElementById('entity-root');
     const queryInput = document.getElementById('entity-query');
     const idGroup = document.getElementById('id-group');
@@ -160,8 +164,7 @@
             
             else if (data.type === 'start') {
                 // Clear console and start UI compile state
-                const targetText = data.mode === 'id' ? `сущности "${data.value}"` : `запроса "${data.value}"`;
-                consoleLog.innerHTML = `<span style="color: #8b949e;">[system] Запуск конвейера компиляции для ${targetText}...\n</span>`;
+                consoleLog.innerHTML = `<span style="color: #8b949e;">event=compilation.requested mode=${data.mode} value=${JSON.stringify(data.value)}\n</span>`;
                 updateCompilationUI(true);
             }
             
@@ -182,7 +185,22 @@
                 const statusSpan = document.createElement('span');
                 statusSpan.style.color = '#2ecc71';
                 statusSpan.style.fontWeight = 'bold';
-                statusSpan.textContent = `\n[system] Сборка PDF успешно завершена! result.pdf обновлен.\n`;
+                statusSpan.textContent = `\nevent=compilation.completed status=success output_path=result.pdf\n`;
+                consoleLog.appendChild(statusSpan);
+                consoleLog.scrollTop = consoleLog.scrollHeight;
+            }
+
+            else if (data.type === 'cancelling') {
+                cancelBtn.disabled = true;
+                appendLogLine('event=compilation.cancel_requested action=terminate_process_tree');
+            }
+
+            else if (data.type === 'cancelled') {
+                updateCompilationUI(false);
+                const statusSpan = document.createElement('span');
+                statusSpan.style.color = '#f39c12';
+                statusSpan.style.fontWeight = 'bold';
+                statusSpan.textContent = '\nevent=compilation.completed status=cancelled\n';
                 consoleLog.appendChild(statusSpan);
                 consoleLog.scrollTop = consoleLog.scrollHeight;
             }
@@ -239,6 +257,14 @@
         }
     });
 
+    cancelBtn.addEventListener('click', () => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: 'cancel'
+            }));
+        }
+    });
+
     // Helper to format and colorize log lines in console box
     function appendLogLine(line) {
         // Remove existing placeholder if present
@@ -249,13 +275,13 @@
         
         const span = document.createElement('span');
         
-        if (line.includes('[OK]') || line.includes('successful')) {
+        if (line.includes('status=success') || line.includes('[OK]') || line.includes('successful')) {
             span.style.color = '#2ecc71'; // Green
-        } else if (line.includes('[ERROR]') || line.includes('failed') || line.includes('Error')) {
+        } else if (line.includes('status=failed') || line.includes('[ERROR]') || line.includes('failed') || line.includes('Error')) {
             span.style.color = '#e74c3c'; // Red
-        } else if (line.includes('[BFS]') || line.includes('Collected')) {
+        } else if (line.includes('event=graph_') || line.includes('event=dependency_') || line.includes('[BFS]') || line.includes('Collected')) {
             span.style.color = '#3498db'; // Blue
-        } else if (line.startsWith('=== ')) {
+        } else if (line.includes('status=cancelled') || line.startsWith('=== ')) {
             span.style.color = '#f39c12'; // Orange
             span.style.fontWeight = 'bold';
         }
@@ -269,6 +295,7 @@
     function updateCompilationUI(isCompiling) {
         if (isCompiling) {
             compileBtn.disabled = true;
+            cancelBtn.disabled = false;
             compileBtn.innerHTML = '<div class="spinner"></div><span>Компиляция...</span>';
             entityInput.disabled = true;
             queryInput.disabled = true;
@@ -276,6 +303,7 @@
             tabId.disabled = true;
         } else {
             compileBtn.disabled = false;
+            cancelBtn.disabled = true;
             compileBtn.innerHTML = '<span class="btn-text">Скомпилировать PDF</span>';
             entityInput.disabled = false;
             queryInput.disabled = false;

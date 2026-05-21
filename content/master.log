@@ -704,7 +704,7 @@ mr/m/n/10 ) [][]= \OMS/cmsy/m/n/10 :9[] []
 (content/objects/Predicate [obj-predicate].tex)
 (content/objects/Well-Formed Formula FOL [obj-wff-fol].tex
 Overfull \hbox (10.61632pt too wide) in paragraph at lines 5--5
-[]\T2A/cmr/bx/n/14.4 Правильно по-стро-ен-ная фор-му-ла FOL (Well-
+[]\T2A/cmr/bx/n/14.4 пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ-пїЅпїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅпїЅ пїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅ FOL (Well-
  []
 
 
@@ -721,23 +721,23 @@ MS/cmsy/m/n/10 8\OML/cmm/m/it/10 x\OMS/cmsy/m/n/10 B\OT1/cmr/m/n/10 )
 
 ) (content/foundations/Distribution [axm-fol-5].tex
 Overfull \hbox (27.03331pt too wide) in paragraph at lines 5--5
-[]\T2A/cmr/bx/n/14.4 Аксиома рас-пре-де-ле-ния кван-то-ра (Distribution
+[]\T2A/cmr/bx/n/14.4 пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ-пїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅ (Distribution
  []
 
 ) (content/foundations/Generalization Rule [axm-fol-generalization].tex
 Overfull \hbox (23.98877pt too wide) in paragraph at lines 5--5
-[]\T2A/cmr/bx/n/14.4 Правило обоб-ще-ния (Generalization Rule [axm-
+[]\T2A/cmr/bx/n/14.4 пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅпїЅ (Generalization Rule [axm-
  []
 
 ) (content/foundations/Modus Ponens [axm-fol-modus-ponens].tex [2])
 (content/foundations/Specialization [axm-fol-4].tex
 Overfull \hbox (12.59706pt too wide) in paragraph at lines 5--5
-[]\T2A/cmr/bx/n/14.4 Аксиома спе-ци-а-ли-за-ции (Specialization [axm-
+[]\T2A/cmr/bx/n/14.4 пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ-пїЅпїЅ-пїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅпїЅ (Specialization [axm-
  []
 
 ) (content/objects/Cartesian Product [obj-cartesian-product].tex
 Overfull \hbox (17.94154pt too wide) in paragraph at lines 5--5
-[]\T2A/cmr/bx/n/14.4 Декартово про-из-ве-де-ние (Cartesian Product) 
+[]\T2A/cmr/bx/n/14.4 пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅпїЅ (Cartesian Product) 
  []
 
 ) (content/objects/Obj Closed Interval [obj-closed-interval].tex)
@@ -757,7 +757,7 @@ T1/cmr/m/n/10 ) [][]= []
 
 ) (content/operations/Op Limit Function Base [op-limit-function-base].tex
 Overfull \hbox (13.3058pt too wide) in paragraph at lines 5--5
-[]\T2A/cmr/bx/n/14.4 Предел функ-ции по ба-зе (Limit of a Function
+[]\T2A/cmr/bx/n/14.4 пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ-пїЅпїЅпїЅ пїЅпїЅ пїЅпїЅ-пїЅпїЅ (Limit of a Function
  []
 
 [4]
@@ -824,7 +824,7 @@ x\OT1/cmr/m/n/10 ) \OMS/cmsy/m/n/10 ^^@ \OML/cmm/m/it/10 f\OT1/cmr/m/n/10 (\OML
 <argument> \landQ 
                   
 l.12 ...РґРµРЅРёРµ $P \entityref{op-landq}{\landQ}
-                                                  $ РёСЃС‚РёРЅРЅРѕ С‚РѕРіРґР...
+                                                  $ РёСЃС‚РёРЅРЅРѕ С‚РѕРіРґпїЅ...
 The control sequence at the end of the top line
 of your error message was never \def'ed. If you have
 misspelled it (e.g., `\hobx'), type `I' and the correct
@@ -838,15 +838,15 @@ and I'll forget about whatever was undefined.
 (content/terminals/Negation [term-negation].tex)
 (content/terminals/Set [term-set].tex
 Overfull \hbox (1.06137pt too wide) in paragraph at lines 16--18
-[]\T2A/cmr/bx/n/10 Базовое от-но-ше-ние: \T2A/cmr/m/n/10 Ос-нов-ным от-но-ше-ни
--ем яв-ля-ет-ся при-над-леж-ность
+[]\T2A/cmr/bx/n/10 пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅпїЅ: \T2A/cmr/m/n/10 пїЅпїЅ-пїЅпїЅпїЅ-пїЅпїЅпїЅ пїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅ
+-пїЅпїЅ пїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅ пїЅпїЅпїЅ-пїЅпїЅпїЅ-пїЅпїЅпїЅ-пїЅпїЅпїЅпїЅпїЅ
  []
 
 ) (content/terminals/Existential Quantifier [term-exists].tex
 Overfull \hbox (3.53932pt too wide) in paragraph at lines 11--14
-[]\T2A/cmr/bx/n/10 Формальная се-ман-ти-ка: \T2A/cmr/m/n/10 Пусть $\OML/cmm/m/i
+[]\T2A/cmr/bx/n/10 пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ-пїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅ: \T2A/cmr/m/n/10 пїЅпїЅпїЅпїЅпїЅ $\OML/cmm/m/i
 t/10 P\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 x\OT1/cmr/m/n/10 )$ \T2A/cmr/m/n/10 ^^V
- пре-ди-кат. Утвер-жде-ние $\OMS/cmsy/m/n/10 9\OML/cmm/m/it/10 x P\OT1/cmr/m/n/
+ пїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅпїЅ. пїЅпїЅпїЅпїЅпїЅ-пїЅпїЅпїЅ-пїЅпїЅпїЅ $\OMS/cmsy/m/n/10 9\OML/cmm/m/it/10 x P\OT1/cmr/m/n/
 10 (\OML/cmm/m/it/10 x\OT1/cmr/m/n/10 )$
  []
 
@@ -859,17 +859,17 @@ File: t2acmtt.fd 2001/08/11 v1.0a Computer Modern Cyrillic font definitions
 ))
 (content/terminals/Uniqueness Existential Quantifier [term-exists-unique].tex
 Overfull \hbox (6.31711pt too wide) in paragraph at lines 11--14
-[]\T2A/cmr/bx/n/10 Формальная се-ман-ти-ка: \T2A/cmr/m/n/10 Пусть $\OML/cmm/m/i
+[]\T2A/cmr/bx/n/10 пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ-пїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅ: \T2A/cmr/m/n/10 пїЅпїЅпїЅпїЅпїЅ $\OML/cmm/m/i
 t/10 P\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 x\OT1/cmr/m/n/10 )$ \T2A/cmr/m/n/10 ^^V
- пре-ди-кат. Утвер-жде-ние $[][]\OMS/cmsy/m/n/10 9[][]\OT1/cmr/m/n/10 !\OML/cmm
+ пїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅпїЅ. пїЅпїЅпїЅпїЅпїЅ-пїЅпїЅпїЅ-пїЅпїЅпїЅ $[][]\OMS/cmsy/m/n/10 9[][]\OT1/cmr/m/n/10 !\OML/cmm
 /m/it/10 x P\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 x\OT1/cmr/m/n/10 )$
  []
 
 ) (content/terminals/Universal Quantifier [term-forall].tex
 Overfull \hbox (3.53932pt too wide) in paragraph at lines 14--17
-[]\T2A/cmr/bx/n/10 Формальная се-ман-ти-ка: \T2A/cmr/m/n/10 Пусть $\OML/cmm/m/i
+[]\T2A/cmr/bx/n/10 пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ-пїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅ: \T2A/cmr/m/n/10 пїЅпїЅпїЅпїЅпїЅ $\OML/cmm/m/i
 t/10 P\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 x\OT1/cmr/m/n/10 )$ \T2A/cmr/m/n/10 ^^V
- пре-ди-кат. Утвер-жде-ние $\OMS/cmsy/m/n/10 8\OML/cmm/m/it/10 x P\OT1/cmr/m/n/
+ пїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅпїЅ. пїЅпїЅпїЅпїЅпїЅ-пїЅпїЅпїЅ-пїЅпїЅпїЅ $\OMS/cmsy/m/n/10 8\OML/cmm/m/it/10 x P\OT1/cmr/m/n/
 10 (\OML/cmm/m/it/10 x\OT1/cmr/m/n/10 )$
  []
 
@@ -884,8 +884,8 @@ Overfull \hbox (241.85962pt too wide) detected at line 15
 (content/theorems/Thm Cauchy Criterion Vector Valued [thm-cauchy-criterion-vect
 or-valued].tex [7]
 Overfull \hbox (27.27597pt too wide) in paragraph at lines 16--17
-[]\T2A/cmr/m/n/10 Доказательство опи-ра-ет-ся на пол-но-ту про-стран-ства $[][]
-\U/msb/m/n/10 R[][][]$\T2A/cmr/m/n/10 . Пусть $[][]\OML/cmm/m/it/10 d[][]\OT1/c
+[]\T2A/cmr/m/n/10 пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅ пїЅпїЅ пїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅ пїЅпїЅпїЅ-пїЅпїЅпїЅпїЅпїЅ-пїЅпїЅпїЅпїЅ $[][]
+\U/msb/m/n/10 R[][][]$\T2A/cmr/m/n/10 . пїЅпїЅпїЅпїЅпїЅ $[][]\OML/cmm/m/it/10 d[][]\OT1/c
 mr/m/n/10 (\OML/cmm/m/it/10 f\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 x[]\OT1/cmr/m/n/
 10 )\OML/cmm/m/it/10 ; f\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 x[]\OT1/cmr/m/n/10 ))
 $
@@ -1094,7 +1094,7 @@ pdfTeX warning (dest): name{op-union} has been referenced but does not exist, r
 eplaced by a fixed one
 
 
-pdfTeX warning (dest): name{def-logical-connectives} has been referenced but do
+pdfTeX warning (dest): name{term-conjunction} has been referenced but do
 es not exist, replaced by a fixed one
 
 
@@ -1130,8 +1130,8 @@ msy10.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/type1/public/ams
 fonts/cm/cmsy7.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKTeX/fonts/type1/p
 ublic/amsfonts/symbols/msbm10.pfb><C:/Users/Talgat/AppData/Local/Programs/MiKTe
 X/fonts/type1/public/amsfonts/symbols/msbm7.pfb>
-Output written on "F:\Universe\Projects\РЈС‡РµР±РЅРёРє РїРѕ РјР°С‚Р°РЅР°Р»РёР·С
-ѓ\content\master.pdf" (9 pages, 312246 bytes).
+Output written on "F:\Universe\Projects\РЈС‡РµР±РЅРёРє РїРѕ РјР°С‚Р°РЅР°Р»РёР·пїЅ
+пїЅ\content\master.pdf" (9 pages, 312246 bytes).
 PDF statistics:
  891 PDF objects out of 1000 (max. 8388607)
  127 named destinations out of 1000 (max. 500000)

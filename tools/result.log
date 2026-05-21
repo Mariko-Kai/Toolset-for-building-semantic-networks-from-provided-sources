@@ -665,7 +665,7 @@ Package hyperref Info: Link coloring ON on input line 6.
 LaTeX Info: Redefining \th on input line 6.
 
 Overfull \hbox (28.22672pt too wide) in paragraph at lines 8--8
-[]\T2A/cmr/bx/n/14.4 Предел по-сле-до-ва-тель-но-сти (Limit of Sequence) 
+[]\T2A/cmr/bx/n/14.4 пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ-пїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅпїЅ (Limit of Sequence) 
  []
 
 LaTeX Font Info:    Trying to load font information for U+msa on input line 14.
@@ -699,29 +699,29 @@ and I'll forget about whatever was undefined.
 
 
 Overfull \hbox (3.96423pt too wide) in paragraph at lines 47--48
-\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A/
-cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
+\T2A/cmr/bx/n/10 пїЅпїЅпїЅ: \T2A/cmr/m/n/10 object \T2A/cmr/bx/n/10 пїЅпїЅ-пїЅпїЅпїЅ-пїЅпїЅпїЅ: \T2A/
+cmr/m/n/10 пїЅпїЅ-пїЅпїЅпїЅ пїЅ.пїЅ., пїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ-пїЅпїЅпїЅ, пїЅпїЅпїЅ I (zorich-
  []
 
 
 Overfull \hbox (3.96423pt too wide) in paragraph at lines 67--68
-\T2A/cmr/bx/n/10 Тип: \T2A/cmr/m/n/10 object \T2A/cmr/bx/n/10 Ис-точ-ник: \T2A/
-cmr/m/n/10 Зо-рич В.А., Ма-те-ма-ти-че-ский ана-лиз, Том I (zorich-
+\T2A/cmr/bx/n/10 пїЅпїЅпїЅ: \T2A/cmr/m/n/10 object \T2A/cmr/bx/n/10 пїЅпїЅ-пїЅпїЅпїЅ-пїЅпїЅпїЅ: \T2A/
+cmr/m/n/10 пїЅпїЅ-пїЅпїЅпїЅ пїЅ.пїЅ., пїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ-пїЅпїЅпїЅ, пїЅпїЅпїЅ I (zorich-
  []
 
 [1
 
 {C:/Users/Talgat/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
 Overfull \hbox (20.75581pt too wide) in paragraph at lines 81--81
-[]\T2A/cmr/bx/n/14.4 Аксиома объ-ем-но-сти (Axiom of Extensionality) 
+[]\T2A/cmr/bx/n/14.4 пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ-пїЅпїЅ-пїЅпїЅ-пїЅпїЅпїЅ (Axiom of Extensionality) 
  []
 
 
-LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 2 undef
+LaTeX Warning: Hyper reference `entity:term-conjunction' on page 2 undef
 ined on input line 103.
 
 
-LaTeX Warning: Hyper reference `entity:def-logical-connectives' on page 2 undef
+LaTeX Warning: Hyper reference `entity:term-conjunction' on page 2 undef
 ined on input line 118.
 
 [2] (result.aux)

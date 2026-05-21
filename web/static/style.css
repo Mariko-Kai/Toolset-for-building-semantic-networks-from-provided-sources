@@ -533,6 +533,13 @@ a:hover {
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
 }
 
+.compiler-actions {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.75rem;
+    align-items: stretch;
+}
+
 .btn-compile {
     background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
     color: #fff;
@@ -565,6 +572,29 @@ a:hover {
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+}
+
+.btn-cancel {
+    background: transparent;
+    color: #f2b8b5;
+    border: 1px solid #8f4f4b;
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1.1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.btn-cancel:hover:not(:disabled) {
+    background: rgba(231, 76, 60, 0.14);
+    color: #fff;
+}
+
+.btn-cancel:disabled {
+    color: var(--text-muted);
+    border-color: var(--border);
+    cursor: not-allowed;
 }
 
 /* --- Console Log Box --- */

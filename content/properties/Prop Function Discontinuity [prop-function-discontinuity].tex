@@ -1,0 +1,19 @@
+% defined-in: zorich (page 154), zorich (page 154), zorich (page 155)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f : E → ℝ (Type), E : Set ℝ (Type), a : ℝ (Type), ε : ℝ (Type), δ : ℝ (Type), x : ℝ (Type)]
+% 2. Data Structures: [The neighborhood V(f(a)) is represented as an open interval in ℝ, UE(a) as the intersection of an open interval in ℝ with E]
+% 3. Implicit Bounds: [a ∈ E, ε > 0, δ > 0]
+% ========================
+
+% entity-id: prop-function-discontinuity
+% entity-type: property
+
+\begin{property}[Discontinuity]
+\mForall{E \subseteq \entityref{obj-real-numbers}{\mathbb{R}}}
+\mForall{f \colon E \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\mForall{a \in E}
+\mathrm{IsDiscontinuity}(f, a) \mDefinedAs 
+\mExists{\varepsilon \in \entityref{obj-real-numbers}{\mathbb{R}}} (\varepsilon > 0 \mAnd 
+\mForall{\delta \in \entityref{obj-real-numbers}{\mathbb{R}}} (\delta > 0 \mImplies 
+\mExists{x \in E} (\entityref{op-absolute-value}{\entityref{op-abs-abstract}{\mathrm{abs}}(x - a)} < \delta \mAnd \entityref{op-absolute-value}{\entityref{op-abs-abstract}{\mathrm{abs}}(f(x) - f(a))} > \varepsilon)))
+\end{property}

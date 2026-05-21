@@ -10,6 +10,7 @@ import re
 import asyncio
 import subprocess
 import atexit
+import json
 from pathlib import Path
 
 from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconnect
@@ -22,6 +23,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from mathesis import MathesisDB, EntityNotFoundError
+from pipeline.logging_utils import normalize_pipeline_log_line as normalize_pipeline_stdout
 
 # ---------------------------------------------------------------------------
 # Compiler Global State (for multiplayer sync)
@@ -30,12 +32,115 @@ from mathesis import MathesisDB, EntityNotFoundError
 class CompilerState:
     def __init__(self):
         self.is_compiling = False
+        self.cancel_requested = False
+        self.current_process = None
+        self.process_lock = threading.Lock()
         self.root_entity = "thm-cauchy-criterion-limit-base"
         self.query = "Определи интеграл Римана"
         self.mode = "query"
         self.logs = []
 
 state = CompilerState()
+api_config = None
+
+def load_or_create_api_config():
+    config_path = PROJECT_ROOT / "api_config.json"
+    
+    # 1. Fetch defaults from pipeline.config
+    try:
+        from pipeline.config import get_default_provider, get_default_model
+        default_config = {
+            "api_keys": {
+                "gemini": "",
+                "openai": "",
+                "groq": ""
+            },
+            "providers": {
+                "extract": get_default_provider("extract"),
+                "synth": get_default_provider("synth"),
+                "lean": get_default_provider("lean"),
+                "preview": get_default_provider("preview"),
+            },
+            "models": {
+                "extract": get_default_model("extract", get_default_provider("extract")),
+                "synth": get_default_model("synth", get_default_provider("synth")),
+                "lean": get_default_model("lean", get_default_provider("lean")),
+                "preview": get_default_model("preview", get_default_provider("preview")),
+            }
+        }
+    except Exception as e:
+        print(f"[config] Failed to load defaults from pipeline.config: {e}")
+        default_config = {
+            "api_keys": {
+                "gemini": "",
+                "openai": "",
+                "groq": ""
+            },
+            "providers": {
+                "extract": "ollama",
+                "synth": "ollama",
+                "lean": "ollama",
+                "preview": "llama_cpp"
+            },
+            "models": {
+                "extract": "qwen3:8b",
+                "synth": "qwen3:8b",
+                "lean": "qwen3:8b",
+                "preview": "bge-reranker-v2-m3-Q6_K.gguf"
+            }
+        }
+
+    config = None
+    if config_path.exists():
+        try:
+            content = config_path.read_text(encoding='utf-8').strip()
+            if not content:
+                print(f"[config] api_config.json is empty. Generating default configuration.")
+            else:
+                config = json.loads(content)
+        except Exception as e:
+            print(f"[config] Error reading/parsing api_config.json: {e}. Re-generating standard defaults.")
+            
+    if not config:
+        config = default_config
+        try:
+            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding='utf-8')
+            print(f"[config] Created default api_config.json at {config_path}")
+        except Exception as e:
+            print(f"[config] Failed to write default api_config.json: {e}")
+    else:
+        updated = False
+        for sec in ["api_keys", "providers", "models"]:
+            if sec not in config or not isinstance(config[sec], dict):
+                config[sec] = default_config[sec]
+                updated = True
+            else:
+                for k, v in default_config[sec].items():
+                    if k not in config[sec]:
+                        config[sec][k] = v
+                        updated = True
+        if updated:
+            try:
+                config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding='utf-8')
+                print(f"[config] Updated api_config.json with missing fields.")
+            except Exception as e:
+                print(f"[config] Failed to update api_config.json: {e}")
+
+    keys = config.get("api_keys", {})
+    if keys.get("gemini"):
+        os.environ["GEMINI_API_KEY"] = keys["gemini"]
+        os.environ["GOOGLE_API_KEY"] = keys["gemini"]
+    if keys.get("openai"):
+        os.environ["OPENAI_API_KEY"] = keys["openai"]
+    if keys.get("groq"):
+        os.environ["GROQ_API_KEY"] = keys["groq"]
+
+    print("[config] Active API configuration:")
+    for k, prov in config.get("providers", {}).items():
+        model = config.get("models", {}).get(k, "")
+        print(f"  - Module '{k}': provider = {prov}, model = {model}")
+        
+    return config
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -45,6 +150,7 @@ app = FastAPI(title="Mathesis", docs_url=None, redoc_url=None)
 
 app.state.cloudflare_url = None
 app.state.cloudflared_process = None
+app.state.cloudflared_job = None
 
 WEB_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=WEB_DIR / "static"), name="static")
@@ -52,6 +158,72 @@ templates = Jinja2Templates(directory=WEB_DIR / "templates")
 
 DB_PATH = PROJECT_ROOT / "mathesis_index.db"
 kb = MathesisDB(str(DB_PATH))
+
+
+# ---------------------------------------------------------------------------
+# Windows Job Objects for robust process lifecycle management
+# ---------------------------------------------------------------------------
+if os.name == 'nt':
+    import ctypes
+    from ctypes import wintypes
+    
+    JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
+    JobObjectExtendedLimitInformation = 9
+
+    class JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
+        _fields_ = [
+            ("PerProcessUserTimeLimit", wintypes.LARGE_INTEGER),
+            ("PerJobUserTimeLimit", wintypes.LARGE_INTEGER),
+            ("LimitFlags", wintypes.DWORD),
+            ("MinimumWorkingSetSize", ctypes.c_size_t),
+            ("MaximumWorkingSetSize", ctypes.c_size_t),
+            ("ActiveProcessLimit", wintypes.DWORD),
+            ("Affinity", ctypes.c_void_p),
+            ("PriorityClass", wintypes.DWORD),
+            ("SchedulingClass", wintypes.DWORD),
+        ]
+
+    class IO_COUNTERS(ctypes.Structure):
+        _fields_ = [
+            ("ReadOperationCount", ctypes.c_ulonglong),
+            ("WriteOperationCount", ctypes.c_ulonglong),
+            ("OtherOperationCount", ctypes.c_ulonglong),
+            ("ReadTransferCount", ctypes.c_ulonglong),
+            ("WriteTransferCount", ctypes.c_ulonglong),
+            ("OtherTransferCount", ctypes.c_ulonglong),
+        ]
+
+    class JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
+        _fields_ = [
+            ("BasicLimitInformation", JOBOBJECT_BASIC_LIMIT_INFORMATION),
+            ("IoInfo", IO_COUNTERS),
+            ("ProcessMemoryLimit", ctypes.c_size_t),
+            ("JobMemoryLimit", ctypes.c_size_t),
+            ("PeakProcessMemoryUsed", ctypes.c_size_t),
+            ("PeakJobMemoryUsed", ctypes.c_size_t),
+        ]
+
+    try:
+        kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+        
+        kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p]
+        kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+        
+        kernel32.SetInformationJobObject.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_int,
+            ctypes.c_void_p,
+            wintypes.DWORD
+        ]
+        kernel32.SetInformationJobObject.restype = wintypes.BOOL
+        
+        kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+        kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+        
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel32.CloseHandle.restype = wintypes.BOOL
+    except Exception as e:
+        print(f"[Windows Job Object] Failed to load kernel32 and declare signatures: {e}")
 
 
 def start_cloudflare_tunnel():
@@ -79,6 +251,33 @@ def start_cloudflare_tunnel():
     )
     app.state.cloudflared_process = process
     
+    if os.name == 'nt':
+        try:
+            hJob = kernel32.CreateJobObjectW(None, None)
+            if hJob:
+                info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
+                info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+                
+                res = kernel32.SetInformationJobObject(
+                    hJob,
+                    JobObjectExtendedLimitInformation,
+                    ctypes.byref(info),
+                    ctypes.sizeof(info)
+                )
+                if res:
+                    res_assign = kernel32.AssignProcessToJobObject(hJob, int(process._handle))
+                    if res_assign:
+                        app.state.cloudflared_job = hJob
+                        print(f"[cloudflared] Successfully assigned process {process.pid} to Job Object.")
+                    else:
+                        print(f"[cloudflared] Failed to assign process to Job Object: {ctypes.WinError(ctypes.get_last_error())}")
+                        kernel32.CloseHandle(hJob)
+                else:
+                    print(f"[cloudflared] Failed to set Job Object limit info: {ctypes.WinError(ctypes.get_last_error())}")
+                    kernel32.CloseHandle(hJob)
+        except Exception as e:
+            print(f"[cloudflared] Error setting up Windows Job Object: {e}")
+    
     # Read output to find trycloudflare URL
     for line in iter(process.stdout.readline, ""):
         print(f"[cloudflared] {line.strip()}")
@@ -103,8 +302,9 @@ main_loop = None
 
 @app.on_event("startup")
 def startup():
-    global main_loop
+    global main_loop, api_config
     kb.connect()
+    api_config = load_or_create_api_config()
     main_loop = asyncio.get_event_loop()
     # Start Cloudflare Tunnel automatically in a background thread
     tunnel_thread = threading.Thread(target=start_cloudflare_tunnel, daemon=True)
@@ -113,29 +313,102 @@ def startup():
 
 @app.on_event("shutdown")
 def shutdown():
+    cancel_running_compilation()
     kb.close()
     cleanup_tunnel()
 
 
 def cleanup_tunnel():
+    if os.name == 'nt' and hasattr(app.state, "cloudflared_job") and app.state.cloudflared_job:
+        print("[cloudflared] Closing Job Object handle (killing all tunnel processes)...")
+        try:
+            kernel32.CloseHandle(app.state.cloudflared_job)
+        except Exception as e:
+            print(f"[cloudflared] Error closing Job Object: {e}")
+        app.state.cloudflared_job = None
+        app.state.cloudflared_process = None
+        return
+
     if hasattr(app.state, "cloudflared_process") and app.state.cloudflared_process:
-        if app.state.cloudflared_process.poll() is None:
+        process = app.state.cloudflared_process
+        if process.poll() is None:
             print("[cloudflared] Terminating tunnel process...")
             try:
-                app.state.cloudflared_process.terminate()
-                app.state.cloudflared_process.wait(timeout=3)
+                if os.name == 'nt':
+                    # Forcefully kill the entire process tree on Windows
+                    subprocess.run(["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                else:
+                    process.terminate()
+                    process.wait(timeout=3)
             except subprocess.TimeoutExpired:
                 print("[cloudflared] Process did not terminate, killing...")
                 try:
-                    app.state.cloudflared_process.kill()
+                    process.kill()
                 except Exception:
                     pass
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[cloudflared] Error terminating process: {e}")
         app.state.cloudflared_process = None
 
 
 atexit.register(cleanup_tunnel)
+
+
+def set_current_compilation_process(process):
+    with state.process_lock:
+        state.current_process = process
+
+
+def get_current_compilation_process():
+    with state.process_lock:
+        return state.current_process
+
+
+def clear_current_compilation_process(process):
+    with state.process_lock:
+        if state.current_process is process:
+            state.current_process = None
+
+
+def terminate_process_tree(process, *, timeout=5):
+    if not process or process.poll() is not None:
+        return
+
+    if os.name == "nt":
+        try:
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=timeout,
+            )
+            return
+        except Exception as e:
+            print(f"[compiler] taskkill failed for process {process.pid}: {e}")
+    else:
+        try:
+            os.killpg(process.pid, 15)
+            process.wait(timeout=timeout)
+            return
+        except Exception as e:
+            print(f"[compiler] process group terminate failed for process {process.pid}: {e}")
+
+    try:
+        process.kill()
+    except Exception:
+        pass
+
+
+def cancel_running_compilation():
+    if not state.is_compiling:
+        return False
+
+    state.cancel_requested = True
+    process = get_current_compilation_process()
+    if process and process.poll() is None:
+        terminate_process_tree(process)
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -349,16 +622,67 @@ manager = ConnectionManager()
 
 
 async def run_compilation_async(mode: str, value: str):
+    global api_config
     state.is_compiling = True
+    state.cancel_requested = False
     state.mode = mode
     state.logs = []
     
     if mode == "id":
         state.root_entity = value
-        cmd = [sys.executable, str(PROJECT_ROOT / "pipeline" / "generate_answer.py"), "--root", value]
+        cmd = [sys.executable, "-u", str(PROJECT_ROOT / "pipeline" / "generate_answer.py"), "--root", value]
     else:
         state.query = value
-        cmd = [sys.executable, str(PROJECT_ROOT / "pipeline" / "ollama_wrapper.py"), value]
+        cmd = [sys.executable, "-u", str(PROJECT_ROOT / "pipeline" / "ollama_wrapper.py"), value]
+        
+    if api_config:
+        providers = api_config.get("providers", {})
+        models = api_config.get("models", {})
+        keys = api_config.get("api_keys", {})
+        
+        # 1. Extract config
+        ext_prov = providers.get("extract")
+        ext_model = models.get("extract")
+        ext_key = keys.get(ext_prov) if ext_prov else None
+        if ext_prov:
+            cmd.extend(["--extract-provider", ext_prov])
+        if ext_model:
+            cmd.extend(["--extract-model", ext_model])
+        if ext_key:
+            cmd.extend(["--extract-api-key", ext_key])
+            
+        # 2. Preview config
+        prev_prov = providers.get("preview")
+        prev_model = models.get("preview")
+        prev_key = keys.get(prev_prov) if prev_prov else None
+        if prev_prov:
+            cmd.extend(["--extract-preview-provider", prev_prov])
+        if prev_model:
+            cmd.extend(["--extract-preview-model", prev_model])
+        if prev_key:
+            cmd.extend(["--extract-preview-api-key", prev_key])
+            
+        # 3. Synth config
+        synth_prov = providers.get("synth")
+        synth_model = models.get("synth")
+        synth_key = keys.get(synth_prov) if synth_prov else None
+        if synth_prov:
+            cmd.extend(["--synth-provider", synth_prov])
+        if synth_model:
+            cmd.extend(["--synth-model", synth_model])
+        if synth_key:
+            cmd.extend(["--synth-api-key", synth_key])
+            
+        # 4. Lean config
+        lean_prov = providers.get("lean")
+        lean_model = models.get("lean")
+        lean_key = keys.get(lean_prov) if lean_prov else None
+        if lean_prov:
+            cmd.extend(["--lean-provider", lean_prov])
+        if lean_model:
+            cmd.extend(["--lean-model", lean_model])
+        if lean_key:
+            cmd.extend(["--lean-api-key", lean_key])
         
     # Broadcast that compilation has started to all connected sessions
     await manager.broadcast({
@@ -367,41 +691,74 @@ async def run_compilation_async(mode: str, value: str):
         "value": value
     })
     
-    try:
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            cwd=str(PROJECT_ROOT)
-        )
-        
-        # Read lines asynchronously as they are written by the compiler script
-        while True:
-            line = await process.stdout.readline()
-            if not line:
-                break
-            decoded_line = line.decode('utf-8', errors='replace').rstrip('\r\n')
-            state.logs.append(decoded_line)
-            # Send log line to all connected clients
-            await manager.broadcast({
-                "type": "log",
-                "line": decoded_line
-            })
-            
-        await process.wait()
-    except Exception as e:
-        err_msg = f"[System Error] Compilation process failed: {str(e)}"
-        state.logs.append(err_msg)
-        await manager.broadcast({
+    loop = asyncio.get_running_loop()
+    
+    def log_and_broadcast(line: str):
+        if not line:
+            return
+        state.logs.append(line)
+        asyncio.create_task(manager.broadcast({
             "type": "log",
-            "line": err_msg
-        })
+            "line": line
+        }))
+        
+    run_result = {"returncode": None}
+
+    def run_cmd():
+        process = None
+        try:
+            creationflags = 0
+            popen_kwargs = {}
+            env = os.environ.copy()
+            env["PYTHONUNBUFFERED"] = "1"
+            env["PYTHONIOENCODING"] = "utf-8"
+            if sys.platform == 'win32':
+                creationflags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+            else:
+                popen_kwargs["start_new_session"] = True
+                
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                cwd=str(PROJECT_ROOT),
+                bufsize=1,
+                text=True,
+                encoding='utf-8',
+                errors='replace',
+                env=env,
+                creationflags=creationflags,
+                **popen_kwargs
+            )
+            set_current_compilation_process(process)
+            
+            for line in iter(process.stdout.readline, ''):
+                clean_line = line.rstrip('\r\n')
+                loop.call_soon_threadsafe(log_and_broadcast, clean_line)
+                
+            run_result["returncode"] = process.wait()
+        except Exception as e:
+            err_msg = f"[System Error] Compilation process failed: {str(e)}"
+            loop.call_soon_threadsafe(log_and_broadcast, err_msg)
+        finally:
+            if process:
+                clear_current_compilation_process(process)
+
+    await asyncio.to_thread(run_cmd)
         
     state.is_compiling = False
+    was_cancelled = state.cancel_requested
+    state.cancel_requested = False
     # Send compilation complete signal to all clients
-    await manager.broadcast({
-        "type": "done"
-    })
+    if was_cancelled:
+        await manager.broadcast({
+            "type": "cancelled"
+        })
+    else:
+        await manager.broadcast({
+            "type": "done",
+            "returncode": run_result["returncode"]
+        })
 
 
 @app.get("/compiler")
@@ -462,6 +819,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 # User clicked "Compile" -> trigger build if not already running
                 if not state.is_compiling:
                     asyncio.create_task(run_compilation_async(data["mode"], data["value"]))
+
+            elif data["type"] == "cancel":
+                # User clicked "Cancel" -> terminate the active pipeline process tree
+                if cancel_running_compilation():
+                    await manager.broadcast({
+                        "type": "cancelling"
+                    })
                     
     except WebSocketDisconnect:
         manager.disconnect(websocket)

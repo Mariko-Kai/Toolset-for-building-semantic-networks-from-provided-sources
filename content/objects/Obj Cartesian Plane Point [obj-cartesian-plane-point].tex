@@ -1,0 +1,22 @@
+% defined-in: spivak (page 76)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [a : ℝ, b : ℝ, p : ℝ × ℝ, O : ℝ × ℝ, X : ℝ × ℝ, Y : ℝ × ℝ]
+% 2. Data Structures: [The point p is represented as an element of the Cartesian product ℝ × ℝ. The rectangle is defined as the set of vertices {O, X, Y, p} where O=(0,0), X=(a,0), Y=(0,b).]
+% 3. Implicit Bounds: [None required; the coordinate system is defined by the standard basis of ℝ².]
+% ========================
+
+% entity-id: obj-cartesian-plane-point
+% entity-type: object
+
+\begin{object}[CartesianPlanePoint]
+\mForall{a \colon \entityref{obj-real-numbers}{\mathbb{R}}}
+\mForall{b \colon \entityref{obj-real-numbers}{\mathbb{R}}}
+\mathrm{IsPoint}(a, b, p) \mDefinedAs
+\left( p = (a, b) \right) \mAnd
+\left( p \in \entityref{obj-cartesian-product}{\mathbb{R} \times \mathbb{R}} \right) \mAnd
+\left( \exists O, X, Y \in \entityref{obj-cartesian-product}{\mathbb{R} \times \mathbb{R}} \right)
+\left( O = (0, 0) \right) \mAnd
+\left( X = (a, 0) \right) \mAnd
+\left( Y = (0, b) \right) \mAnd
+\left( p \text{ is the vertex of the rectangle with vertices } \{O, X, Y, p\} \right)
+\end{object}

@@ -1,257 +1,85 @@
-\documentclass{report}
-\usepackage{mathesis}
+\documentclass[12pt,a4paper]{report}
 \usepackage[utf8]{inputenc}
 \usepackage[russian]{babel}
+\usepackage{mathesis}
+\usepackage{geometry}
+\geometry{left=3cm,right=2cm,top=2cm,bottom=2cm}
+
+\title{\textbf{Справочник математических сущностей}}
+\author{Конвейер компиляции Mathesis}
+\date{\today}
 
 \begin{document}
 
-\section{thm-weierstrass-extreme-value}\label{entity:thm-weierstrass-extreme-value}
-\textbf{Тип:} theorem\quad \textbf{Источник:} apostol (page 174) (apostol (page 174))
+\maketitle
 
-\textbf{Каноническая запись:}
+\tableofcontents
+\newpage
 
-\begin{theorem}[Weierstrass Extreme Value]
-\[
-\mForall{\entityref{obj-function}{f} \colon [a, b] \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
-\quad \entityref{prop-continuous}{f} \mImplies \mExists{c, d \in [a, b]} \quad f(c) = \entityref{op-supremum}{\sup\limits_{x \in [a, b]}} f(x) \entityref{term-conjunction}{\land} f(d) = \entityref{op-infimum}{\inf\limits_{x \in [a, b]}} f(x)
-\]
-\end{theorem}
+\chapter{Function Uniformly Continuous / Function Uniformly Continuous}\label{entity:prop-function-uniformly-continuous}
+\textbf{Тип:} Свойство \hfill \textbf{Источник:} zorich (page 161), zorich (page 162), zorich (page 153), zorich (page 162), zorich (page 153)
 
-\begin{proof}[RU]
-Достаточно доказать, что \entityref{prop-continuous}{f} достигает своей верхней грани на $[a, b]$. Пусть $M = \entityref{op-supremum}{\sup\limits_{x \in [a, b]}} f(x)$. Предположим, что не существует такого $x \in [a, b]$, для которого $f(x) = M$. Определим $g(x) = M - f(x)$. Тогда $g(x) > 0$ для всех $x \in [a, b]$, следовательно, \entityref{obj-function}{функция} $1/\entityref{obj-function}{g}$ непрерывна на $[a, b]$. Согласно теореме о ограниченности непрерывной \entityref{obj-function}{функции}, $1/\entityref{obj-function}{g}$ ограничена на $[a, b]$, то есть $1/g(x) < C$ для некоторого $C > 0$. Это влечет $M - f(x) > 1/C$, откуда $f(x) < M - 1/C$ для всех $x \in [a, b]$. Это противоречит тому, что $M$ является точной верхней гранью $\entityref{obj-function}{f}$ на $[a, b]$. Следовательно, $f(x) = M$ для некоторого $x \in [a, b]$. Аналогичное рассуждение применимо к $\entityref{op-infimum}{\inf} \entityref{obj-function}{f}$.
-\end{proof}
-
-\begin{proof}[EN]
-It suffices to prove that \entityref{prop-continuous}{f} attains its supremum on $[a, b]$. Let $M = \entityref{op-supremum}{\sup\limits_{x \in [a, b]}} f(x)$. Assume there is no $x \in [a, b]$ such that $f(x) = M$. Define $g(x) = M - f(x)$. Then $g(x) > 0$ for all $x \in [a, b]$, so the reciprocal $1/\entityref{obj-function}{g}$ is continuous on $[a, b]$. By the theorem on the boundedness of continuous functions, $1/\entityref{obj-function}{g}$ is bounded on $[a, b]$, such that $1/g(x) < C$ for some $C > 0$. This implies $M - f(x) > 1/C$, so that $f(x) < M - 1/C$ for all $x \in [a, b]$. This contradicts the fact that $M$ is the least upper bound of $\entityref{obj-function}{f}$ on $[a, b]$. Hence, $f(x) = M$ for at least one $x \in [a, b]$. A similar argument applies to $\entityref{op-infimum}{\inf} \entityref{obj-function}{f}$.
-\end{proof}
-
-
-\vspace{1em}
+\vspace{0.5em}
 \hrule
 \vspace{1em}
 
-\section{term-conjunction}\label{entity:term-conjunction}
-\textbf{Тип:} terminal\quad \textbf{Источник:} Unknown (Unknown)
+\section*{Формулировка на русском языке}
+Формулировка отсутствует.
 
-\textbf{Каноническая запись:}
+\section*{Formulation in English}
+Formulation is not available.
 
-\begin{object}[term-conjunction] % Конъюнкция (Conjunction)
+\section*{Математическая формулировка}
+\begin{property}
+    \begin{aligned}
+\mForall{E \subseteq \entityref{obj-real-numbers}{\mathbb{R}}}
+\mForall{f \colon E \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\mathrm{IsUniformlyContinuous}(f, E) \mDefinedAs
+\mForall{\varepsilon \in \entityref{obj-real-numbers}{\mathbb{R}}}
+\left( \varepsilon > 0 \mImplies \mExists{\delta \in \entityref{obj-real-numbers}{\mathbb{R}}} \left( \delta > 0 \mAnd \mForall{x_1 \in E} \mForall{x_2 \in E} \left( \entityref{op-abs-abstract}{\mathrm{abs}}(x_1 - x_2) < \delta \mImplies \entityref{op-abs-abstract}{\mathrm{abs}}(f(x_1) - f(x_2)) < \varepsilon \right) \right) \right)
+    \end{aligned}
+\end{property}
 
-\textbf{Символ:} $\land$
+\chapter{Вещественные числа / Real Numbers}\label{entity:obj-real-numbers}
+\textbf{Тип:} Объект \hfill \textbf{Источник:} Зорич В.А., Математический анализ, Том I, p. 1
 
-\textbf{Читается как:} «и».
-
-\textbf{Формальная семантика:}
-Пусть $P$ и $Q$ — утверждения. Утверждение $P \land Q}$ истинно тогда и только тогда, когда оба утверждения $P$ и $Q$ истинны.
-
-\textbf{Пример:} $(2 < 3) \land (3 < 4)$
-\end{object}
-
-
-\vspace{1em}
+\vspace{0.5em}
 \hrule
 \vspace{1em}
 
-\section{Вещественные числа (Real Numbers)}\label{entity:obj-real-numbers}
-\textbf{Тип:} object\quad \textbf{Источник:} zorich-1, p. 1 (zorich-1, p. 1)
+\section*{Формулировка на русском языке}
+Множество вещественных чисел $\mathbb{R}$ представляет собой непрерывную числовую прямую. Формально $\mathbb{R}$ определяется как полное архимедово упорядоченное поле. В этом поле определены операции сложения, умножения и отношение порядка, а также выполняется аксиома полноты: каждое непустое подмножество, ограниченное сверху, имеет точную верхнюю грань.
 
-\textbf{Каноническая запись:}
+\section*{Formulation in English}
+The set of real numbers $\mathbb{R}$ represents the continuous number line. Formally, $\mathbb{R}$ is defined as a complete Archimedean ordered field. It supports the operations of addition, multiplication, and comparison, and satisfies the completeness axiom, which states that every non-empty subset that is bounded above has a least upper bound.
 
-\begin{object}[obj-real-numbers]
+\section*{Математическая формулировка}
+\hypertarget{obj-real-numbers}{}
+\hypertarget{obj-real-numbers}{}
+\begin{object}
 
 
 
 \[ \mathbb{R} = (\entityref{obj-set}{R}, +, \cdot, \leq) \]
 \end{object}
 
+\chapter{Абсолютная величина / Absolute Value}\label{entity:op-abs-abstract}
+\textbf{Тип:} Операция \hfill \textbf{Источник:} Зорич В.А., Математический анализ, Том I, p. 57
 
-\textbf{Естественный язык:}
-Множество вещественных чисел $\mathbb{R}$ — это непрерывная числовая прямая. Формально $\mathbb{R}$ задается как полное (непрерывное) архимедово упорядоченное поле. В нем можно складывать, умножать, сравнивать элементы, и в нем нет «дырок» (каждое ограниченное сверху подмножество имеет точную верхнюю грань).
-
-\vspace{1em}
+\vspace{0.5em}
 \hrule
 \vspace{1em}
 
-\section{op-supremum}\label{entity:op-supremum}
-\textbf{Тип:} operation\quad \textbf{Источник:} zorich (page 52) (zorich (page 52))
+\section*{Формулировка на русском языке}
+Абсолютная величина (модуль) действительного числа $x$ — это расстояние от начала отсчета до точки $x$ на числовой прямой. Формально, она равна $x$, если $x \geq 0$, и $-x$, если $x < 0$.
 
-\textbf{Каноническая запись:}
+\hypertarget{op-abs-abstract}{}
+\hypertarget{op-abs-abstract}{}
 
-\begin{operation}
-\[
-\mathrm{IsSupremum}(s, X) \mDefinedAs \left( \entityref{term-forall}{\forall} x \in X (x \leq s) \entityref{term-conjunction}{\land} \entityref{term-forall}{\forall} s' < s (\entityref{term-exists}{\exists} x' \in X (s' < x')) \right)
-\]
-\end{operation}
+\section*{Formulation in English}
+Formulation is not available.
 
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Функция (Function)}\label{entity:obj-function}
-\textbf{Тип:} object\quad \textbf{Источник:} zorich-1, p. 1 (zorich-1, p. 1)
-
-\textbf{Каноническая запись:}
-
-\begin{object}[obj-function]
-
-$\entityref{obj-set}{X}, \entityref{obj-set}{Y}$
-
-\[ f \subset \entityref{obj-set}{X} \entityref{obj-cartesian-product}{\times} \entityref{obj-set}{Y} \]
-\[ \mForall{x} (x \in X \mImplies \mExists{! y} (y \in Y \entityref{term-conjunction}{\land} (x, y) \in f)) \]
-\end{object}
-
-
-\textbf{Естественный язык:}
-Функция $f$ из множества $X$ в множество $Y$ — это правило (или бинарное отношение), по которому каждому элементу $x \in X$ ставится в соответствие ровно один элемент $y \in Y$. Формально, это подмножество декартова произведения $X \times Y$, обладающее свойством однозначности.
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{op-infimum}\label{entity:op-infimum}
-\textbf{Тип:} operation\quad \textbf{Источник:} apostol (page 48), spivak (page 153) (apostol (page 48), spivak (page 153))
-
-\textbf{Каноническая запись:}
-
-\begin{operation}[Infimum]
-\mForall{S \subseteq \entityref{obj-real-numbers}{\mathbb{R}}}
-\mForall{L \in \entityref{obj-real-numbers}{\mathbb{R}}}
-\mathrm{IsInfimum}(L, S) \mDefinedAs
-\left(
-\mForall{s \in S} \quad L \leq s
-\right)
-\mAnd
-\left(
-\mForall{y \in \entityref{obj-real-numbers}{\mathbb{R}}}
-\left(
-\left(
-\mForall{s \in S} \quad y \leq s
-\right)
-\mImplies
-y \leq L
-\right)
-\right)
-\end{operation}
-
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{prop-continuous}\label{entity:prop-continuous}
-\textbf{Тип:} property\quad \textbf{Источник:} apostol (page 147) (apostol (page 147))
-
-\textbf{Каноническая запись:}
-
-\begin{property}[Continuous]
-\[
-\mForall{\entityref{obj-function}{f} \colon D \mTo \entityref{obj-real-numbers}{\mReal}}
-\mForall{x_0 \in D}
-\mathrm{IsContinuous}(\entityref{obj-function}{f}, x_0) \mDefinedAs
-\mForall{\varepsilon > 0}
-\mExists{\delta > 0}
-\mForall{x \in D}
-\left( \entityref{op-abs-abstract}{\mathrm{abs}}(x - x_0) < \delta \right)
-\mImplies
-\left( \entityref{op-abs-abstract}{\mathrm{abs}}(f(x) - f(x_0)) < \varepsilon \right)
-\]
-\end{property}
-
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{obj-set}\label{entity:obj-set}
-\textbf{Тип:} object\quad \textbf{Источник:} zorich-1, p. 7 (zorich-1, p. 7)
-
-\textbf{Каноническая запись:}
-
-\begin{object}[obj-set] % Множество (Set)
-
-
-\textbf{Естественный язык:}
-Множество — базовое, неопределяемое напрямую понятие математики. Множество представляет собой совокупность объектов произвольной природы, называемых его элементами. Все свойства множеств строго выводятся из аксиом системы Цермело-Френкеля (ZFC).
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{term-exists}\label{entity:term-exists}
-\textbf{Тип:} terminal\quad \textbf{Источник:} Unknown (Unknown)
-
-\textbf{Каноническая запись:}
-
-\begin{object}[term-exists] % Квантор существования (Existential Quantifier)
-
-\textbf{Символ:} $\exists$
-
-\textbf{Читается как:} «существует», «найдется».
-
-\textbf{Формальная семантика:}
-Пусть $P(x)$ — предикат. Утверждение $\exists x\, P(x)$ истинно тогда и только тогда,
-когда в области дискурса (универсума) существует хотя бы один элемент $x$, для которого $P(x)$ истинно.
-
-\textbf{Пример:} $\exists x \in \entityref{obj-real-numbers}{\mathbb{R}}\; (x^2 = 2)$
-\end{object}
-
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{term-forall}\label{entity:term-forall}
-\textbf{Тип:} terminal\quad \textbf{Источник:} Unknown (Unknown)
-
-\textbf{Каноническая запись:}
-
-\begin{object}[term-forall] % Квантор всеобщности (Universal Quantifier)
-
-
-
-\textbf{Символ:} $\forall$
-
-\textbf{Читается как:} «для всех», «для каждого», «для любого».
-
-\textbf{Формальная семантика:}
-Пусть $P(x)$ — предикат. Утверждение $\forall x\, P(x)$ истинно тогда и только тогда,
-когда $P(x)$ истинно для каждого элемента $x$ из области дискурса (универсума).
-
-\textbf{Пример:} $\forall n \in \entityref{obj-natural-numbers}{\mathbb{N}}\; (n + 0 = n)$
-\end{object}
-
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Декартово произведение (Cartesian Product)}\label{entity:obj-cartesian-product}
-\textbf{Тип:} object\quad \textbf{Источник:} zorich-1, p. 11 (zorich-1, p. 11)
-
-\textbf{Каноническая запись:}
-
-\begin{object}[obj-cartesian-product]
-\[
-\mForall{A \in \entityref{obj-set}{\text{Set}}, B \in \entityref{obj-set}{\text{Set}}}
-\quad
-A \times B \mDefIff \left\{ (a, b) \entityref{term-mid}{\mid} a \in A \entityref{term-conjunction}{\land} b \in B \right\}
-\]
-\end{object}
-
-
-\textbf{Естественный язык:}
-Декартовым произведением \entityref{obj-set}{множеств} $A$ и $B$ называется \entityref{obj-set}{множество} всех \entityref{obj-ordered-pair}{упорядоченных пар} $(a, b)$, где $a \in A$ и $b \in B$.
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{Абсолютная величина (Absolute Value)}\label{entity:op-abs-abstract}
-\textbf{Тип:} operation\quad \textbf{Источник:} zorich-1, p. 57 (zorich-1, p. 57)
-
-\textbf{Каноническая запись:}
-
+\section*{Математическая формулировка}
 \begin{operation}
 \[
 \mForall{x \in \entityref{obj-real-numbers}{\mathbb{R}}}
@@ -263,60 +91,41 @@ x, & x \geq 0 \\
 \]
 \end{operation}
 
+\chapter{Множество / Set}\label{entity:obj-set}
+\textbf{Тип:} Объект \hfill \textbf{Источник:} Зорич В.А., Математический анализ, Том I, p. 7
 
-\textbf{Естественный язык:}
-Абсолютная величина (модуль) действительного числа $x$ — это расстояние от начала отсчета до точки $x$ на числовой прямой. Формально, она равна $x$, если $x \geq 0$, и $-x$, если $x < 0$.
-
-\vspace{1em}
+\vspace{0.5em}
 \hrule
 \vspace{1em}
 
-\section{axm-zfc-pairing}\label{entity:axm-zfc-pairing}
-\textbf{Тип:} axiom\quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
+\section*{Формулировка на русском языке}
+Множество — это фундаментальное, неопределяемое напрямую понятие математики, представляющее собой совокупность объектов произвольной природы, называемых его элементами. Все свойства множеств строго выводятся из аксиом теории множеств Цермело — Френкеля (ZFC).
 
-\textbf{Каноническая запись:}
+\section*{Formulation in English}
+A set is a fundamental, primitive notion in mathematics, representing a collection of objects of arbitrary nature, which are called its elements. All properties of sets are rigorously derived from the axioms of Zermelo–Fraenkel set theory (ZFC).
 
-\begin{axiom}[axm-zfc-pairing] % Аксиома пары (Axiom of Pairing)
+\section*{Математическая формулировка}
+\hypertarget{obj-set}{}
+\hypertarget{obj-set}{}
+\begin{object} % Множество (Set)
 
+\chapter{Аксиома объединения / Axiom of Union}\label{entity:axm-zfc-union}
+\textbf{Тип:} Аксиома \hfill \textbf{Источник:} vereshchagin-shen, vereshchagin-shen
 
-
-\[
-\mForall{A, B}
-\mExists{C} \mForall{x} \left( x \in C \mIff (x = A \entityref{term-disjunction}{\lor} x = B) \right)
-\]
-\end{axiom}
-
-
-\vspace{1em}
+\vspace{0.5em}
 \hrule
 \vspace{1em}
 
-\section{axm-zfc-extensionality}\label{entity:axm-zfc-extensionality}
-\textbf{Тип:} axiom\quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
+\section*{Формулировка на русском языке}
+Для любого семейства множеств $\mathcal{F}$ существует множество $U$, элементами которого являются все элементы множеств, принадлежащих $\mathcal{F}$. Формально: $\forall \mathcal{F} \exists U \forall x (x \in U \iff \exists A (A \in \mathcal{F} \land x \in A))$.
 
-\textbf{Каноническая запись:}
+\section*{Formulation in English}
+For any family of sets $\mathcal{F}$, there exists a set $U$ whose elements are precisely the elements of the sets belonging to $\mathcal{F}$. Formally: $\forall \mathcal{F} \exists U \forall x (x \in U \iff \exists A (A \in \mathcal{F} \land x \in A))$.
 
-\begin{axiom}[axm-zfc-extensionality] % Аксиома объемности (Axiom of Extensionality)
-
-
-
-\[
-\mForall{A, B}
-(A = B) \mIff (\mForall{x} x \in A \mIff x \in B)
-\]
-\end{axiom}
-
-
-\vspace{1em}
-\hrule
-\vspace{1em}
-
-\section{axm-zfc-union}\label{entity:axm-zfc-union}
-\textbf{Тип:} axiom\quad \textbf{Источник:} vereshchagin-shen (vereshchagin-shen)
-
-\textbf{Каноническая запись:}
-
-\begin{axiom}[axm-zfc-union] % Аксиома объединения (Axiom of Union)
+\section*{Математическая формулировка}
+\hypertarget{axm-zfc-union}{}
+\hypertarget{axm-zfc-union}{}
+\begin{axiom} % Аксиома объединения (Axiom of Union)
 
 
 
@@ -326,67 +135,113 @@ x, & x \geq 0 \\
 \]
 \end{axiom}
 
+\chapter{Аксиома объемности / Axiom of Extensionality}\label{entity:axm-zfc-extensionality}
+\textbf{Тип:} Аксиома \hfill \textbf{Источник:} vereshchagin-shen, vereshchagin-shen
 
-\vspace{1em}
+\vspace{0.5em}
 \hrule
 \vspace{1em}
 
-\section{Натуральные числа (Natural Numbers)}\label{entity:obj-natural-numbers}
-\textbf{Тип:} object\quad \textbf{Источник:} zorich-1, p. 58 (zorich-1, p. 58)
+\section*{Формулировка на русском языке}
+Аксиома, утверждающая, что два множества равны тогда и только тогда, когда они содержат одни и те же элементы. Формально: $\forall A, \forall B (A = B \iff \forall x (x \in A \iff x \in B))$.
 
-\textbf{Каноническая запись:}
+\section*{Formulation in English}
+An axiom stating that two sets are equal if and only if they contain the same elements. Formally: $\forall A, \forall B (A = B \iff \forall x (x \in A \iff x \in B))$.
 
-\begin{object}[obj-natural-numbers]
+\section*{Математическая формулировка}
+\hypertarget{axm-zfc-extensionality}{}
+\hypertarget{axm-zfc-extensionality}{}
+\begin{axiom} % Аксиома объемности (Axiom of Extensionality)
+
 
 
 \[
-\mathbb{N} \subset \entityref{obj-real-numbers}{\mathbb{R}} \colon (1 \in \mathbb{N}) \mAnd (\mForall n \in \mathbb{N} \mImplies n + 1 \in \mathbb{N})
+\mForall{A, B}
+(A = B) \mIff (\mForall{x} x \in A \mIff x \in B)
 \]
-\end{object}
+\end{axiom}
 
+\chapter{Аксиома пары / Axiom of Pairing}\label{entity:axm-zfc-pairing}
+\textbf{Тип:} Аксиома \hfill \textbf{Источник:} vereshchagin-shen, vereshchagin-shen
 
-\vspace{1em}
+\vspace{0.5em}
 \hrule
 \vspace{1em}
 
-\section{obj-ordered-pair}\label{entity:obj-ordered-pair}
-\textbf{Тип:} object\quad \textbf{Источник:} apostol (page 76) (apostol (page 76))
+\section*{Формулировка на русском языке}
+Аксиома, утверждающая, что для любых двух множеств $A$ и $B$ существует множество $C$, элементами которого являются в точности $A$ и $B$. Формально: $\forall A, B \exists C \forall x (x \in C \iff (x = A \lor x = B))$.
 
-\textbf{Каноническая запись:}
+\section*{Formulation in English}
+An axiom stating that for any two sets $A$ and $B$, there exists a set $C$ whose elements are exactly $A$ and $B$. Formally: $\forall A, B \exists C \forall x (x \in C \iff (x = A \lor x = B))$.
 
-\begin{object}[Ordered Pair]
-\mForall{a, b, c, d}
-\mathrm{IsOrderedPair}((a, b), a, b) \mDefinedAs \top
-\quad
-\mathrm{IsEqualOrderedPair}((a, b), (c, d)) \mDefinedAs (a = c \mAnd b = d)
-\end{object}
+\section*{Математическая формулировка}
+\hypertarget{axm-zfc-pairing}{}
+\hypertarget{axm-zfc-pairing}{}
+\begin{axiom} % Аксиома пары (Axiom of Pairing)
 
 
-\vspace{1em}
+
+\[
+\mForall{A, B}
+\mExists{C} \mForall{x} \left( x \in C \mIff (x = A \entityref{term-disjunction}{\lor} x = B) \right)
+\]
+\end{axiom}
+
+\chapter{Конъюнкция / Conjunction}\label{entity:term-conjunction}
+\textbf{Тип:} Terminal \hfill \textbf{Источник:} Unknown, Unknown
+
+\vspace{0.5em}
 \hrule
 \vspace{1em}
 
-\section{term-disjunction}\label{entity:term-disjunction}
-\textbf{Тип:} terminal\quad \textbf{Источник:} Unknown (Unknown)
+\section*{Формулировка на русском языке}
+Логическая операция, обозначаемая символом $\land$ и читаемая как «и». Утверждение $P \land Q$ истинно тогда и только тогда, когда оба утверждения $P$ и $Q$ истинны. Пример: $(2 < 3) \land (3 < 4)$.
 
-\textbf{Каноническая запись:}
+\section*{Formulation in English}
+A logical operation denoted by the symbol $\land$ and read as "and". The statement $P \land Q$ is true if and only if both statements $P$ and $Q$ are true. Example: $(2 < 3) \land (3 < 4)$.
 
-\begin{object}[term-disjunction] % Дизъюнкция (Disjunction)
+\section*{Математическая формулировка}
+\hypertarget{term-conjunction}{}
+\hypertarget{term-conjunction}{}
+\begin{object} % Конъюнкция (Conjunction)
 
-\textbf{Символ:} $\entityref{def-logical-connectives}{\lor}$
+\textbf{Символ:} $\land$
+
+\textbf{Читается как:} «и».
+
+\textbf{Формальная семантика:}
+Пусть $P$ и $Q$ — утверждения. Утверждение $P \land Q}$ истинно тогда и только тогда, когда оба утверждения $P$ и $Q$ истинны.
+
+\textbf{Пример:} $(2 < 3) \land (3 < 4)$
+\end{object}
+
+\chapter{Дизъюнкция / Disjunction}\label{entity:term-disjunction}
+\textbf{Тип:} Terminal \hfill \textbf{Источник:} Unknown, Unknown
+
+\vspace{0.5em}
+\hrule
+\vspace{1em}
+
+\section*{Формулировка на русском языке}
+Логическая операция, обозначаемая символом $\lor$ и читаемая как «или». Утверждение $P \lor Q$ истинно тогда и только тогда, когда хотя бы одно из утверждений $P$ или $Q$ является истинным. Пример: $(2 < 3) \lor (3 = 4)$.
+
+\section*{Formulation in English}
+A logical operation denoted by the symbol $\lor$ and read as "or". The statement $P \lor Q$ is true if and only if at least one of the statements $P$ or $Q$ is true. Example: $(2 < 3) \lor (3 = 4)$.
+
+\section*{Математическая формулировка}
+\hypertarget{term-disjunction}{}
+\hypertarget{term-disjunction}{}
+\begin{object} % Дизъюнкция (Disjunction)
+
+\textbf{Символ:} $\lor$
 
 \textbf{Читается как:} «или».
 
 \textbf{Формальная семантика:}
-Пусть $P$ и $Q$ — утверждения. Утверждение $P \entityref{def-logical-connectives}{\lor} Q$ истинно тогда и только тогда, когда хотя бы одно из утверждений $P$ или $Q$ истинно.
+Пусть $P$ и $Q$ — утверждения. Утверждение $P \lor Q$ истинно тогда и только тогда, когда хотя бы одно из утверждений $P$ или $Q$ истинно.
 
-\textbf{Пример:} $(2 < 3) \entityref{def-logical-connectives}{\lor} (3 = 4)$
+\textbf{Пример:} $(2 < 3) \lor (3 = 4)$
 \end{object}
-
-
-\vspace{1em}
-\hrule
-\vspace{1em}
 
 
 

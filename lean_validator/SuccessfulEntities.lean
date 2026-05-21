@@ -504,3 +504,390 @@ def obj_relation_partial_order {α : Type*} (R : α → α → Prop) : Prop :=
   (∀ x y z, R x y → R y z → R x z)
 
 
+-- Entity: prop-lebesgue-riemann-integrability | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+-- Lebesgue criterion for Riemann integrability
+def IsRiemannIntegrable (f : ℝ → ℝ) (a b : ℝ) : Prop :=
+  BddAbove (f '' Set.Icc a b) ∧ BddBelow (f '' Set.Icc a b) ∧
+  MeasureTheory.volume {x | x ∈ Set.Icc a b ∧ ¬ContinuousAt f x} = 0
+
+theorem lebesgue_criterion (f : ℝ → ℝ) (a b : ℝ) : 
+  IsRiemannIntegrable f a b ↔ 
+  BddAbove (f '' Set.Icc a b) ∧ BddBelow (f '' Set.Icc a b) ∧
+  MeasureTheory.volume {x | x ∈ Set.Icc a b ∧ ¬ContinuousAt f x} = 0 := by sorry
+
+-- Entity: prop-lebesgue-riemann-integrability
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+-- Lebesgue criterion for Riemann integrability
+def IsRiemannIntegrable (f : ℝ → ℝ) (a b : ℝ) : Prop :=
+  BddAbove (f '' Set.Icc a b) ∧ BddBelow (f '' Set.Icc a b) ∧
+  MeasureTheory.volume {x | x ∈ Set.Icc a b ∧ ¬ContinuousAt f x} = 0
+
+theorem lebesgue_criterion (f : ℝ → ℝ) (a b : ℝ) : 
+  IsRiemannIntegrable f a b ↔ 
+  BddAbove (f '' Set.Icc a b) ∧ BddBelow (f '' Set.Icc a b) ∧
+  MeasureTheory.volume {x | x ∈ Set.Icc a b ∧ ¬ContinuousAt f x} = 0 := by sorry
+
+-- Entity: prop-function-discontinuous | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def prop_function_discontinuous (f : ℝ → ℝ) (p : ℝ) : Prop :=
+  ¬ContinuousAt f p ∧ 
+  (¬∃ L, Filter.Tendsto f (nhds p) (nhds L)) ∨ 
+  (∃ L, Filter.Tendsto f (nhds p) (nhds L) ∧ L ≠ f p)
+
+-- Entity: prop-complex-function-discontinuous | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat Classical Polynomial
+
+def IsDiscontinuous (f : ℂ → ℂ) (a : ℂ) : Prop := 
+  ¬(∃ L : ℂ, Filter.Tendsto f (nhds a) (nhds L) ∧ L = f a)
+
+def prop_complex_function_discontinuous (f : ℂ → ℂ) (a : ℂ) : Prop := 
+  IsDiscontinuous f a
+
+-- Entity: prop-function-removable-discontinuity | Type: property
+def IsRemovableDiscontinuity (f : ℝ → ℝ) (a : ℝ) : Prop := 
+  ∃ L, Filter.Tendsto f (nhds a) (nhds L) ∧ L ≠ f a
+
+-- Entity: prop-function-discontinuity | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsDiscontinuity (f : ℝ → ℝ) (a : ℝ) : Prop :=
+  ∃ ε > 0, ∀ δ > 0, ∃ x, |x - a| < δ ∧ |f x - f a| > ε
+
+theorem IsDiscontinuity_def (f : ℝ → ℝ) (a : ℝ) : 
+  IsDiscontinuity f a ↔ 
+  ¬ContinuousAt f a := by sorry
+
+-- Entity: prop-function-discontinuity-first-kind | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsFirstKindDiscontinuity (f : ℝ → ℝ) (a : ℝ) : Prop :=
+  ∃ L_minus L_plus : ℝ, 
+    Filter.Tendsto f (nhdsWithin a (Set.Iio a)) (nhds L_minus) ∧
+    Filter.Tendsto f (nhdsWithin a (Set.Ioi a)) (nhds L_plus) ∧
+    (L_minus ≠ f a ∨ L_plus ≠ f a)
+
+theorem FirstKindDiscontinuityProperty (f : ℝ → ℝ) (a : ℝ) : 
+  IsFirstKindDiscontinuity f a ↔ 
+  ∃ L_minus L_plus : ℝ, 
+    Filter.Tendsto f (nhdsWithin a (Set.Iio a)) (nhds L_minus) ∧
+    Filter.Tendsto f (nhdsWithin a (Set.Ioi a)) (nhds L_plus) ∧
+    (L_minus ≠ f a ∨ L_plus ≠ f a) := by sorry
+
+-- Entity: prop-function-bounded | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat Classical Polynomial
+
+def IsBounded (f : ℝ → ℝ) : Prop := ∃ M > 0, ∀ x, |f x| < M
+
+-- Entity: prop-function-limit-at-point | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def prop_function_limit_at_point (f : ℝ → ℝ) (p A : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ x, 0 < abs (x - p) ∧ abs (x - p) < δ → abs (f x - A) < ε
+
+-- Entity: prop-function-continuous-at-point | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def prop_function_continuous_at_point : 
+  ∀ (f : ℝ → ℝ) (p : ℝ), 
+    (∃ L : ℝ, Filter.Tendsto f (nhds p) (nhds L) ∧ L = f p) ↔ 
+    (∀ ε > 0, ∃ δ > 0, ∀ x : ℝ, |x - p| < δ → |f x - f p| < ε) := by sorry
+
+-- Entity: thm-inverse-function-continuity | Type: theorem
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem thm_inverse_function_continuity (a b c d : ℝ) (f : ℝ → ℝ) (g : ℝ → ℝ) 
+  (hf : ∀ x ∈ Set.Icc a b, f x ∈ Set.Icc c d)
+  (hg : ∀ y ∈ Set.Icc c d, g y ∈ Set.Icc a b)
+  (hfg : ∀ x ∈ Set.Icc a b, g (f x) = x)
+  (hgf : ∀ y ∈ Set.Icc c d, f (g y) = y) :
+  ∀ y₀ ∈ Set.Ioo c d, ContinuousAt g y₀ := by sorry
+
+-- Entity: prop-function-uniformly-continuous | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def prop_function_uniformly_continuous (f : ℝ → ℝ) (E : Set ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ x₁ ∈ E, ∀ x₂ ∈ E, |x₁ - x₂| < δ → |f x₁ - f x₂| < ε
+
+-- Entity: prop-function-continuous | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsContinuous (m n : ℕ) (f : EuclideanSpace ℝ (Fin m) → EuclideanSpace ℝ (Fin n)) : Prop :=
+  ∀ (U : Set (EuclideanSpace ℝ (Fin n))), IsOpen U → IsOpen (f ⁻¹' U)
+
+theorem ContinuousFunction_prop (m n : ℕ) (f : EuclideanSpace ℝ (Fin m) → EuclideanSpace ℝ (Fin n)) : 
+  IsContinuous m n f ↔ Continuous f := by sorry
+
+-- Entity: prop-real-neighborhood | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsNeighborhood (N : Set ℝ) (p : ℝ) : Prop :=
+  ∃ ε > 0, N = {x : ℝ | p - ε < x ∧ x < p + ε}
+
+-- Entity: op-interval-midpoint | Type: operation
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsMidpoint (a b c : ℝ) : Prop := c = (a + b) / 2
+
+-- Entity: op-interval-center | Type: operation
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def op_interval_center (c a b : ℝ) : Prop := c = (a + b) / 2
+
+-- Entity: op-logic-formula-construction | Type: operation
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+-- Define the inductive structure for logical formulas
+inductive LogicalFormula : Type
+| basic : Prop → LogicalFormula
+| neg (ψ : LogicalFormula) : LogicalFormula
+| conj (ψ₁ ψ₂ : LogicalFormula) : LogicalFormula
+| disj (ψ₁ ψ₂ : LogicalFormula) : LogicalFormula
+| imp (ψ₁ ψ₂ : LogicalFormula) : LogicalFormula
+
+-- Define the evaluation function
+def op_logic_formula_construction (f : Prop → Prop) : LogicalFormula → Prop := sorry
+
+-- Entity: prop-limit-numerical-sequence
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLimit (x : ℕ → ℝ) (A : ℝ) : Prop :=
+  ∀ ε > 0, ∃ N : ℕ, ∀ n : ℕ, n > N → |x n - A| < ε
+
+theorem limit_converges (x : ℕ → ℝ) (A : ℝ) : 
+  IsLimit x A ↔ Filter.Tendsto x Filter.atTop (nhds A) := by sorry
+
+-- Entity: prop-limit-numerical-sequence
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLimit (x : ℕ → ℝ) (A : ℝ) : Prop :=
+  ∀ ε > 0, ∃ N : ℕ, ∀ n : ℕ, n > N → |x n - A| < ε
+
+theorem limit_converges (x : ℕ → ℝ) (A : ℝ) : 
+  IsLimit x A ↔ Filter.Tendsto x Filter.atTop (nhds A) := by sorry
+
+-- Entity: prop-limit-numerical-sequence
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLimit (x : ℕ → ℝ) (A : ℝ) : Prop :=
+  ∀ ε > 0, ∃ N : ℕ, ∀ n : ℕ, n > N → |x n - A| < ε
+
+theorem limit_converges (x : ℕ → ℝ) (A : ℝ) : 
+  IsLimit x A ↔ Filter.Tendsto x Filter.atTop (nhds A) := by sorry
+
+-- Entity: prop-function-continuous-at-point
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def prop_function_continuous_at_point : 
+  ∀ (f : ℝ → ℝ) (p : ℝ), 
+    (∃ L : ℝ, Filter.Tendsto f (nhds p) (nhds L) ∧ L = f p) ↔ 
+    (∀ ε > 0, ∃ δ > 0, ∀ x : ℝ, |x - p| < δ → |f x - f p| < ε) := by sorry
+
+-- Entity: prop-real-neighborhood | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsNeighborhood (N : Set ℝ) (p : ℝ) : Prop :=
+  ∃ ε > 0, N = {x : ℝ | p - ε < x ∧ x < p + ε}
+
+-- Entity: op-interval-midpoint | Type: operation
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def op_interval_midpoint : 
+  ∀ (a b c : ℝ), c = (a + b) / 2 ↔ ∃ B, B = b ∧ c = (a + B) / 2 := by sorry
+
+-- Entity: obj-parabola-vertex | Type: object
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+-- Define orthogonal projection of point F onto line L
+def orthogonalProjection (F : ℝ × ℝ) (L : ℝ × ℝ) : ℝ × ℝ := 
+  -- This would be the actual orthogonal projection calculation
+  sorry
+
+-- Definition of parabola vertex 
+def IsVertex (V F L : ℝ × ℝ) : Prop := 
+  V = (1/2 : ℝ) • (F + orthogonalProjection F L)
+
+theorem parabolaVertex_exists (F L : ℝ × ℝ) : 
+  ∃ V : ℝ × ℝ, IsVertex V F L := by sorry
+
+-- Entity: obj-cartesian-plane-point | Type: object
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def obj_cartesian_plane_point (p : ℝ × ℝ) : Prop := 
+  ∃ (x y : ℝ), p = (x, y)
+
+-- Entity: obj-parallelogram-vertex-r | Type: object
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsVertexR (P₂ P₃ Q R : EuclideanSpace ℝ (Fin n)) : Prop := 
+  R = P₃ + Q - P₂
+
+theorem parallelogram_vertex_r (P₂ P₃ Q R : EuclideanSpace ℝ (Fin n)) : 
+  IsVertexR P₂ P₃ Q R ↔ R = P₃ + Q - P₂ := by sorry
+
+-- Entity: prop-real-space-positive-direction | Type: property
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+-- Assume we have a type for rays in n-dimensional real space
+variable (Ray : ℕ → (Fin n → ℝ) → (Fin n → ℝ) → Type)
+
+-- Definition of positive direction property
+def prop_real_space_positive_direction (n : ℕ) (o p : Fin n → ℝ) : Prop :=
+  -- A direction is positive if the ray starts at origin and ends at unit vector
+  o = 0 ∧ p = 1
+
+-- Entity: prop-function-uniformly-continuous
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def prop_function_uniformly_continuous (f : ℝ → ℝ) (E : Set ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ x₁ ∈ E, ∀ x₂ ∈ E, |x₁ - x₂| < δ → |f x₁ - f x₂| < ε
+
+-- Entity: prop-function-uniformly-continuous
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def prop_function_uniformly_continuous (f : ℝ → ℝ) (E : Set ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ x₁ ∈ E, ∀ x₂ ∈ E, |x₁ - x₂| < δ → |f x₁ - f x₂| < ε
+

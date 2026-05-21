@@ -1,0 +1,28 @@
+% defined-in: apostol (page 520)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - $V^3 : \text{Type}$ (Three-dimensional Euclidean space)
+%    - $P : V^3$ (Vertex)
+%    - $A : V^3$ (Fixed line direction vector)
+%    - $L : V^3 \to V^3$ (Moving line)
+%    - $\theta : \mathbb{R}$ (Constant angle)
+%    - $S : \mathcal{P}(V^3)$ (Surface)
+% 2. Data Structures: 
+%    - Line $L$ represented as a set of points $\{P + t \cdot \vec{v} \mid t \in \mathbb{R}, \vec{v} \in V^3, \|\vec{v}\| = 1\}$.
+%    - Angle between lines via the dot product of normalized direction vectors.
+% 3. Implicit Bounds: 
+%    - $A \neq \vec{0}$ (Line $A$ is well-defined).
+%    - $\theta \in [0, \pi/2]$ (Angle constraint).
+% ========================
+
+% entity-id: obj-geometry-right-circular-cone
+% entity-type: object
+
+\begin{object}[Right Circular Cone]
+\mForall{P \in \entityref{obj-euclidean-space-3d}{V^3}}
+\mForall{A \in \entityref{obj-euclidean-space-3d}{V^3} \setminus \{0\}}
+\mForall{\theta \in \entityref{obj-real-numbers}{\mathbb{R}}}
+\mathrm{IsRightCircularCone}(S, P, A, \theta) \mDefinedAs
+\left( S = \{ X \in \entityref{obj-euclidean-space-3d}{V^3} \mid \mExists{L \in \entityref{obj-set-of-lines}{Lines(P)}} 
+(X \in L) \mAnd (\mathrm{Angle}(L, A) = \theta) \} \right)
+\end{object}
