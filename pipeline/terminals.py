@@ -1,6 +1,6 @@
 """
 Terminal Primitives — symbols that are leaf nodes in the Mathesis DAG.
-These MUST NOT be wrapped in \entityref by the LLM.
+These MUST NOT be wrapped in semantic macros by the LLM.
 They MUST NOT generate entity_dependency edges.
 """
 
@@ -26,13 +26,9 @@ NOTATION_TERMINALS = {
     '0', '1', r'\infty', r'\Delta', r'\varepsilon', r'\delta',
 }
 
-# Canonical macro equivalents (already in mathesis.sty)
+# Canonical macro equivalents
 MACRO_TERMINALS = {
-    r'\mForall', r'\mExists', r'\mImplies', r'\mIff',
-    r'\mAnd', r'\mOr', r'\mNot', r'\mTurnstile',
-    r'\mIn', r'\mSubset', r'\mSubseteq',
-    r'\mEmpty', r'\mDefIff', r'\mQED', r'\mDefinedAs', r'\mathrm',
-    r'\to', r'\mTo', r'\colon',
+    r'\mathrm', r'\to', r'\colon',
     r'\hypertarget', r'\hyperlink',
 }
 

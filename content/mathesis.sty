@@ -31,3 +31,15 @@
 
 % --- All Semantic Macros (including auto-generated) ---
 \RequirePackage{mathesis_macros}
+
+\newcommand{\mReal}{\mathbb{R}}
+\newcommand{\mNat}{\mathbb{N}}
+\newcommand{\mZ}{\mathbb{Z}}
+
+
+% --- Redefining paired macros to hyperlink brackets properly ---
+\renewcommand{\AbsAbstract}[1]{\mathopen{\hyperlink{def-abs-abstract}{\left\lvert\vphantom{#1}\right.}}#1\mathclose{\hyperlink{def-abs-abstract}{\left.\vphantom{#1}\right\rvert}}}
+\renewcommand{\RealAbsoluteValue}[1]{\mathopen{\hyperlink{def-real-absolute-value}{\left\lvert\vphantom{#1}\right.}}#1\mathclose{\hyperlink{def-real-absolute-value}{\left.\vphantom{#1}\right\rvert}}}
+\renewcommand{\ClosedInterval}[1]{\mathopen{\hyperlink{def-closed-interval}{\left[\vphantom{#1}\right.}}#1\mathclose{\hyperlink{def-closed-interval}{\left.\vphantom{#1}\right]}}}
+\renewcommand{\OpenInterval}[1]{\mathopen{\hyperlink{def-open-interval}{\left(\vphantom{#1}\right.}}#1\mathclose{\hyperlink{def-open-interval}{\left.\vphantom{#1}\right)}}}
+\newcommand{\SetBuilder}[1]{\mathopen{\hyperlink{axiom-set}{\left\{\vphantom{#1}\right.}}#1\mathclose{\hyperlink{axiom-set}{\left.\vphantom{#1}\right\}}}}

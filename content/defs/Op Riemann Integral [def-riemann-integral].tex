@@ -1,19 +1,19 @@
 % defined-in: zorich (page 319), zorich (page 543), zorich (page 319), zorich (page 319)
 % === SEMANTIC MAPPING ===
 % 1. Variables & Types: 
-%    - a, b : \mReal (a < b)
-%    - f : [a, b] \to \mReal
-%    - I : \mReal
-%    - n : \mNatural
-%    - P : \text{Partition}([a, b]) \equiv \{x : \text{Fin}(n+1) \to \mReal \mid x(0) = a \land x(n) = b \land \forall i < n, x(i) < x(i+1)\}
-%    - \xi : \text{MarkedPoints}(P) \equiv \{\xi : \text{Fin}(n) \to \mReal \mid \forall i < n, x(i) \leq \xi(i) \leq x(i+1)\}
-%    - \lambda : \text{Partition} \to \mReal \equiv \lambda(P) = \max_{i < n} (x(i+1) - x(i))
-%    - \sigma : \text{Function} \times \text{Partition} \times \text{MarkedPoints} \to \mReal \equiv \sum_{i=0}^{n-1} f(\xi(i)) \cdot (x(i+1) - x(i))
+%    - a, b : \RealNumbers (a < b)
+%    - f : [a, b] \to \RealNumbers
+%    - I : \RealNumbers
+%    - n : \NaturalNumbers
+%    - P : \text{Partition}([a, b]) \equiv \{x : \text{Fin}(n+1) \to \RealNumbers \mid x(0) = a \land x(n) = b \land \forall i < n, x(i) < x(i+1)\}
+%    - \xi : \text{MarkedPoints}(P) \equiv \{\xi : \text{Fin}(n) \to \RealNumbers \mid \forall i < n, x(i) \leq \xi(i) \leq x(i+1)\}
+%    - \lambda : \text{Partition} \to \RealNumbers \equiv \lambda(P) = \max_{i < n} (x(i+1) - x(i))
+%    - \sigma : \text{Function} \times \text{Partition} \times \text{MarkedPoints} \to \RealNumbers \equiv \sum_{i=0}^{n-1} f(\xi(i)) \cdot (x(i+1) - x(i))
 % 2. Data Structures: 
-%    - Partition represented as a strictly increasing function from a finite index set to \mReal.
-%    - Marked points represented as a function from the index set of sub-intervals to \mReal.
+%    - Partition represented as a strictly increasing function from a finite index set to \RealNumbers.
+%    - Marked points represented as a function from the index set of sub-intervals to \RealNumbers.
 % 3. Implicit Bounds: 
-%    - n : \mNatural is the number of sub-intervals.
+%    - n : \NaturalNumbers is the number of sub-intervals.
 %    - i : \text{Fin}(n) is the index of sub-intervals.
 % ========================
 
@@ -25,13 +25,13 @@
 \hypertarget{def-riemann-integral}{}
 \begin{operation}[RiemannIntegral]
 \[
-\TerForall \Function{f} \colon \ClosedInterval{[a,b]} \TermTo \RealNumbers
+\TerForall \Function{f} \colon \ClosedInterval{a,b} \TermTo \RealNumbers
 \TerForall I \colon \RealNumbers
 \mathrm{IsRiemannIntegral}(\Function{f}, I) \TermDefinedAs
 \TerForall \varepsilon \in \RealNumbers \left( \varepsilon > 0 \TermImplication 
 \TermExists \delta \in \RealNumbers \left( \delta > 0 \And 
 \TerForall n \in \NaturalNumbers \TerForall P \in \Partition{[a,b]} \TerForall \xi \in \Partition{P} 
 \left( \Partition{\lambda}(P) < \delta \TermImplication 
-\AbsAbstract{\left| I - \sum_{i=0}^{n-1} f(\xi(i)) \cdot (x(i+1) - x(i)) \right|} < \varepsilon \right) \right) \right)
+\AbsAbstract{ I - \sum_{i=0}^{n-1} f(\xi(i)) \cdot (x(i+1) - x(i)) } < \varepsilon \right) \right) \right)
 \]
 \end{operation}

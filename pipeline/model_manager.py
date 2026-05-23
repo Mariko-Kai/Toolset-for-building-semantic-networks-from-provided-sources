@@ -84,17 +84,17 @@ class OllamaStrategy(ModelStrategy):
             return ""
             
     def get_embedding(self, text: str) -> Optional[List[float]]:
-        model = self.model_name or "bge-m3"
+        model = "nomic-embed-text:latest"
         url = "http://localhost:11434/api/embeddings"
         payload = {
             "model": model,
             "prompt": text
         }
-        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"),
-                                     headers={"Content-Type": "application/json"})
         try:
+            req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'))
+            req.add_header('Content-Type', 'application/json')
             with urllib.request.urlopen(req) as response:
-                result = json.loads(response.read().decode("utf-8"))
+                result = json.loads(response.read().decode('utf-8'))
                 return result.get("embedding")
         except Exception as e:
             print(f"[OllamaStrategy] Embedding error: {e}")

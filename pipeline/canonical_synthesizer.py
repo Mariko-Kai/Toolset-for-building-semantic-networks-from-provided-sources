@@ -95,46 +95,40 @@ CRITICAL HEURISTICS & ANTI-PATTERNS TO AVOID:
    If you find yourself writing repetitive logical tautologies (e.g., `x ≠ y → x ≠ y`) or overly complex index bounds, your underlying type choice is wrong. Stop and re-evaluate your data structures.
 
 5. Strict Semantic Identifiers (The Self-Describing ID Rule):
-   When generating \entityref{id}{text} or defining a new entity-id, the `id` MUST be globally unambiguous, self-documenting, and resistant to namespace collisions. 
+   When defining a new entity-id, the `id` MUST be globally unambiguous, self-documenting, and resistant to namespace collisions. 
    
    NEVER use bare, generic nouns or adjectives. You MUST include the domain or the parent mathematical object in the ID.
    
-   Format: {type}-{domain_or_parent}-{concept}
+   Format: def-{domain_or_parent}-{concept}
    
-   - BAD: `op-mesh` (Mesh of what? A graph? A 3D model? A partition?)
-   - GOOD: `op-partition-mesh` (Clearly states this is the mesh of a partition)
+   - BAD: `def-mesh` (Mesh of what? A graph? A 3D model? A partition?)
+   - GOOD: `def-partition-mesh` (Clearly states this is the mesh of a partition)
    
-   - BAD: `prop-bounded` (Is a function bounded? A set? A sequence?)
-   - GOOD: `prop-function-bounded` or `prop-set-bounded`
+   - BAD: `def-bounded` (Is a function bounded? A set? A sequence?)
+   - GOOD: `def-function-bounded` or `def-set-bounded`
    
-   - BAD: `op-addition` 
-   - GOOD: `op-real-addition` or `op-matrix-addition` (Unless using the Late Binding abstract pattern like `op-add-abstract`)
+   - BAD: `def-addition` 
+   - GOOD: `def-real-addition` or `def-matrix-addition` (Unless using the Late Binding abstract pattern like `def-add-abstract`)
 
    If a concept belongs to a specific mathematical domain, prefix it explicitly to help the Lean 4 translator map it to the correct Mathlib namespace.
 
 CRITICAL NAMING RULE: The entity-id MUST follow the Mathesis architecture standard:
-- if type is object: prefix MUST be `obj-` (e.g. obj-real-numbers)
-- if type is property: prefix MUST be `prop-` (e.g. prop-continuous)
-- if type is operation: prefix MUST be `op-` (e.g. op-riemann-integral)
-- if type is theorem: prefix MUST be `thm-` (e.g. thm-weierstrass)
+- if type is object, property, operation, or any definition: prefix MUST be `def-` (e.g. def-real-numbers, def-continuous, def-riemann-integral)
+- if type is theorem/lemma: prefix MUST be `thm-` (e.g. thm-weierstrass)
 - if type is axiom: prefix MUST be `axm-`(e.g. axm-zfc-axiom-of-pairing)
-DO NOT use `def-` as a prefix.
+DO NOT use `obj-`, `prop-`, or `op-` as prefixes.
 
 CRITICAL: Generate EXACTLY ONE mathematical entity. DO NOT repeat the output. DO NOT provide multiple versions. One % entity-id, one % entity-type, and the LaTeX block(s).
 
-MACROS: \mForall, \mExists, \mImplies, \mIff, \mAnd, \mOr, \mNot, \mDefinedAs, \mathrm.
-REFS: \entityref{entity-id}{symbol} for derived entities.
-ABS MACROS: \entityref{op-abs-abstract}{\mathrm{abs}}(x), \entityref{op-norm-abstract}{\mathrm{norm}}(x), \entityref{op-supremum}{\sup}_{x \in A} f(x) or \entityref{op-supremum}{\sup}(S), \entityref{op-infimum}{\inf}_{x \in A} f(x) or \entityref{op-infimum}{\inf}(S) (NEVER use \mAbs, \mNorm, \mSup, \mInf, or raw |x|, \|x\|).
+TERMINALS: \emptyset = < > \leq \geq 0 1 \infty \varepsilon \delta \mathrm
 
-TERMINALS (NEVER wrap in \entityref): \emptyset = < > \leq \geq 0 1 \infty \varepsilon \delta \mathrm
-
-CRITICAL WRAPPING RULE: By default, ALL mathematical entities/concepts/operators in your formulas MUST be wrapped in \entityref{entity-id}{symbol}, unless they are explicitly listed as terminals to NEVER wrap. If you encounter an entity that is unknown or not explicitly provided in the context, you MUST still wrap it and construct a logical, type-prefixed entity-id for it per the documented naming rules above (e.g. \entityref{op-supremum}{\sup}, \entityref{op-infimum}{\inf}, \entityref{op-limit}{\lim}).
+CRITICAL WRAPPING RULE: By default, ALL mathematical entities/concepts/operators in your formulas MUST be wrapped in semantic macros (e.g. \RealNumbers, \Continuous{f}, \AbsAbstract{x}) or standard LaTeX if no semantic macro exists. DO NOT use the legacy \entityref command. Do not use legacy \mForall, \mExists, \mReal commands; use standard \forall, \exists, \mathbb{R} or the available semantic macros.
 
 TYPING: Every formula MUST start with variable declarations via quantors:
-\mForall{f \colon \entityref{obj-closed-interval}{[a,b]} \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\forall f \colon \RealNumbers \to \RealNumbers
 
 PURE MATH RULE: For \begin{theorem}, \begin{object}, \begin{property}, and \begin{operation} blocks, NO NATURAL LANGUAGE IS ALLOWED AT ALL. NO English, NO Russian, NO plain text, NO "Note", NO "Remark", NO explanations. The content MUST be 100% formal math symbols and macros. ALL formulas MUST be wrapped in display math blocks \[ ... \]. Inline math $...$ is FORBIDDEN.
-Natural language and explanatory notes are ONLY permitted inside \begin{proof} blocks. ALL math objects/variables in proofs MUST be correctly wrapped with \entityref or math macros.
+Natural language and explanatory notes are ONLY permitted inside \begin{proof} blocks. ALL math objects/variables in proofs MUST be correctly wrapped with math macros.
 """
 
     if implicit_assumptions:
@@ -144,10 +138,9 @@ Natural language and explanatory notes are ONLY permitted inside \begin{proof} b
 % entity-id: thm-weierstrass-extreme
 % entity-type: theorem
 \begin{theorem}[Weierstrass Extreme Value]
-\mForall{f \colon \entityref{obj-closed-interval}{[a,b]} \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
-\quad \entityref{prop-continuous}{f}
-\mImplies \mExists{c \in \entityref{obj-closed-interval}{[a,b]}}
-\mForall{x \in \entityref{obj-closed-interval}{[a,b]}} \quad f(x) \leq f(c)
+\forall f \colon \ClosedInterval{[a,b]} \to \RealNumbers \;\; \Continuous{f}
+\implies \exists c \in \ClosedInterval{[a,b]} \;\;
+\forall x \in \ClosedInterval{[a,b]} \quad f(x) \leq f(c)
 \end{theorem}
 """
 
@@ -176,28 +169,19 @@ Proofs can contain natural language, but all math entities must be formally wrap
 {example}
 
 CRITICAL DEFINITION RULES:
-1. NO EQUIVALENCE: You are STRICTLY FORBIDDEN from using `\mIff` (\iff) or `=` at the root level to connect the term to its definition.
+1. NO EQUIVALENCE: You are STRICTLY FORBIDDEN from using `\iff` or `=` at the root level to connect the term to its definition.
 2. USE PREDICATES: You MUST define the concept as a named predicate (e.g., `\mathrm{{IsDerivative}}(f, x, L)`).
-3. USE \mDefinedAs: Use the `\mDefinedAs` macro to assign the logical condition to your predicate.
+3. USE \coloneqq: Use the `\coloneqq` macro to assign the logical condition to your predicate.
 
 BAD EXAMPLE:
-\left( f'(x) = L \right) \mIff \left( L = \entityref{{op-limit}}{{\lim}}_{{h \to 0}} \frac{{f(x + h) - f(x)}}{{h}} \right)
+\left( f'(x) = L \right) \iff \left( L = \lim_{{h \to 0}} \frac{{f(x + h) - f(x)}}{{h}} \right)
 
 GOOD EXAMPLE:
-\mathrm{{IsDerivative}}(f, x, L) \mDefinedAs \left( L = \entityref{{op-limit}}{{\lim}}_{{h \to 0}} \frac{{f(x + h) - f(x)}}{{h}} \right)
+\mathrm{{IsDerivative}}(f, x, L) \coloneqq \left( L = \lim_{{h \to 0}} \frac{{f(x + h) - f(x)}}{{h}} \right)
 
 Generate \begin{{object}}[Name] ... \end{{object}} (or property/operation).
 CRITICAL: DO NOT add any notes, remarks, text, or English words outside or inside the block. ONLY the formal mathematical formula."""
     return prompt
-
-def sanitize_terminal_entityrefs(latex: str) -> str:
-    from pipeline.terminals import ALL_TERMINALS
-    for terminal in ALL_TERMINALS:
-        escaped = re.escape(terminal)
-        # Строгое совпадение: второй аргумент entityref === terminal
-        pattern = rf'\\entityref\{{[^}}]+\}}\{{({escaped})\}}'
-        latex = re.sub(pattern, r'\1', latex)
-    return latex
 
 def enforce_single_entity(latex: str) -> str:
     """If LLM generated multiple entities, keep only the first one."""
@@ -225,16 +209,16 @@ def warn_natural_language(latex: str) -> list:
     return []
 
 def sanitize_raw_delimiters(latex: str) -> str:
-    """Replace raw |...| with \\mAbs{...} inside math blocks."""
+    """Replace raw |...| with \\RealAbsoluteValue{...} inside math blocks."""
     # Only replace simple |expr| patterns (no nested |)
-    latex = re.sub(r'(?<!\\)\|([^|]+?)\|', r'\\entityref{op-abs-abstract}{\\mathrm{abs}}(\1)', latex)
+    latex = re.sub(r'(?<!\\)\|([^|]+?)\|', r'\\RealAbsoluteValue{\1}', latex)
     return latex
 
 def check_forbidden_macros(latex: str, entity_type: str) -> list:
-    """Checks if definitions use forbidden macros like \\mIff."""
+    """Checks if definitions use forbidden macros like \\iff."""
     errors = []
-    if entity_type != "theorem" and r"\mIff" in latex:
-        errors.append("ОШИБКА: Использование \\mIff в определениях/операциях строго запрещено. Используйте предикат и макрос \\mDefinedAs.")
+    if entity_type != "theorem" and r"\iff" in latex:
+        errors.append("ОШИБКА: Использование \\iff в определениях/операциях строго запрещено. Используйте предикат и макрос \\coloneqq.")
     return errors
 
 def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=False, model="qwen3:8b", skip_validation=False, canonical_term=""):
@@ -327,7 +311,6 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
                     latex_content = response
 
             latex_content = enforce_single_entity(latex_content)
-            latex_content = sanitize_terminal_entityrefs(latex_content)
             latex_content = sanitize_raw_delimiters(latex_content)
             
             # Check for natural language violations
@@ -354,7 +337,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
 
         # Mathlib discovery
         import string
-        clean_title = temp_eid.replace('def-', '').replace('op-', '').replace('obj-', '').replace('prop-', '').replace('thm-', '').replace('-', ' ')
+        clean_title = temp_eid.replace('def-', '').replace('thm-', '').replace('axm-', '').replace('-', ' ')
         entity_words = [w for w in clean_title.split() if len(w) > 2]
         discovery_terms = [w.title() for w in entity_words]
         if len(entity_words) >= 2:
@@ -512,25 +495,9 @@ def rebuild_master_tex():
                 continue
             entity_id = id_match.group(1).strip()
             
-            # Extract dependencies
-            deps = list(set(re.findall(r'\\entityref\{([^{}]+)\}', text)))
-            
-            # Extract abstract macro dependencies
-            macro_deps = {
-                r'\mNorm': 'op-norm-abstract',
-                r'\mAbs': 'op-abs-abstract',
-                r'\mInner': 'op-inner-product-abstract',
-                r'\mDist': 'op-dist-abstract',
-                r'\mSup': 'op-supremum',
-                r'\mInf': 'op-infimum',
-                r'\mDeriv': 'op-derivative',
-                r'\mIntegral': 'op-integral',
-            }
-            for macro, default_id in macro_deps.items():
-                if macro in text:
-                    deps.append(default_id)
-            
-            deps = list(set(deps))
+            # Extract dependencies using latex_utils macro parser
+            from pipeline.latex_utils import extract_dependencies
+            deps = extract_dependencies(text)
             
             nodes[entity_id] = deps
             file_by_id[entity_id] = filepath

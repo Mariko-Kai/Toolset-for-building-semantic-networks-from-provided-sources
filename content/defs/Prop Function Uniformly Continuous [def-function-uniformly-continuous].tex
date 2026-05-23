@@ -22,6 +22,6 @@
 \hypertarget{def-function-uniformly-continuous}{}
 \begin{property}[Uniformly Continuous Function]
 \[
-\mathrm{IsUniformlyContinuous}(f, A) \TermDefinedAs \TerForall \varepsilon \in \mReal \left( \varepsilon > 0 \TermImplication \TermExists \delta \in \mReal \left( \delta > 0 \And \TerForall x \in A \TerForall y \in A \left( \RealAbsoluteValue{\mathrm{abs}}(x - y) < \delta \TermImplication \RealAbsoluteValue{\mathrm{abs}}(f(x) - f(y)) < \varepsilon \right) \right) \right)
+\mathrm{IsUniformlyContinuous}(f, A) \TermDefinedAs \TerForall \varepsilon \in \RealNumbers \left( \varepsilon > 0 \TermImplication \TermExists \delta \in \RealNumbers \left( \delta > 0 \And \TerForall x \in A \TerForall y \in A \left( \RealAbsoluteValue{\mathrm{abs}}(x - y) < \delta \TermImplication \RealAbsoluteValue{\mathrm{abs}}(f(x) - f(y)) < \varepsilon \right) \right) \right)
 \]
 \end{property}

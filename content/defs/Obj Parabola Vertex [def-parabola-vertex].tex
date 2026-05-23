@@ -1,6 +1,6 @@
 % defined-in: apostol (page 530)
 % === SEMANTIC MAPPING ===
-% 1. Variables & Types: [F : \mReal^2, L : \mathcal{L}, V : \mReal^2]
+% 1. Variables & Types: [F : \RealNumbers^2, L : \mathcal{L}, V : \RealNumbers^2]
 % 2. Data Structures: [The parabola is defined as a set of points equidistant from F and L. The vertex V is the midpoint of the segment connecting F to the orthogonal projection of F onto L.]
 % 3. Implicit Bounds: [Let P_L(F) be the orthogonal projection of F onto L.]
 % ========================
@@ -14,9 +14,9 @@
 \hypertarget{def-parabola-vertex}{}
 \begin{object}[ParabolaVertex]
 \[
-\TerForall F \colon \mReal^2
+\TerForall F \colon \RealNumbers^2
 \TerForall L \colon \mathcal{L}
-\TerForall V \colon \mReal^2
+\TerForall V \colon \RealNumbers^2
 \mathrm{IsVertex}(V, F, L) \TermDefinedAs 
 \left( V = \frac{1}{2} \left( F + P_L(F) \right) \right)
 \]

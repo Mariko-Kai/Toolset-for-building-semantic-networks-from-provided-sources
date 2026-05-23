@@ -10,10 +10,10 @@
 % entity-type: def
 \begin{object}[Uniform Convergence]
 \Forall{A \colon \mathrm{Type}}
-\Forall{f_n \colon \mathbb{N} \mTo (A \mTo \entityref{obj-real-numbers}{\mathbb{R}})}
-\Forall{f \colon A \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
-\mathrm{IsUniformLimit}(f_n, f, A) \mDefinedAs
-\Forall{\varepsilon \in \mathbb{R}} \quad (\varepsilon > 0) \mImplies
-\mExists{N \colon \mathbb{N}} \quad \Forall{n \colon \mathbb{N}} \quad (n > N) \mImplies
+\Forall{f_n \colon \mathbb{N} \TermTo (A \TermTo \entityref{obj-real-numbers}{\mathbb{R}})}
+\Forall{f \colon A \TermTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\mathrm{IsUniformLimit}(f_n, f, A) \TermDefinedAs
+\Forall{\varepsilon \in \mathbb{R}} \quad (\varepsilon > 0) \TermImplication
+\TermExists{N \colon \mathbb{N}} \quad \Forall{n \colon \mathbb{N}} \quad (n > N) \TermImplication
 \Forall{x \in A} \quad \entityref{op-absolute-value}{\entityref{op-abs-abstract}{\mathrm{abs}}(} f_n(x) - f(x) \entityref{op-absolute-value}{)} < \varepsilon
 \end{object}

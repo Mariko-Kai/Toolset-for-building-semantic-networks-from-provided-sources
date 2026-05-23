@@ -253,26 +253,8 @@ def parse_canonical(filepath):
     
     formulas = re.findall(r'\\\[(.*?)\\\]', text, re.DOTALL)
     
-    deps = list(set(re.findall(r'\\entityref\{([^{}]+)\}', text)))
-    
-    # Extract abstract macro dependencies
-    macro_deps = {
-        r'\mNorm': 'op-norm-abstract',
-        r'\mAbs': 'op-abs-abstract',
-        r'\mInner': 'op-inner-product-abstract',
-        r'\mDist': 'op-dist-abstract',
-        r'\mSup': 'op-supremum',
-        r'\mInf': 'op-infimum',
-        r'\mDeriv': 'op-derivative',
-        r'\mIntegral': 'op-integral',
-    }
-    for macro, default_id in macro_deps.items():
-        escaped = re.escape(macro)
-        concrete = re.findall(rf'{escaped}\[([^\]]+)\]', text)
-        if concrete:
-            deps.extend(concrete)
-        elif re.search(rf'{escaped}(?!\[)\{{', text):
-            deps.append(default_id)
+    from pipeline.latex_utils import extract_dependencies
+    deps = extract_dependencies(text)
             
     deps = list(set(deps))
     
@@ -589,7 +571,7 @@ def main():
         citation = BOOK_CITATIONS.get(book_key_base, BOOK_CITATIONS.get(book_key, data["source"]))
         page_info = data["source"]
         if "," in page_info:
-            page_info = page_info.split(",", 1)[1].strip()
+            page_info = page_info.split(",", 1)[1].strip() # Clean up formatting for display
         citation_full = f"{citation}, {page_info}"
         
         # Map type to Russian textbook terminology
@@ -625,9 +607,8 @@ def main():
             
         # 3. Mathematical formulation (third)
         block += "\\section*{Математическая формулировка}\n"
-        # Strip internal ID leaks (op-hypertarget and math env arguments)
+        # Strip internal ID leaks (math env arguments)
         clean_body = data.get("full_body", "")
-        clean_body = re.sub(r'\\entityref\{op-hypertarget\}\{\\hypertarget\}\{[^}]*\}\{\}\s*', '', clean_body)
         clean_body = re.sub(r'\\begin\{(object|operation|property|axiom|theorem|lemma|corollary)\}\[[^\]]+\]', r'\\begin{\1}', clean_body)
         
         block += f"{clean_body}\n\n"

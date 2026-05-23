@@ -9,10 +9,10 @@
 % entity-type: def
 \begin{object}[Uniform Convergence of a Series of Functions]
 \Forall{A \colon \mathrm{Type}}
-\Forall{f_n \colon \mathbb{N} \mTo (A \mTo \entityref{obj-real-numbers}{\mathbb{R}})}
-\Forall{f \colon A \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
-\mathrm{IsUniformlyConvergentSeries}(f_n, f, A) \mDefinedAs
-\left( \exists s \colon \mathbb{N} \mTo (A \mTo \entityref{obj-real-numbers}{\mathbb{R}}) \right)
+\Forall{f_n \colon \mathbb{N} \TermTo (A \TermTo \entityref{obj-real-numbers}{\mathbb{R}})}
+\Forall{f \colon A \TermTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\mathrm{IsUniformlyConvergentSeries}(f_n, f, A) \TermDefinedAs
+\left( \exists s \colon \mathbb{N} \TermTo (A \TermTo \entityref{obj-real-numbers}{\mathbb{R}}) \right)
 \left( \forall n \colon \mathbb{N}, s(n) = \sum_{i=1}^{n} f_i \right) \And
 \left( \forall \varepsilon > 0, \exists N \colon \mathbb{N}, \forall n \geq N, \forall x \in A, \entityref{op-absolute-value}{\entityref{op-abs-abstract}{\mathrm{abs}}(s(n)(x) - f(x))} < \varepsilon \right)
 \end{object}

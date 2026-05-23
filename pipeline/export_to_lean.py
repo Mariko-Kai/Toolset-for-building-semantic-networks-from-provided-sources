@@ -154,15 +154,14 @@ def query_llm(prompt, model=None, system_prompt=None, json_mode=False, provider=
     # Decryption guide of custom LaTeX macros used in the project
     latex_decryption_guide = """=== LaTeX Project Macro Translation Guide ===
 Our LaTeX formulas use custom macro abbreviations that must be translated to standard Lean 4 syntax:
-* \\mForall{x \\in X} or \\mForall{x \\colon X} -> universal quantifier (∀ x ∈ X, ...) or (∀ x : X, ...)
-* \\mExists{x \\in X} or \\mExists{x \\colon X} -> existential quantifier (∃ x ∈ X, ...) or (∃ x : X, ...)
-* \\mIff -> logical equivalence / iff (↔)
-* \\mImplies -> logical implication (→)
-* \\entityref{entity-id}{text} -> represents a reference to a core mathematical object/type. Translate to appropriate Lean types:
-  - \\entityref{obj-real-numbers}{\\mathbb{R}} -> Real numbers (ℝ)
-  - \\entityref{obj-natural-numbers}{\\mathbb{N}} -> Natural numbers (ℕ)
-  - \\entityref{obj-rational-numbers}{\\mathbb{Q}} -> Rational numbers (Rat)
-  - \\entityref{op-abs-abstract}{\\mathrm{abs}}(x) -> Absolute value function (|x| or Real.abs x)
+* \\forall -> universal quantifier (∀ x, ...)
+* \\exists -> existential quantifier (∃ x, ...)
+* \\iff -> logical equivalence / iff (↔)
+* \\implies -> logical implication (→)
+* \\RealNumbers -> Real numbers (ℝ)
+* \\NaturalNumbers -> Natural numbers (ℕ)
+* \\RationalNumbers -> Rational numbers (Rat)
+* \\RealAbsoluteValue{x} -> Absolute value function (|x| or Real.abs x)
 * \\left( and \\right) -> standard parentheses ( and )"""
 
     # Declaration rules based on Entity Type
@@ -250,20 +249,20 @@ CRITICAL HEURISTICS & ANTI-PATTERNS TO AVOID:
    If you find yourself writing repetitive logical tautologies (e.g., `x ≠ y → x ≠ y`) or overly complex index bounds, your underlying type choice is wrong. Stop and re-evaluate your data structures.
 
 5. Strict Semantic Identifiers (The Self-Describing ID Rule):
-   When generating \entityref{id}{text} or defining a new entity-id, the `id` MUST be globally unambiguous, self-documenting, and resistant to namespace collisions. 
+   When defining a new entity-id, the `id` MUST be globally unambiguous, self-documenting, and resistant to namespace collisions. 
    
    NEVER use bare, generic nouns or adjectives. You MUST include the domain or the parent mathematical object in the ID.
    
-   Format: {type}-{domain_or_parent}-{concept}
+   Format: def-{domain_or_parent}-{concept}
    
-   - BAD: `op-mesh` (Mesh of what? A graph? A 3D model? A partition?)
-   - GOOD: `op-partition-mesh` (Clearly states this is the mesh of a partition)
+   - BAD: `def-mesh` (Mesh of what? A graph? A 3D model? A partition?)
+   - GOOD: `def-partition-mesh` (Clearly states this is the mesh of a partition)
    
-   - BAD: `prop-bounded` (Is a function bounded? A set? A sequence?)
-   - GOOD: `prop-function-bounded` or `prop-set-bounded`
+   - BAD: `def-bounded` (Is a function bounded? A set? A sequence?)
+   - GOOD: `def-function-bounded` or `def-set-bounded`
    
-   - BAD: `op-addition` 
-   - GOOD: `op-real-addition` or `op-matrix-addition` (Unless using the Late Binding abstract pattern like `op-add-abstract`)
+   - BAD: `def-addition` 
+   - GOOD: `def-real-addition` or `def-matrix-addition` (Unless using the Late Binding abstract pattern like `def-add-abstract`)
 
    If a concept belongs to a specific mathematical domain, prefix it explicitly to help the Lean 4 translator map it to the correct Mathlib namespace.
 
@@ -426,45 +425,33 @@ def translate_to_lean_regex(entity_id, entity_type, tex_content):
     lean_name = entity_id.replace('-', '_')
 
     replacements = [
-        # Quantifiers (Parameterized)
-        (r'\\mForall\{([^}]+)\}', r'∀ \1, '),
-        (r'\\mExists\{([^}]+)\}', r'∃ \1, '),
-        
-        # Mappings
-        (r'\\mMap\{([^}]+)\}\{([^}]+)\}\{([^}]+)\}', r'\1 : \2 → \3'),
-
         # Quantifiers (Standalone)
-        (r'\\mForall', '∀'), (r'\\forall', '∀'),
-        (r'\\mExists', '∃'), (r'\\exists', '∃'),
+        (r'\\forall', '∀'),
+        (r'\\exists', '∃'),
 
         # Logic Connectives
-        (r'\\mImplies', '→'), (r'\\Rightarrow', '→'), (r'\\implies', '→'),
-        (r'\\mIff', '↔'), (r'\\Leftrightarrow', '↔'), (r'\\iff', '↔'),
-        (r'\\mDefIff', ':='), (r'\\mDefinedAs', ':='),
-        (r'\\mAnd', '∧'), (r'\\land', '∧'),
-        (r'\\mOr', '∨'), (r'\\lor', '∨'),
-        (r'\\mNot', '¬'), (r'\\lnot', '¬'),
-        (r'\\mTurnstile', '⊢'), (r'\\vdash', '⊢'),
+        (r'\\Rightarrow', '→'), (r'\\implies', '→'),
+        (r'\\Leftrightarrow', '↔'), (r'\\iff', '↔'),
+        (r'\\coloneqq', ':='),
+        (r'\\land', '∧'),
+        (r'\\lor', '∨'),
+        (r'\\lnot', '¬'),
+        (r'\\vdash', '⊢'),
 
         # Sets
-        (r'\\mIn', '∈'), (r'\\in', '∈'),
-        (r'\\mSubseteq', '⊆'), (r'\\subseteq', '⊆'),
-        (r'\\mSubset', '⊆'), (r'\\subset', '⊆'),
-        (r'\\mEmpty', '∅'), (r'\\varnothing', '∅'), (r'\\emptyset', '∅'),
-
-        # Number Sets
-        (r'\\mReal', 'ℝ'), (r'\\mathbb\{R\}', 'ℝ'),
-        (r'\\mNat', 'ℕ'), (r'\\mathbb\{N\}', 'ℕ'),
-        (r'\\mInt', 'ℤ'), (r'\\mathbb\{Z\}', 'ℤ'),
-        (r'\\mComplex', 'ℂ'), (r'\\mathbb\{C\}', 'ℂ'),
+        (r'\\in', '∈'),
+        (r'\\subseteq', '⊆'),
+        (r'\\subset', '⊆'),
+        (r'\\varnothing', '∅'), (r'\\emptyset', '∅'),
 
         # Formatting / Structural
-        (r'\\entityref\{[^}]+\}\{(.*?)\}', r'\1'),
+        (r'\\hyperlink\{[^}]+\}\{(.*?)\}', r'\1'),
+        (r'\\mathopen\{([^}]+)\}', r'\1'),
         (r'\\quad', ' '), (r'\\;', ' '),
         (r'\\text\{([^}]+)\}', r'\1'),
         (r'\\left', ''), (r'\\right', ''),
         (r'\\colon', ':'),
-        (r'\\mTo', '→'), (r'\\to', '→'),
+        (r'\\to', '→'),
 
         # Relational / Variables
         (r'\\neq', '≠'),

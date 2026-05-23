@@ -1,0 +1,14 @@
+
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\newcommand{\mAbs}[1]{%
+  \mathopen{\hyperlink{abs}{\left\lvert\vphantom{#1}\right.}}%
+  #1%
+  \mathclose{\hyperlink{abs}{\left.\vphantom{#1}\right\rvert}}%
+}
+\begin{document}
+\hypertarget{abs}{Absolute Value}
+Here is a formula:
+\[ \mAbs{\frac{1}{2}} \]
+\end{document}

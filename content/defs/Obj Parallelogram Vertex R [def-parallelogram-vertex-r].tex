@@ -1,8 +1,8 @@
 % defined-in: spivak (page 350)
 % === SEMANTIC MAPPING ===
-% 1. Variables & Types: [P2, P3, Q, R : \mReal^n]
+% 1. Variables & Types: [P2, P3, Q, R : \RealNumbers^n]
 % 2. Data Structures: [Parallelogram defined as the set of points {P2 + u(P3 - P2) + v(Q - P2) | u, v \in [0, 1]}]
-% 3. Implicit Bounds: [The dimension n : \mNatural is assumed for the Euclidean space \mReal^n]
+% 3. Implicit Bounds: [The dimension n : \NaturalNumbers is assumed for the Euclidean space \RealNumbers^n]
 % ========================
 
 % entity-id: def-parallelogram-vertex-r
@@ -14,7 +14,7 @@
 \hypertarget{def-parallelogram-vertex-r}{}
 \begin{object}[ParallelogramVertexR]
 \[
-\TerForall P_2, P_3, Q, R \colon \mReal^n
+\TerForall P_2, P_3, Q, R \colon \RealNumbers^n
 \mathrm{IsVertexR}(P_2, P_3, Q, R) \TermDefinedAs \left( R = P_3 + Q - P_2 \right)
 \]
 \end{object}

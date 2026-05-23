@@ -1,8 +1,8 @@
 % defined-in: zorich (page 62)
 % === SEMANTIC MAPPING ===
-% 1. Variables & Types: [r : \mReal^n (ray), o : \mReal^n (origin), p : \mReal^n (point)]
+% 1. Variables & Types: [r : \RealNumbers^n (ray), o : \RealNumbers^n (origin), p : \RealNumbers^n (point)]
 % 2. Data Structures: [Ray represented as a set of points {o + t(p - o) | t \geq 0}]
-% 3. Implicit Bounds: [n : \mNatural (dimension of the space)]
+% 3. Implicit Bounds: [n : \NaturalNumbers (dimension of the space)]
 % ========================
 
 % entity-id: def-real-space-positive-direction
@@ -14,9 +14,9 @@
 \hypertarget{def-real-space-positive-direction}{}
 \begin{property}[Positive Direction]
 \[
-\TerForall n \colon \mNatural
-\TerForall o \colon \RealNumbers{\mReal^n}
-\TerForall p \colon \RealNumbers{\mReal^n}
+\TerForall n \colon \NaturalNumbers
+\TerForall o \colon \RealNumbers{\RealNumbers^n}
+\TerForall p \colon \RealNumbers{\RealNumbers^n}
 \TerForall r \colon \mathrm{Ray}(o, p)
 \mathrm{IsPositiveDirection}(r) \TermDefinedAs \left( o = 0 \And p = 1 \right)
 \]
