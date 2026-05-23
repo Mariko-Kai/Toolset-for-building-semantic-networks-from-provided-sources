@@ -1,0 +1,34 @@
+% defined-in: apostol (page 520)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - $V^3 : \text{Type}$ (Three-dimensional Euclidean space)
+%    - $P : V^3$ (Vertex)
+%    - $A : V^3$ (Fixed line direction vector)
+%    - $L : V^3 \to V^3$ (Moving line)
+%    - $\theta : \mReal$ (Constant angle)
+%    - $S : \mathcal{P}(V^3)$ (Surface)
+% 2. Data Structures: 
+%    - Line $L$ represented as a set of points $\{P + t \cdot \vec{v} \mid t \in \mReal, \vec{v} \in V^3, \|\vec{v}\| = 1\}$.
+%    - Angle between lines via the dot product of normalized direction vectors.
+% 3. Implicit Bounds: 
+%    - $A \neq \vec{0}$ (Line $A$ is well-defined).
+%    - $\theta \in [0, \pi/2]$ (Angle constraint).
+% ========================
+
+% entity-id: def-geometry-right-circular-cone
+% entity-type: def
+% macro: \GeometryRightCircularCone
+% args: 1
+% notation: #1
+
+\hypertarget{def-geometry-right-circular-cone}{}
+\begin{object}[Right Circular Cone]
+\[
+\TerForall P \in V^3
+\TerForall A \in V^3 \setminus \{0\}
+\TerForall \theta \in \RealNumbers
+\mathrm{IsRightCircularCone}(S, P, A, \theta) \TermDefinedAs
+\left( S = \{ X \in V^3 \mid \TermExists L \in \Set{Lines(P)} 
+(X \in L) \And (\mathrm{Angle}(L, A) = \theta) \} \right)
+\]
+\end{object}

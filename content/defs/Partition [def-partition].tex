@@ -1,0 +1,22 @@
+% entity-id: def-partition
+% entity-type: def
+% defined-in: zorich-1, p. 325
+% macro: \Partition
+% args: 1
+% notation: #1
+
+\section{Разбиение отрезка (Partition)}
+
+\hypertarget{def-partition}{}
+\begin{object}[obj-partition]
+\label{entity:obj-partition}
+% 1. ОБЪЯВЛЕНИЕ ТИПОВ
+$\TerForall a, b \in \RealNumbers \colon a < b$
+
+% 2. ТЕЛО ОПРЕДЕЛЕНИЯ
+\[
+P \TermDefIff
+\Set{\{x_0, x_1, \ldots, x_n\}} \subset \ClosedInterval{[a, b]}
+\colon a = x_0 < x_1 < \cdots < x_n = b
+\]
+\end{object}

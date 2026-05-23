@@ -50,7 +50,7 @@ def get_object(conn: sqlite3.Connection, id: str) -> models.Object:
 
 | Назначение | Макрос | ❌ Неправильно |
 |-----------|--------|----------------|
-| Кванторы | `\mForall{x}`, `\mExists{x}` | `\forall x` |
+| Кванторы | `\Forall{x}`, `\mExists{x}` | `\forall x` |
 | Импликация | `\mImplies` | `\Rightarrow` |
 | Определение | `\mDefIff` | `:=` |
 | Множества чисел | `\mReal`, `\mNatural` | `\mathbb{R}` |

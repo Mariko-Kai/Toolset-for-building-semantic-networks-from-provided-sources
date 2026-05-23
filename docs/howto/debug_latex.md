@@ -10,7 +10,7 @@
 
 ```
 ! Undefined control sequence.
-l.42 \mForall
+l.42 \Forall
 ```
 
 **Причина:** Файл не подключает `mathesis.sty` или макрос отсутствует в пакете.

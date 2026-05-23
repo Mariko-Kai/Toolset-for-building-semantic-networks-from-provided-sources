@@ -1,0 +1,40 @@
+% defined-in: apostol (page 170)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - a, b, c, d : \RealNumbers
+%    - f : \ClosedInterval{[a, b]} \to \ClosedInterval{[c, d]}
+%    - g : \ClosedInterval{[c, d]} \to \ClosedInterval{[a, b]}
+%    - y0 : \OpenInterval{(c, d)}
+%    - \varepsilon, \delta : \RealNumbers^{+}
+% 2. Data Structures: 
+%    - Intervals are represented as \ClosedInterval{[a, b]} and \OpenInterval{(c, d)}.
+%    - The inverse function g is defined via the property \FunctionContinuous{g(f(x)) = x}.
+% 3. Implicit Bounds: 
+%    - f is assumed to be strictly monotonic and continuous to ensure the existence of a continuous inverse g.
+% ========================
+
+% entity-id: prop-inverse-function-continuity
+% entity-type: prop
+% macro: \InverseFunctionContinuity
+% args: 1
+% notation: #1
+
+\hypertarget{prop-inverse-function-continuity}{}
+\begin{theorem}[Continuity of Inverse Function]
+\[
+\TerForall f \colon \ClosedInterval{[a, b]} \TermTo \ClosedInterval{[c, d]}
+\TerForall g \colon \ClosedInterval{[c, d]} \TermTo \ClosedInterval{[a, b]}
+\left( \FunctionContinuous{g \circ f = \mathrm{id}_{[a,b]} \And f \circ g = \mathrm{id}_{[c,d]}} \right)
+\TermImplication
+\TerForall y_0 \in \OpenInterval{(c, d)}
+\left( \FunctionContinuousAtPoint{g, y_0} \right)
+\]
+\end{theorem}
+
+\begin{proof}[RU]
+Пусть $x_0 = \Function{g}(y_0)$, тогда $f(x_0) = y_0$. Пусть задано $\varepsilon > 0$. Выберем $\delta = \min(f(x_0) - f(x_0 - \varepsilon), f(x_0 + \varepsilon) - f(x_0))$. Тогда для любого $y \in (y_0 - \delta, y_0 + \delta)$ выполняется неравенство $\Function{g}(y_0) - \varepsilon < \Function{g}(y) < \Function{g}(y_0) + \varepsilon$, что доказывает непрерывность $\Function{g}$ в точке $y_0$.
+\end{proof}
+
+\begin{proof}[EN]
+Let $x_0 = \Function{g}(y_0)$, such that $f(x_0) = y_0$. Suppose $\varepsilon > 0$ is given. Let $\delta$ be the minimum of the two values $f(x_0) - f(x_0 - \varepsilon)$ and $f(x_0 + \varepsilon) - f(x_0)$. It follows that for any $y \in (y_0 - \delta, y_0 + \delta)$, the inequality $\Function{g}(y_0) - \varepsilon < \Function{g}(y) < \Function{g}(y_0) + \varepsilon$ holds, which confirms the continuity of $\Function{g}$ at $y_0$.
+\end{proof}

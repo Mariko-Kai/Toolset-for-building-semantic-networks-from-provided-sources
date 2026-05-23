@@ -1,0 +1,35 @@
+% defined-in: spivak (page 301)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - a, b : \RealNumbers
+%    - n : \NaturalNumbers
+%    - f : \ClosedInterval{[a, b]} \to \RealNumbers
+%    - t : \NaturalNumbers \to \RealNumbers
+%    - x : \NaturalNumbers \to \RealNumbers
+%    - P : \Partition{Partition(a, b, n, t)}
+% 2. Data Structures: 
+%    - Partition P is represented by a sequence t : {0, ..., n} \to \mReal such that t_0 = a, t_n = b, and t_{i-1} \leq t_i.
+%    - Riemann sum is a summation over the index set {1, ..., n}.
+% 3. Implicit Bounds: 
+%    - n : \NaturalNumbers is the number of sub-intervals.
+%    - i : \NaturalNumbers is the index variable constrained by 1 \leq i \leq n.
+% ========================
+
+% entity-id: def-riemann-sum
+% entity-type: def
+% macro: \RiemannSum
+% args: 1
+% notation: #1
+\hypertarget{def-riemann-sum}{}
+\begin{operation}[RiemannSum]
+\[
+\TerForall n \colon \NaturalNumbers
+\TerForall a, b \colon \RealNumbers
+\TerForall t \colon \{0, \dots, n\} \to \RealNumbers
+\TerForall x \colon \{1, \dots, n\} \to \RealNumbers
+\TerForall f \colon \ClosedInterval{[a, b]} \to \RealNumbers
+\left( \Partition{t, a, b, n} \And \Partition{x, t, n} \right)
+\TermImplication
+\mathrm{RiemannSum}(f, t, x, n) \TermDefinedAs \sum_{i=1}^{n} f(x(i)) \cdot (t(i) - t(i-1))
+\]
+\end{operation}

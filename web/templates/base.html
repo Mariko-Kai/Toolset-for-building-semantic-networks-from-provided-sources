@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,13 +8,14 @@
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
 
     <!-- KaTeX -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
-        onload="{% raw %}renderMathInElement(document.body, {
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" onload="{% raw %}renderMathInElement(document.body, {
             delimiters: [
                 {left: '$$', right: '$$', display: true},
                 {left: '$', right: '$', display: false},
@@ -24,14 +26,14 @@
             trust: true,
             macros: {
                 '\\entityref': '\\href{/objects/#1}{\\color{##e74c3c}{#2}}',
-                '\\mForall': '\\forall',
+                '\\Forall': '\\forall',
                 '\\mExists': '\\exists',
                 '\\mImplies': '\\Rightarrow',
                 '\\mIff': '\\Leftrightarrow',
                 '\\mDefIff': '\\stackrel{\\mathrm{def}}{\\iff}',
                 '\\mDefinedAs': '\\coloneqq',
                 '\\mQED': '\\qed',
-                '\\mAnd': '\\land',
+                '\\And': '\\land',
                 '\\mOr': '\\lor',
                 '\\mNot': '\\lnot',
                 '\\mTurnstile': '\\vdash',
@@ -56,11 +58,12 @@
                 '\\mIntegral': '\\int'
             }
         });{% endraw %}">
-    </script>
+        </script>
 
     <!-- Styles -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body>
     <nav class="navbar" style="z-index: 9999; position: relative;">
         <a href="/" class="navbar-brand" style="pointer-events: auto !important; position: relative; z-index: 10000;">
@@ -68,15 +71,17 @@
         </a>
         <div class="navbar-nav" style="pointer-events: auto !important; position: relative; z-index: 10000;">
             <a href="/catalog" class="nav-link">Каталог</a>
-            <a href="/master.pdf" class="nav-link nav-link-highlight" target="_blank">PDF Версия</a>
+            <a href="/full_book.pdf" class="nav-link nav-link-highlight" target="_blank">PDF Версия</a>
         </div>
 
         <!-- Cloudflare Tunnel Status Banner -->
-        <div class="cloudflare-status-banner" id="cf-banner" style="pointer-events: auto !important; position: relative; z-index: 10000;">
+        <div class="cloudflare-status-banner" id="cf-banner"
+            style="pointer-events: auto !important; position: relative; z-index: 10000;">
             <span class="cf-dot {% if request.app.state.cloudflare_url %}cf-dot-active{% endif %}" id="cf-dot"></span>
             <span class="cf-text" id="cf-text">
                 {% if request.app.state.cloudflare_url %}
-                Public: <a href="{{ request.app.state.cloudflare_url }}" target="_blank" class="cf-link">{{ request.app.state.cloudflare_url }}</a>
+                Public: <a href="{{ request.app.state.cloudflare_url }}" target="_blank" class="cf-link">{{
+                    request.app.state.cloudflare_url }}</a>
                 {% else %}
                 Tunnel: <span style="color: var(--text-muted);" id="cf-conn-text">connecting...</span>
                 {% endif %}
@@ -92,4 +97,5 @@
         <p>&mu;&alpha;&theta;&eta;&sigma;&iota;&sigmaf; &mdash; structured mathematical knowledge</p>
     </footer>
 </body>
+
 </html>

@@ -1,0 +1,20 @@
+% defined-in: zorich (page 26)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f : X → Y (Function), X : Type, Y : Type, B : Set Y (Subset of Y), x : X (Element of X)]
+% 2. Data Structures: [The preimage is defined as a subset of X constructed via set comprehension]
+% 3. Implicit Bounds: [None required beyond the domain X and codomain Y]
+% ========================
+
+% entity-id: def-function-preimage
+% entity-type: def
+% macro: \FunctionPreimage
+% args: 1
+% notation: #1
+
+\hypertarget{def-function-preimage}{}
+\begin{operation}[Preimage]
+\[
+\TerForall X \colon \mathrm{Type} \TerForall Y \colon \mathrm{Type} \TerForall f \colon X \TermTo Y \TerForall B \subseteq Y
+\quad \mathrm{Preimage}(f, B) \TermDefinedAs \{ x \in X \mid f(x) \in B \}
+\]
+\end{operation}

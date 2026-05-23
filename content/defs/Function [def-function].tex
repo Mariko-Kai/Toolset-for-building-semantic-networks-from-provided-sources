@@ -1,0 +1,20 @@
+% entity-id: def-function
+% entity-type: def
+% lean_manual: true
+% defined-in: zorich-1, p. 1
+% macro: \Function
+% args: 1
+% notation: #1
+
+\section{Функция (Function)}
+
+\hypertarget{def-function}{}
+\begin{object}[obj-function]
+\label{entity:obj-function}
+% 1. ОБЪЯВЛЕНИЕ ТИПОВ
+$\Set{X}, \Set{Y}$
+
+% 2. ТЕЛО ОПРЕДЕЛЕНИЯ
+\[ f \subset \Set{X} \CartesianProduct{\times} \Set{Y} \]
+\[ \TerForall x (x \in X \TermImplication \TermExists ! y (y \in Y \TermConjunction{\land} (x, y) \in f)) \]
+\end{object}

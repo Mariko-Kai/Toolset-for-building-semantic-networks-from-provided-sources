@@ -1,0 +1,38 @@
+% defined-in: zorich (page 543), zorich (page 543)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - a, b : ℝ
+%    - f : [a, b] → ℝ (or ℂ or V)
+%    - g : [a, b] → ℝ (or ℂ or V)
+%    - n : ℕ
+%    - P : {x_i : ℕ → ℝ | 0 ≤ i ≤ n, x_0 = a, x_n = b, x_i ≤ x_{i+1}}
+%    - ξ : {ξ_i : ℕ → ℝ | 1 ≤ i ≤ n, x_{i-1} ≤ ξ_i ≤ x_i}
+%    - λ(P) : ℝ (mesh size)
+%    - I : ℝ (or ℂ or V)
+% 2. Data Structures: 
+%    - Partition P represented as a finite sequence of points x_i indexed by ℕ.
+%    - Marked partition (P, ξ) represented as a pair of sequences (x, ξ).
+%    - Riemann-Stieltjes sum represented as a finite summation over index i from 1 to n.
+% 3. Implicit Bounds: 
+%    - n : ℕ (number of sub-intervals)
+%    - i : ℕ (index variable)
+% ========================
+
+% entity-id: def-riemann-stieltjes-integral
+% entity-type: def
+% macro: \RiemannStieltjesIntegral
+% args: 1
+% notation: #1
+\hypertarget{def-riemann-stieltjes-integral}{}
+\begin{operation}
+\[
+\TerForall \Function{f}, \Function{g} \colon \ClosedInterval{[a, b]} \TermTo \RealNumbers
+\TerForall I \colon \RealNumbers
+\mathrm{IsRiemannStieltjesIntegral}(\Function{f}, \Function{g}, a, b, I) \TermDefinedAs
+\left( I = \LimitFunctionBase{\lim}_{\Partition{\lambda}(P) \to 0} \sum_{i=1}^{n} f(\xi_i) \Delta g_i \right)
+\And
+\left( \Delta g_i \TermDefinedAs g(x_i) - g(x_{i-1}) \right)
+\And
+\left( \Partition{\lambda}(P) \TermDefinedAs \Supremum{\sup}_{1 \leq i \leq n} (x_i - x_{i-1}) \right)
+\]
+\end{operation}

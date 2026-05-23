@@ -1,0 +1,24 @@
+% defined-in: spivak (page 163)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f : ℝ → ℝ, a : ℝ, ε : ℝ, δ : ℝ, x : ℝ]
+% 2. Data Structures: [None required; standard real-valued function domain]
+% 3. Implicit Bounds: [ε > 0, δ > 0]
+% ========================
+
+% entity-id: def-real-function-continuous
+% entity-type: def
+% macro: \RealFunctionContinuous
+% args: 1
+% notation: #1
+\hypertarget{def-real-function-continuous}{}
+\begin{property}[Continuous Function]
+\[
+\TerForall f \colon \RealNumbers \TermTo \RealNumbers
+\TerForall a \colon \RealNumbers
+\mathrm{IsContinuous}(f, a) \TermDefinedAs
+\TerForall \varepsilon \in \RealNumbers \left( \varepsilon > 0 \TermImplication
+\TermExists \delta \in \RealNumbers \left( \delta > 0 \And
+\TerForall x \in \RealNumbers \left( \AbsAbstract{\left| x - a \right|} < \delta \TermImplication
+\AbsAbstract{\left| f(x) - f(a) \right|} < \varepsilon \right) \right) \right)
+\]
+\end{property}

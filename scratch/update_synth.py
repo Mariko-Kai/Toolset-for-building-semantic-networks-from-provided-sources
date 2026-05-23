@@ -35,8 +35,8 @@ new_func = '''def synthesize_cluster(cluster_id, formulations, sources, page_ref
     from pipeline.export_to_lean import translate_to_lean_via_llm, translate_to_lean_regex, is_semantic_error
     from pipeline.lean_validator import validate_entity, discover_mathlib_signatures
     from pipeline.ensemble_extractor import gather_implicit_assumptions
-    from pipeline.export_to_lean import _LLM_PROVIDER
-    active_provider_name = (_LLM_PROVIDER or "OLLAMA").upper()
+    from pipeline.model_manager import ModelManager
+    active_provider_name = (model or "LLM").upper()
 
     while current_attempt <= max_attempts:
         print(f"\\n[synthesizer] --- Attempt {current_attempt}/{max_attempts} ---", flush=True)
@@ -52,7 +52,7 @@ new_func = '''def synthesize_cluster(cluster_id, formulations, sources, page_ref
 
             print(f"[synthesizer] Sending prompt to {active_provider_name} LLM to generate LaTeX...", flush=True)
             t0 = time.time()
-            response = query_llm(current_prompt, model=model)
+            response = ModelManager.get_instance().query(role="main", prompt=current_prompt)
             elapsed = time.time() - t0
             print(f"[synthesizer] LLM responded in {elapsed:.1f}s ({len(response)} chars)", flush=True)
 

@@ -1,0 +1,22 @@
+% defined-in: spivak (page 140)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f : D → ℝ, where D ⊆ ℝ; a : D; L : ℝ]
+% 2. Data Structures: [The limit is represented as a functional operator on the domain D]
+% 3. Implicit Bounds: [The domain D must be such that a is a limit point of D \ {a}]
+% ========================
+
+% entity-id: def-function-removable-discontinuity
+% entity-type: def
+% macro: \FunctionRemovableDiscontinuity
+% args: 1
+% notation: #1
+
+\hypertarget{def-function-removable-discontinuity}{}
+\begin{property}
+\[
+\TerForall f \colon D \to \RealNumbers
+\TerForall a \in D
+\mathrm{IsRemovableDiscontinuity}(f, a) \TermDefinedAs
+\left( \TermExists L \in \RealNumbers \left( L = \LimitFunctionBase{\lim}_{x \to a} f(x) \right) \right) \And \left( \LimitFunctionBase{\lim}_{x \to a} f(x) \neq f(a) \right)
+\]
+\end{property}

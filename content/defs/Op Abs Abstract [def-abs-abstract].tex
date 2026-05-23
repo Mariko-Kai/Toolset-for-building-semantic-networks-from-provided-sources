@@ -1,0 +1,25 @@
+% defined-in: zorich-1, p. 57
+% entity-id: def-abs-abstract
+% entity-type: def
+% lean_manual: true
+% macro: \AbsAbstract
+% args: 1
+% notation: #1
+
+\section{Абсолютная величина (Absolute Value)}
+\label{entity:op-abs-abstract}
+
+\textbf{Описание:}
+Абсолютная величина (модуль) действительного числа $x$ — это расстояние от начала отсчета до точки $x$ на числовой прямой. Формально, она равна $x$, если $x \geq 0$, и $-x$, если $x < 0$.
+
+\hypertarget{def-abs-abstract}{}
+\begin{operation}
+\[
+\TerForall x \in \RealNumbers
+\mathrm{abs}(x) \TermDefinedAs
+\begin{cases}
+x, & x \geq 0 \\
+-x, & x < 0
+\end{cases}
+\]
+\end{operation}

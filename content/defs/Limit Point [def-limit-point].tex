@@ -1,0 +1,23 @@
+% defined-in: zorich-1, p. 111
+% entity-id: def-limit-point
+% entity-type: def
+% macro: \LimitPoint
+% args: 1
+% notation: #1
+
+\section{Предельная точка множества (Limit Point of a Set)}
+\label{entity:obj-limit-point}
+
+\textbf{Описание:}
+Точка $p$ называется предельной точкой \Set{множества} $D$, если в любой окрестности точки $p$ содержится точка из $D$, отличная от $p$.
+
+\hypertarget{def-limit-point}{}
+\begin{object}[obj-limit-point]
+\[
+\TerForall D \subseteq \RealNumbers
+\TerForall p \in \RealNumbers
+\mathrm{IsLimitPoint}(p, D) \TermDefinedAs
+\TerForall \varepsilon > 0 \TermExists x \in D
+\left( 0 < \AbsAbstract{\left| x - p \right|} < \varepsilon \right)
+\]
+\end{object}

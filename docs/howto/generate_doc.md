@@ -102,8 +102,8 @@ Stub-файлы содержат только шаблонную структу�
 \begin{object}[Окрестность точки]
 \label{entity:obj-neighborhood}
 % 1. ОБЪЯВЛЕНИЕ ТИПОВ
-\mForall{a \in \entityref{obj-real-numbers}{\mReal}}
-\mForall{\varepsilon > 0}
+\Forall{a \in \entityref{obj-real-numbers}{\mReal}}
+\Forall{\varepsilon > 0}
 
 % 2. ТЕЛО ОПРЕДЕЛЕНИЯ
 \entityref{obj-neighborhood}{\text{Окрестность}} \; U(a, \varepsilon)

@@ -1,0 +1,28 @@
+% defined-in: spivak (page 76)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [a : ℝ, b : ℝ, p : ℝ × ℝ, O : ℝ × ℝ, X : ℝ × ℝ, Y : ℝ × ℝ]
+% 2. Data Structures: [The point p is represented as an element of the Cartesian product ℝ × ℝ. The rectangle is defined as the set of vertices {O, X, Y, p} where O=(0,0), X=(a,0), Y=(0,b).]
+% 3. Implicit Bounds: [None required; the coordinate system is defined by the standard basis of ℝ².]
+% ========================
+
+% entity-id: def-cartesian-plane-point
+% entity-type: def
+% macro: \CartesianPlanePoint
+% args: 1
+% notation: #1
+
+\hypertarget{def-cartesian-plane-point}{}
+\begin{object}[CartesianPlanePoint]
+\[
+\TerForall a \colon \RealNumbers
+\TerForall b \colon \RealNumbers
+\mathrm{IsPoint}(a, b, p) \TermDefinedAs
+\left( p = (a, b) \right) \And
+\left( p \in \CartesianProduct{\mReal \times \mReal} \right) \And
+\left( \exists O, X, Y \in \CartesianProduct{\mReal \times \mReal} \right)
+\left( O = (0, 0) \right) \And
+\left( X = (a, 0) \right) \And
+\left( Y = (0, b) \right) \And
+\left( p \text{ is the vertex of the rectangle with vertices } \{O, X, Y, p\} \right)
+\]
+\end{object}

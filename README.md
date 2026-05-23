@@ -51,6 +51,46 @@ uvicorn web.app:app --reload
 
 ---
 
+### 4. Генерация полной документации (сборка книги) 📚
+
+Чтобы собрать полную PDF-книгу со всеми сущностями графа, их описаниями на естественном языке (RU/EN) и формулировками LaTeX, запустите:
+
+```bash
+python pipeline/generate_full_book.py
+```
+*Собранная книга будет доступна по пути: `output/full_book.pdf`*
+
+---
+
+### 5. Дедупликация и проверка эквивалентности сущностей 🔄
+
+Если в базе накопились дубликаты или схожие утверждения, запустите модуль семантического слияния. Он найдет синтаксические и семантические дубликаты, а также очистит сиротские артефакты:
+
+```bash
+python pipeline/postprocess_equivalence.py
+```
+
+---
+
+### 6. Запуск конвейера извлечения и Lean-валидации 🧠
+
+Для извлечения новых сущностей из текста, построения графа зависимостей и последующей генерации `result.pdf` через Ollama/Gemini используйте основной интерфейс конвейера:
+
+```bash
+python pipeline/ollama_wrapper.py "Определение равномерно непрерывной функции" \
+  --cv-model qwen3-vl:4b \
+  --extract-preview-provider llama_cpp \
+  --extract-preview-model "llama/bge-reranker-v2-m3-Q6_K.gguf" \
+  --extract-provider gemini \
+  --extract-model gemini-3.1-flash-lite \
+  --synth-provider gemini \
+  --synth-model gemini-3.1-flash-lite \
+  --lean-provider ollama \
+  --lean-model "goedel:latest"
+```
+
+---
+
 ## 📂 Структура проекта
 
 Основные модули и папки проекта:

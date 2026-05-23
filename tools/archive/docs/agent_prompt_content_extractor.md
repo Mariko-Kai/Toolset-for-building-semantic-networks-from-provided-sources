@@ -9,10 +9,10 @@
 ## 2. Extraction & Decontextualization Rules
 - **No Natural Language:** Remove all conversational text ("It is obvious that", "Let us consider"). Extract only the hard mathematical essence.
 - **Hidden Constraints:** Identify implicit quantifiers or domain declarations not explicitly written but implied by the context (e.g., if a function is used, declare its signature first). Place these in the `\section{definition}` block.
-- **TODO Queue & Resolution Guarantee:** If you encounter a concept or symbol that has not yet been defined in the canonical base, DO NOT hallucinate a definition. Emit the semantic tag (e.g., `\entityref{...}` via macros like `\mAnd`, `\mIn`) and send the term to the central "TODO Queue". **Правило нулевых висячих ссылок (Zero Dangling Entities):** Все сущности, помеченные ссылкой и попавшие в очередь, **гарантированно** должны быть обработаны агентной системой. Для каждого элемента очереди будет запущен отдельный процесс поиска и строгого формулирования (Root-to-Axiom) по реестру `sources`.
+- **TODO Queue & Resolution Guarantee:** If you encounter a concept or symbol that has not yet been defined in the canonical base, DO NOT hallucinate a definition. Emit the semantic tag (e.g., `\entityref{...}` via macros like `\And`, `\mIn`) and send the term to the central "TODO Queue". **Правило нулевых висячих ссылок (Zero Dangling Entities):** Все сущности, помеченные ссылкой и попавшие в очередь, **гарантированно** должны быть обработаны агентной системой. Для каждого элемента очереди будет запущен отдельный процесс поиска и строгого формулирования (Root-to-Axiom) по реестру `sources`.
 
 ## 3. Strict Formal Notation & Semantic Tokens
-- **Formal Logic Only:** All formulations (except those inside `foundations/`) must be written in canonical predicate logic and set theory using the `mathesis.sty` macros (e.g., `\mForall`, `\mExists`, `\mSet`).
+- **Formal Logic Only:** All formulations (except those inside `foundations/`) must be written in canonical predicate logic and set theory using the `mathesis.sty` macros (e.g., `\Forall`, `\mExists`, `\mSet`).
 - **WFF Base (Well-Formed Formulas):**
   1. **Atomic Entities:** Variables, constants, sets ($f, x, X, \mathbb{R}$). Base symbols and their modifiers (subscripts/superscripts like `x_{a_1}`) form a single, indivisible token. 
   2. **Connectives:** Operations and logic ($\cup, \cap, \to$).

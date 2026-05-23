@@ -28,13 +28,13 @@ axiom axm_zfc_specification : ∀ X, ∃ Y, ∀ z, ( z \in Y ↔ (z \in X \land 
 axiom axm_zfc_union : ∀ \mathcal{F, } ∃ U, ∀ x, ( x \in U ↔ ∃ A, (A \in \mathcal{F} \land x \in A) )
 
 -- ax-completeness
-axiom ax_completeness : (\mForall x \in X ∧ \mForall y \in Y \colon x \le y) → (\mExists c \in \mReal \mForall x \in X, \mForall y \in Y \colon x \le c \le y)
+axiom ax_completeness : (\Forall x \in X ∧ \Forall y \in Y \colon x \le y) → (\mExists c \in \mReal \Forall x \in X, \Forall y \in Y \colon x \le c \le y)
 
 -- ax-fol-5
-axiom ax_fol_5 : (\mForall x (\mathcal{B} \to \mathcal{C})) \to (\mathcal{B} \to (\mForall x \mathcal{C}))
+axiom ax_fol_5 : (\Forall x (\mathcal{B} \to \mathcal{C})) \to (\mathcal{B} \to (\Forall x \mathcal{C}))
 
 -- ax-fol-4
-axiom ax_fol_4 : (\mForall x \mathcal{B}(x)) \to \mathcal{B}(t)
+axiom ax_fol_4 : (\Forall x \mathcal{B}(x)) \to \mathcal{B}(t)
 
 -- obj-closed-interval
 def obj_closed_interval : Type := \{ x \in \mathbb{R} \mid a \le x \le b \}
@@ -52,7 +52,7 @@ axiom obj_natural_numbers : Type
 def obj_partition : Type := \{x_0, x_1, \ldots, x_n\} \subset [a, b] \colon a = x_0 < x_1 < \cdots < x_n = b
 
 -- obj-predicate
-def obj_predicate : Type := (\mathcal{A}^n --- предикатный символ) ∧ (\mForall i \in \{1,\ldots,n\} \colon t_i \in \mathcal{T})
+def obj_predicate : Type := (\mathcal{A}^n --- предикатный символ) ∧ (\Forall i \in \{1,\ldots,n\} \colon t_i \in \mathcal{T})
 
 -- obj-real-numbers
 axiom obj_real_numbers : Type
@@ -70,13 +70,13 @@ axiom obj_set : Type
 def obj_term : Type := (t \in \mathcal{V}) ∨ (t \in \mathcal{C}) ∨ (\mExists f^n ∧ \mExists t_1, \ldots, t_n \in \mathcal{T} \colon t = f^n(t_1, \ldots, t_n))
 
 -- obj-wff-fol
-def obj_wff_fol : Type := (At(\mathcal{A})) ∨ (\mExists \mathcal{B} \in \mathcal{F} \colon \mathcal{A} = \neg \mathcal{B}) ∨ (\mExists \mathcal{B}, \mathcal{C} \in \mathcal{F} \colon \mathcal{A} = \mathcal{B} \to \mathcal{C}) ∨ (\mExists x \in \mathcal{V}, \mExists \mathcal{B} \in \mathcal{F} \colon \mathcal{A} = \mForall x \mathcal{B})
+def obj_wff_fol : Type := (At(\mathcal{A})) ∨ (\mExists \mathcal{B} \in \mathcal{F} \colon \mathcal{A} = \neg \mathcal{B}) ∨ (\mExists \mathcal{B}, \mathcal{C} \in \mathcal{F} \colon \mathcal{A} = \mathcal{B} \to \mathcal{C}) ∨ (\mExists x \in \mathcal{V}, \mExists \mathcal{B} \in \mathcal{F} \colon \mathcal{A} = \Forall x \mathcal{B})
 
 -- op-abs
 theorem op_abs : |x| := sorry
 
 -- op-antiderivative
-axiom op_antiderivative : F = Prim(f) ↔ \mForall x \in I \colon F'(x) = f(x)
+axiom op_antiderivative : F = Prim(f) ↔ \Forall x \in I \colon F'(x) = f(x)
 
 -- op-darboux-integral
 theorem op_darboux_integral : \underline{I} := sorry
@@ -91,16 +91,16 @@ theorem op_derivative : f'(x_0) := sorry
 theorem op_finite_sum : \sum_{i=1}^n a_i := sorry
 
 -- rule-generalization
-axiom rule_generalization : \frac{\mathcal{A}}{\mForall x \mathcal{A}}
+axiom rule_generalization : \frac{\mathcal{A}}{\Forall x \mathcal{A}}
 
 -- op-implication
 theorem op_implication : \mathcal{A} \to \mathcal{B} := sorry
 
 -- op-infimum
-axiom op_infimum : m = \inf A ↔ \mForall x \in A \colon x \ge m ∧ \mForall \varepsilon > 0 \mExists x_{\varepsilon} \in A \colon x_{\varepsilon} < m + \varepsilon
+axiom op_infimum : m = \inf A ↔ \Forall x \in A \colon x \ge m ∧ \Forall \varepsilon > 0 \mExists x_{\varepsilon} \in A \colon x_{\varepsilon} < m + \varepsilon
 
 -- op-limit
-axiom op_limit : \lim_{x \to x_0} f(x) = A ↔ \mForall \varepsilon > 0 \mExists \delta > 0 \mForall x \in X \colon (0 < |x - x_0| < \delta → |f(x) - A| < \varepsilon)
+axiom op_limit : \lim_{x \to x_0} f(x) = A ↔ \Forall \varepsilon > 0 \mExists \delta > 0 \Forall x \in X \colon (0 < |x - x_0| < \delta → |f(x) - A| < \varepsilon)
 
 -- op-lower-darboux-sum
 theorem op_lower_darboux_sum : s(f, P) := sorry
@@ -115,16 +115,16 @@ theorem op_negation : \neg \mathcal{A} := sorry
 theorem op_riemann_integral : I = \int_a^b f(x) dx := sorry
 
 -- op-supremum
-axiom op_supremum : M = \sup A ↔ \mForall x \in A \colon x \le M ∧ \mForall \varepsilon > 0 \mExists x_{\varepsilon} \in A \colon x_{\varepsilon} > M - \varepsilon
+axiom op_supremum : M = \sup A ↔ \Forall x \in A \colon x \le M ∧ \Forall \varepsilon > 0 \mExists x_{\varepsilon} \in A \colon x_{\varepsilon} > M - \varepsilon
 
 -- op-universal-quantifier
-theorem op_universal_quantifier : \mForall x \mathcal{A} := sorry
+theorem op_universal_quantifier : \Forall x \mathcal{A} := sorry
 
 -- op-upper-darboux-sum
 theorem op_upper_darboux_sum : S(f, P) := sorry
 
 -- prop-bounded
-def prop_bounded : Prop := ограничена(f) ↔ \mExists M > 0 \colon \mForall x \in X → |f(x)| \le M
+def prop_bounded : Prop := ограничена(f) ↔ \mExists M > 0 \colon \Forall x \in X → |f(x)| \le M
 
 -- prop-continuous
 def prop_continuous : Prop := непрерывна(f, x_0) ↔ \lim_{x \to x_0} f(x) = f(x_0)
@@ -133,5 +133,5 @@ def prop_continuous : Prop := непрерывна(f, x_0) ↔ \lim_{x \to x_0} 
 axiom thm_newton_leibniz : \int_a^b f(x) dx = F(b) - F(a)
 
 -- thm-quantifier-dist
-axiom thm_quantifier_dist : MP \colon (Ax_5 ∧ Ax_4) → ( \mForall x (\mathcal{B}(x) \to \mathcal{C}(x)) \to (\mForall x \mathcal{B}(x) \to \mForall x \mathcal{C}(x)) )
+axiom thm_quantifier_dist : MP \colon (Ax_5 ∧ Ax_4) → ( \Forall x (\mathcal{B}(x) \to \mathcal{C}(x)) \to (\Forall x \mathcal{B}(x) \to \Forall x \mathcal{C}(x)) )
 

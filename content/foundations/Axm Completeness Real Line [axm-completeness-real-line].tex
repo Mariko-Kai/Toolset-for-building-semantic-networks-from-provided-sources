@@ -1,18 +1,19 @@
 % defined-in: zorich (page 62)
 % entity-id: axm-completeness-real-line
 % entity-type: axiom
-\hypertarget{axm-completeness-real-line}{}
+% macro: \CompletenessRealLine
+% args: 1
+% notation: #1
 \hypertarget{axm-completeness-real-line}{}
 \begin{axiom}[Completeness of the Real Line]
 \[
-\mForall{L} \mathrm{IsComplete}(L) \mDefinedAs \mNot 
-\mExists{A, B \subset L} \left( (A \neq 
-\entityref{obj-empty-set}{\\varnothing}) \
-entityref{term-conjunction}{\land} (B \neq 
-\entityref{obj-empty-set}{\\varnothing}) 
-\entityref{term-conjunction}{\land} (A 
-\entityref{op-union}{\cup} B = L) 
-\entityref{term-conjunction}{\land} (A 
-\entityref{op-intersection}{\cap} B = \entityref{obj-empty-set}{\\varnothing}) \entityref{term-conjunction}{\land} \mForall{a \in A} \mForall{b \in B} (a < b) \entityref{term-conjunction}{\land} \mNot \mExists{p \in L} ((p \in A) \entityref{term-disjunction}{\lor} (p \in B)) \right)
+\TerForall L \mathrm{IsComplete}(L) \TermDefinedAs \TermNegation 
+\TermExists A, B \subset L \left( (A \neq 
+\Set{\varnothing}) \TermConjunction{\land} (B \neq 
+\Set{\varnothing}) 
+\TermConjunction{\land} (A 
+\cup B = L) 
+\TermConjunction{\land} (A 
+\cap B = \Set{\varnothing}) \TermConjunction{\land} \TerForall a \in A \TerForall b \in B (a < b) \TermConjunction{\land} \TermNegation \TermExists p \in L ((p \in A) \TermDisjunction{\lor} (p \in B)) \right)
 \]
 \end{axiom}

@@ -1,0 +1,29 @@
+% defined-in: apostol (page 48), spivak (page 153)
+% entity-id: def-infimum
+% entity-type: def
+% macro: \Infimum
+% args: 1
+% notation: #1
+
+\hypertarget{def-infimum}{}
+\begin{operation}[Infimum]
+\[
+\TerForall S \subseteq \RealNumbers
+\TerForall L \in \RealNumbers
+\mathrm{IsInfimum}(L, S) \TermDefinedAs
+\left(
+\TerForall s \in S \quad L \leq s
+\right)
+\And
+\left(
+\TerForall y \in \RealNumbers
+\left(
+\left(
+\TerForall s \in S \quad y \leq s
+\right)
+\TermImplication
+y \leq L
+\right)
+\right)
+\]
+\end{operation}

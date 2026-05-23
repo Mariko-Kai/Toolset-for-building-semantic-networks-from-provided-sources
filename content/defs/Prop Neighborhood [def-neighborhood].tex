@@ -1,0 +1,16 @@
+% defined-in: apostol (page 150)
+% entity-id: def-neighborhood
+% entity-type: def
+% macro: \Neighborhood
+% args: 1
+% notation: #1
+
+\hypertarget{def-neighborhood}{}
+\begin{property}[Neighborhood]
+\[
+\TerForall p \in \RealNumbers
+\TerForall \varepsilon \in \RealNumbers, \varepsilon > 0
+\TerForall N \subseteq \RealNumbers
+\mathrm{IsNeighborhood}(N, p) \TermDefinedAs \TermExists \varepsilon > 0 \left( N = \left( p - \varepsilon, p + \varepsilon \right) \right)
+\]
+\end{property}

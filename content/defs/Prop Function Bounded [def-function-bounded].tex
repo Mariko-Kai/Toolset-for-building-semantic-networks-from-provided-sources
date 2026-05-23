@@ -1,0 +1,20 @@
+% defined-in: apostol (page 96)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f : [a, b] → ℝ, a : ℝ, b : ℝ, M : ℝ, x : ℝ]
+% 2. Data Structures: [Interval [a, b] represented as a subtype of ℝ]
+% 3. Implicit Bounds: [M > 0 is a strict existential constraint]
+% ========================
+
+% entity-id: def-function-bounded
+% entity-type: def
+% macro: \FunctionBounded
+% args: 1
+% notation: #1
+
+\hypertarget{def-function-bounded}{}
+\begin{property}
+\[
+\TerForall f \colon \ClosedInterval{[a, b]} \TermTo \RealNumbers
+\mathrm{IsBounded}(f) \TermDefinedAs \TermExists M \in \RealNumbers \left( (M > 0) \And \TerForall x \in \ClosedInterval{[a, b]} \left( \AbsAbstract{\left| f(x) \right|} < M \right) \right)
+\]
+\end{property}

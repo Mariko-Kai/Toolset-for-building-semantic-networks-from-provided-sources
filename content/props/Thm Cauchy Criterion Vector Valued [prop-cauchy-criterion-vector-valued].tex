@@ -1,0 +1,25 @@
+% defined-in: zorich (page 398)
+% entity-id: prop-cauchy-criterion-vector-valued
+% entity-type: prop
+% macro: \CauchyCriterionVectorValued
+% args: 1
+% notation: #1
+
+\hypertarget{prop-cauchy-criterion-vector-valued}{}
+\begin{theorem}[Cauchy Criterion for Vector-Valued Functions]
+\[
+\TerForall X \TerForall \mathcal{B} \subseteq \mathcal{P}(X) \TerForall \Function{f} \colon X \TermTo \RealNumbers^n
+\left( \TermExists \LimitFunctionBase{\lim}_{\mathcal{B}} f(x) \TermEquivalence \TerForall \varepsilon > 0 \TermExists B \in \mathcal{B} \left( \omega(\Function{f}; B) < \varepsilon \right) \right)
+\]
+\[
+\text{where } \omega(\Function{f}; B) \TermDefinedAs \Supremum{\sup}_{x_1, x_2 \in B} d(f(x_1), f(x_2))
+\]
+\end{theorem}
+
+\begin{proof}[RU]
+Доказательство опирается на полноту пространства $\RealNumbers^n$. Пусть $d(f(x_1), f(x_2))$ обозначает евклидово расстояние. Условие $\TerForall \varepsilon > 0 \TermExists B \in \mathcal{B} (\omega(\Function{f}; B) < \varepsilon)$ означает, что \Function{образ} \Set{множества} $B$ при \Function{отображении} $\Function{f}$ становится сколь угодно малым в смысле диаметра. Поскольку $\RealNumbers^n$ является полным метрическим пространством, выполнение критерия Коши для базы $\mathcal{B}$ необходимо и достаточно для существования предела \Function{функции} $\Function{f}$ по этой базе. Доказательство аналогично одномерному случаю, где вместо модуля разности используется $d(f(x_1), f(x_2))$.
+\end{proof}
+
+\begin{proof}[EN]
+The proof relies on the completeness of the space $\RealNumbers^n$. Let $d(f(x_1), f(x_2))$ denote the Euclidean distance. The condition $\TerForall \varepsilon > 0 \TermExists B \in \mathcal{B} (\omega(\Function{f}; B) < \varepsilon)$ implies that the image of the set $B$ under the mapping $\Function{f}$ becomes arbitrarily small in terms of its diameter. Since $\RealNumbers^n$ is a complete metric space, the Cauchy criterion for the base $\mathcal{B}$ is necessary and sufficient for the existence of the limit of the function $\Function{f}$ along this base. The proof is analogous to the one-dimensional case, replacing the absolute difference with the distance $d(f(x_1), f(x_2))$.
+\end{proof}

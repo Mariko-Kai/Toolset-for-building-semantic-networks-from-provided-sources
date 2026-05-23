@@ -1,0 +1,14 @@
+% entity-id: def-open-interval
+% entity-type: def
+% macro: \OpenInterval
+% args: 1
+% notation: #1
+\hypertarget{def-open-interval}{}
+\begin{object}[Open Interval]
+\[
+\TerForall a, b \in \RealNumbers
+\TerForall S \subseteq \RealNumbers
+\mathrm{IsOpenInterval}(S, a, b) \TermDefinedAs \left( a < b 
+\TermConjunction{\land} S = \{x \in \RealNumbers \TermMid{\mid} a < x < b\} \right)
+\]
+\end{object}

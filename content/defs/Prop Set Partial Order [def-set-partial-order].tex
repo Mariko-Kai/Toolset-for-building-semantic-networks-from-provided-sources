@@ -1,0 +1,28 @@
+% defined-in: zorich (page 32)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [X : Type, R : X \to X \to Prop]
+% 2. Data Structures: [The relation R is represented as a curried binary predicate on the type X]
+% 3. Implicit Bounds: [None required for the definition of the property itself]
+% ========================
+
+% entity-id: def-set-partial-order
+% entity-type: def
+% macro: \SetPartialOrder
+% args: 1
+% notation: #1
+
+\hypertarget{def-set-partial-order}{}
+\begin{property}[Partial Order]
+\[
+\TerForall X \colon \mathrm{Type}
+\TerForall R \colon X \TermTo X \TermTo \mathrm{Prop}
+\mathrm{IsPartialOrder}(X, R) \TermDefinedAs
+\left(
+\begin{aligned}
+& \left( \TerForall x \colon X \RelationPartialOrder{R}(x, x) \right) \And \\
+& \left( \TerForall x \colon X \TerForall y \colon X \TerForall z \colon X \left( R(x, y) \And R(y, z) \TermImplication R(x, z) \right) \right) \And \\
+& \left( \TerForall x \colon X \TerForall y \colon X \left( R(x, y) \And R(y, x) \TermImplication x = y \right) \right)
+\end{aligned}
+\right)
+\]
+\end{property}

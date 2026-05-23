@@ -1,0 +1,14 @@
+% defined-in: spivak (page 550)
+% entity-id: def-complex-number
+% entity-type: def
+% lean_manual: true
+% macro: \ComplexNumber
+% args: 0
+% notation: \mathbb{C}
+
+\hypertarget{def-complex-number}{}
+\begin{object}[Complex Number]
+\[
+\TerForall z \mathrm{IsComplexNumber}(z) \TermDefinedAs \TermExists a \in \RealNumbers \TermExists b \in \RealNumbers \left( z = \langle a, b \rangle \right) \And \left( \mathrm{Re}(z) = a \right) \And \left( \mathrm{Im}(z) = b \right)
+\]
+\end{object}

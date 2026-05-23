@@ -1,0 +1,22 @@
+% entity-id: def-cartesian-product
+% entity-type: def
+% lean_manual: true
+% defined-in: zorich-1, p. 11
+% macro: \CartesianProduct
+% args: 1
+% notation: #1
+
+\section{Декартово произведение (Cartesian Product)}
+\label{entity:obj-cartesian-product}
+
+\textbf{Описание:}
+Декартовым произведением \Set{множеств} $A$ и $B$ называется \Set{множество} всех \OrderedPair{упорядоченных пар} $(a, b)$, где $a \in A$ и $b \in B$.
+
+\hypertarget{def-cartesian-product}{}
+\begin{object}[obj-cartesian-product]
+\[
+\TerForall A \in \Set{\text{Set}}, B \in \Set{\text{Set}}
+\quad
+A \times B \TermDefIff \left\{ (a, b) \TermMid{\mid} a \in A \TermConjunction{\land} b \in B \right\}
+\]
+\end{object}

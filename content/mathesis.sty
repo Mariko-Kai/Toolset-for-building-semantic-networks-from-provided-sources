@@ -4,9 +4,20 @@
 % --- Dependencies ---
 \RequirePackage{amsmath, amssymb, mathtools, amsthm}
 \RequirePackage{xcolor}
-\RequirePackage[colorlinks=true, linkcolor=blue, urlcolor=blue, linktoc=all]{hyperref}
+\RequirePackage[hidelinks]{hyperref}
 
-\theoremstyle{definition}
+% Custom theorem style: breaks the line after the header so formulas start fresh
+\newtheoremstyle{mathesisstyle}%
+  {6pt}   % space above
+  {6pt}   % space below
+  {}      % body font (normal, not italic)
+  {}      % indent amount
+  {\bfseries} % theorem head font
+  {.}     % punctuation after theorem head
+  {\newline} % space after theorem head — \newline forces a line break!
+  {}      % theorem head spec (empty = default)
+
+\theoremstyle{mathesisstyle}
 \newtheorem{object}{Объект}[chapter]
 \newtheorem{operation}{Операция}[chapter]
 \newtheorem{property}{Свойство}[chapter]
@@ -15,33 +26,8 @@
 \newtheorem{lemma}{Лемма}[chapter]
 \newtheorem{corollary}{Следствие}[chapter]
 
-% --- Semantic Entity Reference ---
+% --- Semantic Entity Reference (for backward compatibility) ---
 \newcommand{\entityref}[2]{\hyperlink{#1}{#2}}
 
-% --- Semantic Macros ---
-% Quantifiers
-\newcommand{\mForall}{\forall}
-\newcommand{\mExists}{\exists}
-
-% Logic Connectives
-\newcommand{\mImplies}{\Rightarrow}
-\newcommand{\mIff}{\Leftrightarrow}
-\newcommand{\mDefIff}{\stackrel{\mathrm{def}}{\iff}}
-\newcommand{\mDefinedAs}{\coloneqq}
-\newcommand{\mQED}{\qed}
-\newcommand{\mAnd}{\land}
-\newcommand{\mOr}{\lor}
-\newcommand{\mNot}{\lnot}
-\newcommand{\mTurnstile}{\vdash}
-
-% Sets
-\newcommand{\mSet}[1]{\{#1\}}
-\newcommand{\mIn}{\in}
-\newcommand{\mSubset}{\subset}
-\newcommand{\mSubseteq}{\subseteq}
-\newcommand{\mEmpty}{\varnothing}
-
-
-% Maps and mappings
-\newcommand{\mTo}{\to}
-\newcommand{\mMap}[3]{#1 \colon #2 \mTo #3}
+% --- All Semantic Macros (including auto-generated) ---
+\RequirePackage{mathesis_macros}

@@ -1,15 +1,17 @@
 % entity-id: axm-zfc-power-set
 % entity-type: axiom
 % defined-in: vereshchagin-shen
+% macro: \ZfcPowerSet
+% args: 1
+% notation: #1
 
-\hypertarget{axm-zfc-power-set}{}
 \hypertarget{axm-zfc-power-set}{}
 \begin{axiom}[axm-zfc-power-set] % Аксиома булеана (Axiom of Power Set)
 
 
 
 \[
-\mForall{X}
-\mExists{P} \mForall{A} (A \in P \mIff A \subset X)
+\TerForall X
+\TermExists P \TerForall A (A \in P \TermEquivalence A \subset X)
 \]
 \end{axiom}

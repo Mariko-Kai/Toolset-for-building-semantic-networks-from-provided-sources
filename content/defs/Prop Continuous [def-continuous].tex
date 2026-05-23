@@ -1,0 +1,21 @@
+% defined-in: apostol (page 147)
+% entity-id: def-continuous
+% entity-type: def
+% macro: \Continuous
+% args: 1
+% notation: #1
+
+\hypertarget{def-continuous}{}
+\begin{property}[Continuous]
+\[
+\TerForall \Function{f} \colon D \TermTo \RealNumbers
+\TerForall x_0 \in D
+\mathrm{IsContinuous}(\Function{f}, x_0) \TermDefinedAs
+\TerForall \varepsilon > 0
+\TermExists \delta > 0
+\TerForall x \in D
+\left( \AbsAbstract{\left| x - x_0 \right|} < \delta \right)
+\TermImplication
+\left( \AbsAbstract{\left| f(x) - f(x_0) \right|} < \varepsilon \right)
+\]
+\end{property}

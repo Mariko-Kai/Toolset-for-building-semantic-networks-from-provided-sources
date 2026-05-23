@@ -1,0 +1,13 @@
+% defined-in: zorich (page 52)
+% entity-id: def-supremum
+% entity-type: def
+% macro: \Supremum
+% args: 1
+% notation: #1
+
+\hypertarget{def-supremum}{}
+\begin{operation}
+\[
+\mathrm{IsSupremum}(s, X) \TermDefinedAs \left( \TerForall{\forall} x \in X (x \leq s) \TermConjunction{\land} \TerForall{\forall} s' < s (\TermExists{\exists} x' \in X (s' < x')) \right)
+\]
+\end{operation}

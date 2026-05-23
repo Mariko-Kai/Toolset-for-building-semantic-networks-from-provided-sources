@@ -1,0 +1,19 @@
+% defined-in: apostol (page 447), apostol (page 447), apostol (page 447), spivak (page 521), spivak (page 521), spivak (page 523)
+% lean-signature: set_option maxHeartbeats 0
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f_n : ℕ → (A → ℝ), f : A → ℝ, ε : ℝ, N : ℕ, x : A, A : Type]
+% 2. Data Structures: [Sequence of functions represented as a function from ℕ to the function space A → ℝ]
+% 3. Implicit Bounds: [n : ℕ, ε > 0, x ∈ A]
+% ========================
+
+% entity-id: def-sequence-uniform-convergence
+% entity-type: def
+\begin{object}[Uniform Convergence]
+\Forall{A \colon \mathrm{Type}}
+\Forall{f_n \colon \mathbb{N} \mTo (A \mTo \entityref{obj-real-numbers}{\mathbb{R}})}
+\Forall{f \colon A \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\mathrm{IsUniformLimit}(f_n, f, A) \mDefinedAs
+\Forall{\varepsilon \in \mathbb{R}} \quad (\varepsilon > 0) \mImplies
+\mExists{N \colon \mathbb{N}} \quad \Forall{n \colon \mathbb{N}} \quad (n > N) \mImplies
+\Forall{x \in A} \quad \entityref{op-absolute-value}{\entityref{op-abs-abstract}{\mathrm{abs}}(} f_n(x) - f(x) \entityref{op-absolute-value}{)} < \varepsilon
+\end{object}

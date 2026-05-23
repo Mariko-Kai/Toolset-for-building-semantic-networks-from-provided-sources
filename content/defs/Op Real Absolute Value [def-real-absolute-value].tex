@@ -1,0 +1,25 @@
+% defined-in: apostol (page 64)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [x : \mReal (Type), |x| : \mReal (Type)]
+% 2. Data Structures: [None required; scalar mapping]
+% 3. Implicit Bounds: [None; defined for all x : \mReal]
+% ========================
+
+% entity-id: def-real-absolute-value
+% entity-type: def
+% macro: \RealAbsoluteValue
+% args: 1
+% notation: #1
+
+\hypertarget{def-real-absolute-value}{}
+\begin{operation}[Absolute Value]
+\[
+\TerForall x \colon \RealNumbers
+\quad \mathrm{IsAbsoluteValue}(x, y) \TermDefinedAs 
+\left( 
+\left( x \geq 0 \And y = x \right) 
+\TermDisjunction 
+\left( x < 0 \And y = -x \right) 
+\right)
+\]
+\end{operation}

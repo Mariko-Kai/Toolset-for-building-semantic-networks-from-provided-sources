@@ -1,0 +1,18 @@
+% defined-in: apostol (page 47)
+% entity-id: def-least-upper-bound
+% entity-type: def
+% macro: \LeastUpperBound
+% args: 1
+% notation: #1
+
+\hypertarget{def-least-upper-bound}{}
+\begin{property}[Least Upper Bound]
+\[
+\TerForall S \subseteq \RealNumbers
+\TerForall B \in \RealNumbers
+\mathrm{IsLeastUpperBound}(B, S) \TermDefinedAs
+\left( S \neq \Set{\varnothing} \right) \TermConjunction{\land}
+\left( \TerForall x \in S \quad x \leq B \right) \TermConjunction{\land}
+\left( \TerForall y \in \RealNumbers \quad y < B \TermImplication \TermExists s \in S \quad s > y \right)
+\]
+\end{property}

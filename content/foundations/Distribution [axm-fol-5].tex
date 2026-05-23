@@ -1,19 +1,21 @@
 % entity-id: axm-fol-5
 % entity-type: axiom
 % defined-in: zorich-1, p. 55
+% macro: \Fol5
+% args: 1
+% notation: #1
 
 \section{Аксиома распределения квантора (Distribution [axm-fol-5])}
 
 \hypertarget{axm-fol-5}{}
-\hypertarget{axm-fol-5}{}
 \begin{axiom}[axm-fol-5]
 \label{entity:axm-fol-5}
 % 1. ОБЪЯВЛЕНИЕ ТИПОВ
-$\entityref{obj-predicate}{\mathcal{B}}, \entityref{obj-predicate}{\mathcal{C}}$ --- формулы логики первого порядка,
-переменная $x$ не входит свободно в $\entityref{obj-predicate}{\mathcal{B}}$
+$\Predicate{\mathcal{B}}, \Predicate{\mathcal{C}}$ --- формулы логики первого порядка,
+переменная $x$ не входит свободно в $\Predicate{\mathcal{B}}$
 
 % 2. ТЕЛО АКСИОМЫ
 \[
-(\mForall x (\entityref{obj-predicate}{\mathcal{B}} \entityref{term-implication}{\to} \entityref{obj-predicate}{\mathcal{C}})) \entityref{term-implication}{\to} (\entityref{obj-predicate}{\mathcal{B}} \entityref{term-implication}{\to} (\mForall x \entityref{obj-predicate}{\mathcal{C}}))
+(\TerForall x (\Predicate{\mathcal{B}} \TermImplication{\to} \Predicate{\mathcal{C}})) \TermImplication{\to} (\Predicate{\mathcal{B}} \TermImplication{\to} (\TerForall x \Predicate{\mathcal{C}}))
 \]
 \end{axiom}

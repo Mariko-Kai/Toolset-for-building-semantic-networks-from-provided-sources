@@ -196,7 +196,13 @@ class MathesisDB:
     def get_containers(self, component_id: str) -> list[models.Object]:
         return queries.get_containers(self.conn, component_id)
 
-    # --- Search ---
+    # --- Search & Aliases ---
+
+    def lookup_alias(self, alias: str) -> Optional[str]:
+        return queries.lookup_alias(self.conn, alias)
+
+    def filter_future_nodes(self, candidate_ids: list[str], current_page: int) -> list[str]:
+        return queries.filter_future_nodes(self.conn, candidate_ids, current_page)
 
     def search(self, query: str,
                entity_type: str = None) -> list[models.SearchResult]:

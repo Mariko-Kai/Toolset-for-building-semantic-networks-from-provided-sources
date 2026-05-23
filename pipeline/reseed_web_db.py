@@ -91,16 +91,16 @@ def main():
                 }
                 entity_type = type_map.get(rel, "unknown")
             else:
-                entity_type = type_match.group(1).strip()
-                if entity_type == "definition":
-                    # Check which directory it is in
-                    rel = filepath.relative_to(CONTENT_DIR).parts[0]
-                    type_map = {
-                        "objects": "object",
-                        "properties": "property",
-                        "operations": "operation",
-                    }
-                    entity_type = type_map.get(rel, "object")
+                entity_type = type_match.group(1).strip().lower()
+                # Map abbreviated types
+                if entity_type == 'def' or entity_type == 'definition':
+                    entity_type = 'object'
+                elif entity_type == 'prop':
+                    entity_type = 'property'
+                elif entity_type == 'thm':
+                    entity_type = 'theorem'
+                elif entity_type == 'op':
+                    entity_type = 'operation'
                     
             if entity_type not in ("axiom", "object", "property", "operation", "theorem"):
                 continue

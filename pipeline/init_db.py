@@ -15,7 +15,11 @@ def init_db():
             entity_id TEXT PRIMARY KEY,
             type TEXT NOT NULL,
             title TEXT NOT NULL,
-            path TEXT NOT NULL
+            path TEXT NOT NULL,
+            file_path TEXT,
+            lean_path TEXT,
+            nl_desc TEXT,
+            embedding BLOB
         )
     """)
 

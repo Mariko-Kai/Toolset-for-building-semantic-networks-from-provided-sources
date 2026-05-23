@@ -1,0 +1,27 @@
+% defined-in: zorich (page 330), zorich (page 330), zorich (page 330), zorich (page 333)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - a, b : ℝ
+%    - f : [a, b] → ℝ
+%    - D : 𝒫([a, b]) (set of discontinuity points)
+%    - μ : 𝒫(ℝ) → ℝ (Lebesgue measure)
+% 2. Data Structures: 
+%    - [a, b] : obj-closed-interval
+%    - D : obj-set-discontinuity
+%    - μ(D) : op-lebesgue-measure
+% 3. Implicit Bounds: 
+%    - f is bounded on [a, b]
+% ========================
+
+% entity-id: def-lebesgue-riemann-integrability
+% entity-type: def
+% macro: \LebesgueRiemannIntegrability
+% args: 1
+% notation: #1
+
+\hypertarget{def-lebesgue-riemann-integrability}{}
+\begin{property}[Lebesgue Criterion for Riemann Integrability]
+\[
+\mathrm{IsRiemannIntegrable}(f, [a, b]) \TermDefinedAs \left( \FunctionBounded{f} \And \mu(\{x \in [a, b] \mid \FunctionDiscontinuous{f}(x)\}) = 0 \right)
+\]
+\end{property}

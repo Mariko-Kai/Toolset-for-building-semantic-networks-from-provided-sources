@@ -1,0 +1,21 @@
+% defined-in: apostol (page 150)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [p : ℝ], [ε : ℝ], [N : Set ℝ]
+% 2. Data Structures: [The neighborhood is represented as an open interval (p - ε, p + ε)]
+% 3. Implicit Bounds: [ε > 0]
+% ========================
+
+% entity-id: def-real-neighborhood
+% entity-type: def
+% macro: \RealNeighborhood
+% args: 1
+% notation: #1
+
+\hypertarget{def-real-neighborhood}{}
+\begin{property}[Neighborhood]
+\[
+\TerForall p \colon \RealNumbers
+\TerForall N \subseteq \RealNumbers
+\mathrm{IsNeighborhood}(N, p) \TermDefinedAs \TermExists \varepsilon \in \RealNumbers \left( \varepsilon > 0 \And N = \{ x \colon \RealNumbers \mid p - \varepsilon < x < p + \varepsilon \} \right)
+\]
+\end{property}

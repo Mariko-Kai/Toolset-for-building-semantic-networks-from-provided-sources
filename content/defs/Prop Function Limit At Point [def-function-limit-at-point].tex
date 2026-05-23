@@ -1,0 +1,25 @@
+% defined-in: apostol (page 152), apostol (page 151)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f : (D → ℝ), D : Set ℝ, p : ℝ, A : ℝ, ε : ℝ, δ : ℝ, x : ℝ]
+% 2. Data Structures: [Neighborhoods are represented as open intervals (p - δ, p + δ) \ {p}]
+% 3. Implicit Bounds: [ε > 0, δ > 0, x ∈ D]
+% ========================
+
+% entity-id: def-function-limit-at-point
+% entity-type: def
+% macro: \FunctionLimitAtPoint
+% args: 1
+% notation: #1
+
+\hypertarget{def-function-limit-at-point}{}
+\begin{property}[Limit of a Function at a Point]
+\[
+\TerForall f \colon D \TermTo \RealNumbers
+\TerForall p \colon \RealNumbers
+\TerForall A \colon \RealNumbers
+\mathrm{HasLimit}(f, p, A) \TermDefinedAs
+\left( \TerForall \varepsilon \in \RealNumbers \quad \varepsilon > 0 \TermImplication
+\TermExists \delta \in \RealNumbers \quad \delta > 0 \And
+\left( \TerForall x \in D \quad 0 < \AbsAbstract{\left| x - p \right|} < \delta \TermImplication \AbsAbstract{\left| f(x) - A \right|} < \varepsilon \right) \right)
+\]
+\end{property}

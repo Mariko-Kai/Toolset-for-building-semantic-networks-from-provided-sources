@@ -629,7 +629,7 @@ def main():
     if args.lean_provider:
         setup_lean_provider(args.lean_provider, api_key=args.lean_api_key, model=args.lean_model)
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10.0)
     cursor = conn.cursor()
 
     # Ensure mapping & pending_edges tables exist
@@ -737,8 +737,22 @@ def main():
 
 
 
-        cursor.execute("INSERT OR REPLACE INTO entities (entity_id, type, title, path) VALUES (?, ?, ?, ?)",
-                       (entity_id, entity_type, title, str(file_path.relative_to(PROJECT_ROOT))))
+        nl_desc = data['texts'][0] if data['texts'] else title
+        # Generate embedding for the new entity
+        embed_blob = None
+        try:
+            # We need to import the new get_embedding from ollama_wrapper
+            # But it's simpler to just write it here or import it
+            from pipeline.ollama_wrapper import get_embedding
+            embed_vec = get_embedding(nl_desc, args.embed_provider if hasattr(args, "embed_provider") else None, args.embed_model if hasattr(args, "embed_model") else None)
+            if embed_vec:
+                import struct
+                embed_blob = struct.pack(f"{len(embed_vec)}f", *embed_vec)
+        except Exception as e:
+            print(f"[synthesizer] [-] Could not generate embedding: {e}")
+        
+        cursor.execute("INSERT OR REPLACE INTO entities (entity_id, type, title, path, file_path, lean_path, nl_desc, embedding) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                       (entity_id, entity_type, title, str(file_path.relative_to(PROJECT_ROOT)), str(file_path.relative_to(PROJECT_ROOT)), str(lean_file_path.relative_to(PROJECT_ROOT)) if valid_lean_code else None, nl_desc, embed_blob))
         print(f"[synthesizer] [OK] DB updated: entities({entity_id})")
 
         for source in data['sources']:

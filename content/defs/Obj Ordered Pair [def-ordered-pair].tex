@@ -1,0 +1,17 @@
+% defined-in: apostol (page 76)
+% entity-id: def-ordered-pair
+% entity-type: def
+% lean_manual: true
+% macro: \OrderedPair
+% args: 1
+% notation: #1
+
+\hypertarget{def-ordered-pair}{}
+\begin{object}[Ordered Pair]
+\[
+\TerForall a, b, c, d
+\mathrm{IsOrderedPair}((a, b), a, b) \TermDefinedAs \top
+\quad
+\mathrm{IsEqualOrderedPair}((a, b), (c, d)) \TermDefinedAs (a = c \And b = d)
+\]
+\end{object}

@@ -1,0 +1,22 @@
+% defined-in: apostol (page 174)
+% entity-id: prop-weierstrass-extreme-value
+% entity-type: prop
+% macro: \WeierstrassExtremeValue
+% args: 1
+% notation: #1
+
+\hypertarget{prop-weierstrass-extreme-value}{}
+\begin{theorem}[Weierstrass Extreme Value]
+\[
+\TerForall \Function{f} \colon [a, b] \TermTo \RealNumbers
+\quad \Continuous{f} \TermImplication \TermExists c, d \in [a, b] \quad f(c) = \Supremum{\sup\limits_{x \in [a, b]}} f(x) \TermConjunction{\land} f(d) = \Infimum{\inf\limits_{x \in [a, b]}} f(x)
+\]
+\end{theorem}
+
+\begin{proof}[RU]
+Достаточно доказать, что \Continuous{f} достигает своей верхней грани на $[a, b]$. Пусть $M = \Supremum{\sup\limits_{x \in [a, b]}} f(x)$. Предположим, что не существует такого $x \in [a, b]$, для которого $f(x) = M$. Определим $g(x) = M - f(x)$. Тогда $g(x) > 0$ для всех $x \in [a, b]$, следовательно, \Function{функция} $1/\Function{g}$ непрерывна на $[a, b]$. Согласно теореме о ограниченности непрерывной \Function{функции}, $1/\Function{g}$ ограничена на $[a, b]$, то есть $1/g(x) < C$ для некоторого $C > 0$. Это влечет $M - f(x) > 1/C$, откуда $f(x) < M - 1/C$ для всех $x \in [a, b]$. Это противоречит тому, что $M$ является точной верхней гранью $\Function{f}$ на $[a, b]$. Следовательно, $f(x) = M$ для некоторого $x \in [a, b]$. Аналогичное рассуждение применимо к $\Infimum{\inf} \Function{f}$.
+\end{proof}
+
+\begin{proof}[EN]
+It suffices to prove that \Continuous{f} attains its supremum on $[a, b]$. Let $M = \Supremum{\sup\limits_{x \in [a, b]}} f(x)$. Assume there is no $x \in [a, b]$ such that $f(x) = M$. Define $g(x) = M - f(x)$. Then $g(x) > 0$ for all $x \in [a, b]$, so the reciprocal $1/\Function{g}$ is continuous on $[a, b]$. By the theorem on the boundedness of continuous functions, $1/\Function{g}$ is bounded on $[a, b]$, such that $1/g(x) < C$ for some $C > 0$. This implies $M - f(x) > 1/C$, so that $f(x) < M - 1/C$ for all $x \in [a, b]$. This contradicts the fact that $M$ is the least upper bound of $\Function{f}$ on $[a, b]$. Hence, $f(x) = M$ for at least one $x \in [a, b]$. A similar argument applies to $\Infimum{\inf} \Function{f}$.
+\end{proof}

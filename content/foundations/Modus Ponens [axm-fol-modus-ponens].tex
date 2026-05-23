@@ -1,18 +1,20 @@
 % entity-id: axm-fol-modus-ponens
 % entity-type: axiom
 % defined-in: zorich-1, p. 55
+% macro: \FolModusPonens
+% args: 1
+% notation: #1
 
 \section{Правило вывода (Modus Ponens [axm-fol-modus-ponens])}
 
 \hypertarget{axm-fol-modus-ponens}{}
-\hypertarget{axm-fol-modus-ponens}{}
 \begin{axiom}[axm-fol-modus-ponens]
 \label{entity:axm-fol-modus-ponens}
 % 1. ОБЪЯВЛЕНИЕ ТИПОВ
-$\entityref{obj-predicate}{\mathcal{A}}, \entityref{obj-predicate}{\mathcal{B}}$ --- формулы логики первого порядка
+$\Predicate{\mathcal{A}}, \Predicate{\mathcal{B}}$ --- формулы логики первого порядка
 
 % 2. ТЕЛО ОПРЕДЕЛЕНИЯ
 \[
-\frac{\entityref{obj-predicate}{\mathcal{A}}, \quad \entityref{obj-predicate}{\mathcal{A}} \entityref{term-implication}{\to} \entityref{obj-predicate}{\mathcal{B}}}{\entityref{obj-predicate}{\mathcal{B}}}
+\frac{\Predicate{\mathcal{A}}, \quad \Predicate{\mathcal{A}} \TermImplication{\to} \Predicate{\mathcal{B}}}{\Predicate{\mathcal{B}}}
 \]
 \end{axiom}

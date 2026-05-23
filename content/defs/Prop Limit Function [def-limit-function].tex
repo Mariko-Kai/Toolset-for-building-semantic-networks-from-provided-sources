@@ -1,0 +1,25 @@
+% defined-in: zorich-1, p. 111
+% entity-id: def-limit-function
+% entity-type: def
+% macro: \LimitFunction
+% args: 1
+% notation: #1
+
+\section{Предел функции (Limit of a Function)}
+\label{entity:prop-limit-function}
+
+\textbf{Описание:}
+Число $A$ называется пределом \Function{функции} $\Function{f}$ при $x$, стремящемся к $a$ (по \Set{множеству} $E$), если для любого $\varepsilon > 0$ существует такое $\delta > 0$, что для любой точки $x \in E$, удовлетворяющей условию $0 < |x - a| < \delta$, выполнено неравенство $|f(x) - A| < \varepsilon$.
+
+\hypertarget{def-limit-function}{}
+\begin{property}[Limit of a Function]
+\[
+\TerForall E \subseteq \RealNumbers
+\TerForall a \in \LimitPoint{E'}
+\TerForall \Function{f} \colon E \TermTo \RealNumbers
+\TerForall A \in \RealNumbers
+\mathrm{IsLimit}(\Function{f}, a, A) \TermDefinedAs
+\TerForall \varepsilon > 0 \TermExists \delta > 0 \TerForall x \in E
+\left( 0 < \AbsAbstract{\left| x - a \right|} < \delta \TermImplication \AbsAbstract{\left| f(x) - A \right|} < \varepsilon \right)
+\]
+\end{property}

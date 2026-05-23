@@ -224,7 +224,7 @@ x \in X \;\land\; f(x) = x \;\square
 % Logic
 \newcommand{\mImplies}{\Longrightarrow}
 \newcommand{\mIff}{\Longleftrightarrow}
-\newcommand{\mForall}[1]{\forall \, #1 \colon \quad}
+\newcommand{\Forall}[1]{\forall \, #1 \colon \quad}
 
 % Analysis
 \newcommand{\mSeq}[1]{\{ #1_n \}}

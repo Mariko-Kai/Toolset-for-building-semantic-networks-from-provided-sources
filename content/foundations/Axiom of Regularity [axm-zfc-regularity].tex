@@ -1,15 +1,17 @@
 % entity-id: axm-zfc-regularity
 % entity-type: axiom
 % defined-in: vereshchagin-shen
+% macro: \ZfcRegularity
+% args: 1
+% notation: #1
 
-\hypertarget{axm-zfc-regularity}{}
 \hypertarget{axm-zfc-regularity}{}
 \begin{axiom}[axm-zfc-regularity] % Аксиома регулярности (Axiom of Regularity)
 
 
 
 \[
-\mForall{S}
-\left( (\mExists{y} y \in S) \mImplies \mExists{x} \left( x \in S \entityref{term-conjunction}{\land} \lnot \mExists{z} (z \in S \entityref{term-conjunction}{\land} z \in x) \right) \right)
+\TerForall S
+\left( (\TermExists y y \in S) \TermImplication \TermExists x \left( x \in S \TermConjunction{\land} \lnot \TermExists z (z \in S \TermConjunction{\land} z \in x) \right) \right)
 \]
 \end{axiom}

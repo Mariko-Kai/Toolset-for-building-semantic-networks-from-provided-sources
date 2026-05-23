@@ -110,7 +110,7 @@ Return STRICTLY a JSON object with no other text or explanation:
     "term_ru": "exact translation of the mathematical term in Russian",
     "term_en": "exact translation of the mathematical term in English"
 }}"""
-    resp = query_llm(prompt, model=model, json_mode=True, provider=provider)
+    resp = mgr.query_llm(prompt, model=model, json_mode=True, provider=provider)
     try:
         parsed = json.loads(resp)
         return parsed.get("term_ru", term), parsed.get("term_en", term)
@@ -151,85 +151,125 @@ def extract_keyword(query, model, provider=None):
 
 # ── Multi-Result Entity Resolution ───────────────────────────────────────────
 
-def resolve_entities(query, canonical_term, model, available_entities, provider=None):
+def normalize_math_term(term):
+    """Кастомный стеммер/нормализатор для математических терминов"""
+    import re
+    t = term.lower()
+    t = re.sub(r'[^\w\s]', '', t)
+    words = []
+    for w in t.split():
+        if len(w) > 4:
+            w = re.sub(r'(ый|ая|ое|ые|ого|ей|их|ом|ем|ой|у|а|о|е|и|ы|я|ic|al|ion|ing|ed|s)$', '', w)
+        words.append(w)
+    return " ".join(sorted(words))
+
+
+
+def cosine_similarity(v1, v2):
+    import math
+    if not v1 or not v2: return 0.0
+    dot = sum(a*b for a,b in zip(v1, v2))
+    norm1 = math.sqrt(sum(a*a for a in v1))
+    norm2 = math.sqrt(sum(b*b for b in v2))
+    if norm1 == 0 or norm2 == 0: return 0.0
+    return dot / (norm1 * norm2)
+
+def resolve_entities(query, canonical_term, model, available_entities, provider=None, embed_provider=None, embed_model=None):
     """
-    Resolves query against available entities. Returns ALL matches with confidence.
-    Returns: (matches: list[dict], keyword: str)
+    Resolves query using Shift-Left Semantic Search Architecture.
+    1. Dictionary (Normalized string match)
+    2. Vector Embedding Search (cosine similarity > 0.85)
+    3. LLM-Judge Arbitration (goedel-prover)
     """
-    if not available_entities:
+    from pipeline.model_manager import ModelManager
+    mgr = ModelManager.get_instance()
+    import sqlite3
+    import struct
+    import json
+    import re
+    from pathlib import Path
+    
+    db_path = PROJECT_ROOT / "mathesis_index.db"
+    if not db_path.exists():
         return [], canonical_term
-
-    entities_str = "\n".join(
-        f"- '{e['title']}' (ID: {e['id']})" for e in available_entities
-    )
-
-    prompt = f"""You are a STRICT semantic router for a mathematical database.
-
-TASK: Find ALL entities from the available list that refer EXACTLY to the term "{canonical_term}".
-
-AVAILABLE ENTITIES:
-{entities_str}
+        
+    conn = sqlite3.connect(db_path, timeout=10.0)
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("SELECT entity_id, title, nl_desc, embedding, lean_path FROM entities")
+        rows = cursor.fetchall()
+    except sqlite3.OperationalError:
+        conn.close()
+        return [], canonical_term
+        
+    conn.close()
+    
+    # 1. Normalization (Dictionary Search)
+    norm_query = normalize_math_term(canonical_term)
+    candidates = []
+    
+    for eid, title, nl_desc, emb_blob, lean_path in rows:
+        norm_title = normalize_math_term(title)
+        if norm_query == norm_title:
+            candidates.append({"entity_id": eid, "title": title, "nl_desc": nl_desc, "score": 1.0, "method": "dictionary"})
+            
+    # 2. Embedding Search (Always run to pool candidates)
+    if not candidates:
+        try:
+            query_emb = mgr.get_embedding(canonical_term, provider=embed_provider, model=embed_model)
+            if query_emb:
+                for eid, title, nl_desc, emb_blob, lean_path in rows:
+                    if emb_blob:
+                        num_floats = len(emb_blob) // 4
+                        emb_vec = struct.unpack(f"{num_floats}f", emb_blob)
+                        sim = cosine_similarity(query_emb, emb_vec)
+                        if sim > 0.85:
+                            candidates.append({"entity_id": eid, "title": title, "nl_desc": nl_desc, "score": sim, "method": "embedding"})
+        except Exception as e:
+            print(f"[-] Embedding search failed: {e}")
+            
+    if not candidates:
+        return [], canonical_term
+        
+    # Sort candidates by score
+    candidates.sort(key=lambda x: x["score"], reverse=True)
+    
+    # 3. LLM-Judge Arbitration
+    for best_candidate in candidates:
+        print(f"[*] Candidate found by {best_candidate['method']}: {best_candidate['entity_id']} (score {best_candidate['score']:.2f})")
+        
+        desc_text = str(best_candidate['nl_desc'])[:1000] if best_candidate['nl_desc'] else "No description available."
+        prompt = f"""You are 'goedel-prover', a strict mathematical arbiter.
+Your goal is to decide if the USER TERM is EXACTLY equivalent to the CANDIDATE entity in the context of mathematical definitions.
 
 USER TERM: "{canonical_term}"
 
-RULES (EXTREMELY STRICT):
-1. NO PARTIAL MATCHES: The entity's title MUST be a direct translation or exact synonym of "{canonical_term}".
-2. NO CONCEPT MIXING: An operation is NOT the same as a class of objects. A limit operation is NOT a set. Reject these with confidence 0.0.
-3. CONFIDENCE: 
-   - 1.0 = EXACT match ONLY.
-   - Do NOT return any entity with confidence < 1.0. 
-   - If NO entities match EXACTLY, return an empty array `[]`.
+CANDIDATE TITLE: "{best_candidate['title']}"
+CANDIDATE DESCRIPTION:
+{desc_text}
 
-Return ONLY valid JSON:
-{{
-    "matches": [
-        {{"entity_id": "id", "confidence": 1.0, "reason": "why it is an EXACT match"}}
-    ]
-}}
+Is the USER TERM identical to this CANDIDATE? 
+Answer EXACTLY with valid JSON:
+{{ "is_identical": true, "reason": "short explanation" }} or {{ "is_identical": false, "reason": "why they differ" }}
 """
-    response = query_llm(prompt, model=model, json_mode=True, provider=provider)
-    
-    # Strip markdown JSON wrappers if present
-    response = re.sub(r'^```json\s*', '', response.strip(), flags=re.MULTILINE)
-    response = re.sub(r'^```\s*$', '', response.strip(), flags=re.MULTILINE).strip()
-    
-    # Extract just the JSON object/array to handle models appending text
-    match = re.search(r'(\{.*\}|\[.*\])', response, re.DOTALL)
-    if match:
-        response = match.group(1)
-    
-    try:
-        parsed = json.loads(response)
-        if isinstance(parsed, list):
-            # some models return array directly
-            matches = parsed
-        else:
-            matches = parsed.get("matches", [])
-    except (json.JSONDecodeError, ValueError) as e:
-        print(f"[-] Ошибка парсинга JSON: {e}\nОчищенный ответ модели:\n{response}")
-        return [], canonical_term
-
-    # Validate entity IDs exist
-    valid_ids = {e["id"] for e in available_entities}
-    validated_matches = []
-
-    for m in matches:
-        eid = m.get("entity_id", "")
-        confidence = m.get("confidence", 0)
-
-        if confidence < 0.7:
-            continue
-
-        if eid in valid_ids:
-            validated_matches.append(m)
-        else:
-            # Try fuzzy match for typos
-            closest = difflib.get_close_matches(eid, list(valid_ids), n=1, cutoff=0.90)
-            if closest:
-                m["entity_id"] = closest[0]
-                validated_matches.append(m)
-
-    return validated_matches, canonical_term
+        try:
+            response = mgr.query_llm(prompt, model=model, json_mode=True, provider=provider)
+            match = re.search(r'(\\{.*\\})', response, re.DOTALL)
+            if match: response = match.group(1)
+            
+            decision = json.loads(response)
+            if decision.get("is_identical", False):
+                print(f"[Queue] [+] Goedel Arbitration confirmed match for {best_candidate['entity_id']}: {decision.get('reason')}")
+                return [{"entity_id": best_candidate["entity_id"], "confidence": best_candidate["score"]}], canonical_term
+            else:
+                print(f"[Queue] [-] Goedel Arbitration rejected match for {best_candidate['entity_id']}: {decision.get('reason')}")
+        except Exception as e:
+            print(f"[-] Failed to parse arbiter JSON: {e}")
+            if best_candidate["method"] == "dictionary":
+                return [{"entity_id": best_candidate["entity_id"], "confidence": 1.0}], canonical_term
+            
+    return [], canonical_term
 
 
 

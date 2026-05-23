@@ -1,0 +1,24 @@
+% defined-in: zorich (page 39)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - \mathcal{A} : \mathrm{Type} (The set of atomic mathematical statements)
+%    - \mathcal{L} : \mathrm{Type} (The set of all logical formulas)
+%    - \neg, \wedge, \vee, \Rightarrow : \mathrm{Operations} (Logical connectives)
+% 2. Data Structures: 
+%    - \mathcal{L} is defined inductively as the smallest set containing \mathcal{A} closed under the application of logical operators.
+% 3. Implicit Bounds: 
+%    - None required for the definition of the syntax.
+% ========================
+
+% entity-id: def-logic-formula-construction
+% entity-type: def
+% macro: \LogicFormulaConstruction
+% args: 1
+% notation: #1
+
+\hypertarget{def-logic-formula-construction}{}
+\begin{operation}[LogicalFormulaConstruction]
+\[
+\mathrm{IsLogicalFormula}(\phi) \TermDefinedAs \left( \phi \in \mathcal{A} \right) \TermDisjunction \left( \exists \psi \in \mathcal{L} : \phi = \TermNegation{\neg} \psi \right) \TermDisjunction \left( \exists \psi_1, \psi_2 \in \mathcal{L} : \phi \in \{ \psi_1 \TermConjunction{\wedge} \psi_2, \psi_1 \TermDisjunction{\vee} \psi_2, \psi_1 \Rightarrow \psi_2 \} \right)
+\]
+\end{operation}

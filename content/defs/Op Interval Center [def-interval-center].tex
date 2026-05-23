@@ -1,0 +1,20 @@
+% defined-in: zorich (page 64)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [a : ℝ, b : ℝ, c : ℝ]
+% 2. Data Structures: [The interval is represented as a pair (a, b) : ℝ × ℝ]
+% 3. Implicit Bounds: [None required for the arithmetic mean of two reals]
+% ========================
+
+% entity-id: def-interval-center
+% entity-type: def
+% macro: \IntervalCenter
+% args: 1
+% notation: #1
+
+\hypertarget{def-interval-center}{}
+\begin{operation}[Center of an Interval]
+\[
+\TerForall a \colon \RealNumbers \TerForall b \colon \RealNumbers \TerForall c \colon \RealNumbers
+\mathrm{IsCenter}(c, a, b) \TermDefinedAs \left( c = \frac{a + b}{\NaturalNumbers{2}} \right)
+\]
+\end{operation}

@@ -1,0 +1,15 @@
+% defined-in: zorich (page 39)
+% entity-id: def-logical-connective
+% entity-type: def
+% macro: \LogicalConnective
+% args: 1
+% notation: #1
+
+\hypertarget{def-logical-connective}{}
+\begin{operation}[Logical Connective]
+\[
+\TerForall \mathcal{S} \colon \Set{\mathcal{A}}
+\TerForall \mathcal{C} \in \{ \TermNegation, \And, \TermDisjunction, \TermImplication \}
+\mathrm{IsLogicalConnective}(\mathcal{C}, \mathcal{S}) \TermDefinedAs \left( \mathcal{C} \colon \mathcal{S}^n \TermTo \Predicate{\mathcal{S}_{comp}} \right)
+\]
+\end{operation}

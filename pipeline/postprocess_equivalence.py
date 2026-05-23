@@ -139,7 +139,7 @@ class MathesisSemanticMerger:
         
         try:
             # Делаем запрос через централизованный query_llm Mathesis
-            reply = query_llm(
+            reply = ModelManager.get_instance().query_llm(
                 prompt=prompt,
                 model=self.classifier_model,
                 provider=self.classifier_provider
@@ -351,7 +351,7 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
         
         try:
             # Делаем запрос через централизованный query_llm Mathesis
-            reply = query_llm(
+            reply = ModelManager.get_instance().query_llm(
                 prompt=prompt,
                 model=self.lean_model,
                 provider=self.lean_provider

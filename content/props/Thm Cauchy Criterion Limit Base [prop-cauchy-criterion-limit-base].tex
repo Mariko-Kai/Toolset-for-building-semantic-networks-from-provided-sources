@@ -1,0 +1,30 @@
+% defined-in: zorich (page 133), zorich (page 133), zorich (page 134)
+% entity-id: prop-cauchy-criterion-limit-base
+% entity-type: prop
+% macro: \CauchyCriterionLimitBase
+% args: 1
+% notation: #1
+
+\hypertarget{prop-cauchy-criterion-limit-base}{}
+\begin{theorem}[Cauchy Criterion for Limits over a Base]
+\[
+\TerForall X \in \mathrm{Set}
+\TerForall \mathcal{B} \subseteq \mathcal{P}(X)
+\TerForall \Function{f} \colon X \TermTo \RealNumbers
+\left( \text{is\_base}(\mathcal{B}) \right)
+\TermImplication
+\left( \TermExists A \in \RealNumbers \LimitFunctionBase{\mathrm{IsLimitBase}}(\Function{f}, \mathcal{B}, A) \right)
+\TermEquivalence
+\left( \TerForall \varepsilon > 0 \TermExists B \in \mathcal{B} \left( \Supremum{\sup}_{x_1, x_2 \in B} \AbsAbstract{\left| f(x_1) - f(x_2) \right|} < \varepsilon \right) \right)
+\]
+\end{theorem}
+
+\begin{proof}[RU]
+Необходимость: Пусть $\LimitFunctionBase{\lim}_{\mathcal{B}} f(x) = A$. Тогда для любого $\varepsilon > 0$ существует $B \in \mathcal{B}$ такое, что для любого $x \in B$ выполняется $\AbsAbstract{\left| f(x) - A \right|} < \frac{\varepsilon}{3}$. Для любых $x_1, x_2 \in B$ имеем $\AbsAbstract{\left| f(x_1) - f(x_2) \right|} \leq \AbsAbstract{\left| f(x_1) - A \right|} + \AbsAbstract{\left| f(x_2) - A \right|} < \frac{2}{3}\varepsilon < \varepsilon$.
+Достаточность: Для каждого $n \in \NaturalNumbers$ выберем $B_n \in \mathcal{B}$ такое, что $\omega(\Function{f}; B_n) < \frac{1}{n}$. Выберем $x_n \in B_n$. Для любых $n, m$ и $x \in B_n \cap B_m$ имеем $\AbsAbstract{\left| f(x_n) - f(x_m) \right|} \leq \AbsAbstract{\left| f(x_n) - f(x) \right|} + \AbsAbstract{\left| f(x) - f(x_m) \right|} < \frac{1}{n} + \frac{1}{m}$. Последовательность $\{f(x_n)\}$ фундаментальна и, следовательно, сходится к некоторому $A \in \RealNumbers$. Переходя к пределу при $m \to \infty$, получаем $\AbsAbstract{\left| f(x_n) - A \right|} \leq \frac{1}{n}$. Тогда для $x \in B_n$ имеем $\AbsAbstract{\left| f(x) - A \right|} \leq \AbsAbstract{\left| f(x) - f(x_n) \right|} + \AbsAbstract{\left| f(x_n) - A \right|} < \frac{1}{n} + \frac{1}{n} = \frac{2}{n}$. Выбирая $n > \frac{2}{\varepsilon}$, получаем требуемое.
+\end{proof}
+
+\begin{proof}[EN]
+Necessity: Let $\LimitFunctionBase{\lim}_{\mathcal{B}} f(x) = A$. For any $\varepsilon > 0$, there exists $B \in \mathcal{B}$ such that for all $x \in B$, $\AbsAbstract{\left| f(x) - A \right|} < \frac{\varepsilon}{3}$. For any $x_1, x_2 \in B$, we have $\AbsAbstract{\left| f(x_1) - f(x_2) \right|} \leq \AbsAbstract{\left| f(x_1) - A \right|} + \AbsAbstract{\left| f(x_2) - A \right|} < \frac{2}{3}\varepsilon < \varepsilon$.
+Sufficiency: For each $n \in \NaturalNumbers$, choose $B_n \in \mathcal{B}$ such that $\omega(\Function{f}; B_n) < \frac{1}{n}$. Choose $x_n \in B_n$. For any $n, m$ and $x \in B_n \cap B_m$ we have $\AbsAbstract{\left| f(x_n) - f(x_m) \right|} \leq \AbsAbstract{\left| f(x_n) - f(x) \right|} + \AbsAbstract{\left| f(x) - f(x_m) \right|} < \frac{1}{n} + \frac{1}{m}$. The sequence $\{f(x_n)\}$ is Cauchy and therefore converges to some $A \in \RealNumbers$. Passing to the limit as $m \to \infty$, we obtain $\AbsAbstract{\left| f(x_n) - A \right|} \leq \frac{1}{n}$. Then for $x \in B_n$ we have $\AbsAbstract{\left| f(x) - A \right|} \leq \AbsAbstract{\left| f(x) - f(x_n) \right|} + \AbsAbstract{\left| f(x_n) - A \right|} < \frac{1}{n} + \frac{1}{n} = \frac{2}{n}$. Choosing $n > \frac{2}{\varepsilon}$, we obtain the desired result.
+\end{proof}

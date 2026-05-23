@@ -787,7 +787,7 @@ def main():
         sys.exit(1)
 
     # Init DB
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10.0)
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS formulation_raw_cache (

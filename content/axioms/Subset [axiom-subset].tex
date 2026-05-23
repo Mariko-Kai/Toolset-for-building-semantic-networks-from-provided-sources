@@ -1,0 +1,22 @@
+% entity-id: axiom-subset
+% entity-type: axiom
+% lean_manual: true
+% system: ZFC
+% macro: \TermSubset
+% args: 0
+% notation: \subset
+
+
+\hypertarget{axiom-subset}{}
+\begin{object}[term-subset] % \Subset{Подмножество} (Subset)
+
+
+
+\textbf{Символ:} $\subset$ (или $\subseteq$)
+
+\textbf{Формальное определение:}
+\Set{Множество} $A$ называется \Subset{подмножеством} \Set{множества} $B$, если каждый элемент $A$ является элементом $B$:
+\[ A \subset B \TermDefIff \TerForall x (x \in A \TermImplication x \in B) \]
+
+\textbf{Примечание:} В архитектуре Mathesis символ $\subset$ является терминалом и не требует обертки в \texttt{entityref}.
+\end{object}

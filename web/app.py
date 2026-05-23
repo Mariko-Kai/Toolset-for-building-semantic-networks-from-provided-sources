@@ -455,10 +455,39 @@ async def index(request: Request):
 @app.get("/catalog", response_class=HTMLResponse)
 async def catalog_page(request: Request):
     """Catalog page: all entities grouped by type."""
-    axioms = kb.list_axioms()
-    objects = kb.list_objects()
-    properties = kb.list_properties()
-    operations = kb.list_operations()
+    cache_path = PROJECT_ROOT / "output" / "nl_translations_cache.json"
+    cache_data = {}
+    if cache_path.exists():
+        with open(cache_path, "r", encoding="utf-8") as f:
+            try:
+                cache_data = json.load(f)
+            except json.JSONDecodeError:
+                cache_data = {}
+
+    axioms, objects, properties, operations = [], [], [], []
+    for eid, data in cache_data.items():
+        entity = {
+            "id": eid,
+            "name": data.get("name_ru") or eid,
+            "statement": data.get("desc_ru") or "",
+            "formal_definition": data.get("desc_ru") or "",
+            "system": "ZFC",
+            "module": "analysis",
+            "arity": "?"
+        }
+        if eid.startswith("axm-"):
+            axioms.append(entity)
+        elif eid.startswith("obj-"):
+            objects.append(entity)
+        elif eid.startswith("prop-"):
+            properties.append(entity)
+        elif eid.startswith("op-") or eid.startswith("oper-"):
+            operations.append(entity)
+            
+    axioms.sort(key=lambda x: x["id"])
+    objects.sort(key=lambda x: x["id"])
+    properties.sort(key=lambda x: x["id"])
+    operations.sort(key=lambda x: x["id"])
 
     return templates.TemplateResponse("index.html", {
         "request": request,
@@ -478,6 +507,17 @@ async def axiom_page(request: Request, id: str):
         raise HTTPException(status_code=404, detail=f"Axiom '{id}' not found")
 
     used_by = kb.get_used_by(id)
+    
+    # Inject natural language description if available
+    cache_path = PROJECT_ROOT / "output" / "nl_translations_cache.json"
+    if cache_path.exists():
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                cache_data = json.load(f)
+                if id in cache_data and cache_data[id].get("desc_ru"):
+                    entity.statement = cache_data[id]["desc_ru"]
+        except Exception:
+            pass
 
     return templates.TemplateResponse("entity.html", {
         "request": request,
@@ -498,6 +538,17 @@ async def object_page(request: Request, id: str):
 
     props = kb.get_object_properties(id)
     used_by = kb.get_used_by(id)
+    
+    # Inject natural language description if available
+    cache_path = PROJECT_ROOT / "output" / "nl_translations_cache.json"
+    if cache_path.exists():
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                cache_data = json.load(f)
+                if id in cache_data and cache_data[id].get("desc_ru"):
+                    entity.formal_definition = cache_data[id]["desc_ru"]
+        except Exception:
+            pass
 
     # Resolve property names
     prop_details = []
@@ -535,6 +586,17 @@ async def property_page(request: Request, id: str):
 
     used_by = kb.get_used_by(id)
 
+    # Inject natural language description if available
+    cache_path = PROJECT_ROOT / "output" / "nl_translations_cache.json"
+    if cache_path.exists():
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                cache_data = json.load(f)
+                if id in cache_data and cache_data[id].get("desc_ru"):
+                    entity.formal_definition = cache_data[id]["desc_ru"]
+        except Exception:
+            pass
+
     return templates.TemplateResponse("entity.html", {
         "request": request,
         "entity": entity,
@@ -557,6 +619,17 @@ async def operation_page(request: Request, id: str):
 
     args = kb.get_operation_arguments(id)
     used_by = kb.get_used_by(id)
+
+    # Inject natural language description if available
+    cache_path = PROJECT_ROOT / "output" / "nl_translations_cache.json"
+    if cache_path.exists():
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                cache_data = json.load(f)
+                if id in cache_data and cache_data[id].get("desc_ru"):
+                    entity.formal_definition = cache_data[id]["desc_ru"]
+        except Exception:
+            pass
 
     # Resolve argument object names
     arg_details = []
@@ -768,7 +841,7 @@ async def compiler_page_redirect():
 
 @app.get("/result.pdf")
 async def get_result_pdf():
-    pdf_path = PROJECT_ROOT / "result.pdf"
+    pdf_path = PROJECT_ROOT / "output" / "result.pdf"
     if pdf_path.exists():
         return FileResponse(pdf_path, media_type="application/pdf")
     else:
@@ -777,11 +850,22 @@ async def get_result_pdf():
 
 @app.get("/master.pdf")
 async def get_master_pdf():
-    pdf_path = PROJECT_ROOT / "master.pdf"
+    # master.pdf устарел, перенаправляем или отдаем full_book.pdf (или ищем в output)
+    pdf_path = PROJECT_ROOT / "output" / "master.pdf"
+    if not pdf_path.exists():
+        pdf_path = PROJECT_ROOT / "output" / "full_book.pdf"
     if pdf_path.exists():
         return FileResponse(pdf_path, media_type="application/pdf")
     else:
         raise HTTPException(status_code=404, detail="master.pdf not found")
+
+@app.get("/full_book.pdf")
+async def get_full_book_pdf():
+    pdf_path = PROJECT_ROOT / "output" / "full_book.pdf"
+    if pdf_path.exists():
+        return FileResponse(pdf_path, media_type="application/pdf")
+    else:
+        raise HTTPException(status_code=404, detail="full_book.pdf not found")
 
 
 @app.websocket("/ws/compiler")

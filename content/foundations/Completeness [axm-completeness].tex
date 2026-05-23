@@ -1,19 +1,21 @@
 % entity-id: axm-completeness
 % entity-type: axiom
 % defined-in: zorich-1, p. 77
+% macro: \Completeness
+% args: 1
+% notation: #1
 
 \section{Аксиома полноты (Completeness Axiom)}
 
 \hypertarget{axm-completeness}{}
-\hypertarget{axm-completeness}{}
 \begin{axiom}[axm-completeness]
 \label{entity:axm-completeness}
 % 1. ОБЪЯВЛЕНИЕ ТИПОВ
-$\entityref{obj-set}{X, Y} \subset \entityref{obj-real-numbers}{\mReal}$
+$\Set{X, Y} \subset \RealNumbers$
 
 % 2. ТЕЛО АКСИОМЫ
 \[
-(\mForall x \in \entityref{obj-set}{X} \mAnd \mForall y \in \entityref{obj-set}{Y} \colon x \entityref{prop-partial-order}{\le} y) \mImplies 
-(\mExists c \in \entityref{obj-real-numbers}{\mReal} \mForall x \in \entityref{obj-set}{X}, \mForall y \in \entityref{obj-set}{Y} \colon x \entityref{prop-partial-order}{\le} c \entityref{prop-partial-order}{\le} y)
+(\TerForall x \in \Set{X} \And \TerForall y \in \Set{Y} \colon x \SetPartialOrder{\le} y) \TermImplication 
+(\TermExists c \in \RealNumbers \TerForall x \in \Set{X}, \TerForall y \in \Set{Y} \colon x \SetPartialOrder{\le} c \SetPartialOrder{\le} y)
 \]
 \end{axiom}

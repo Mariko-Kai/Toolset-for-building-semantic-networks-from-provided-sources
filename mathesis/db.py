@@ -141,6 +141,13 @@ CREATE TABLE IF NOT EXISTS object_composition (
     )
 );
 
+-- === ALIAS REGISTRY ===
+
+CREATE TABLE IF NOT EXISTS alias_registry (
+    alias TEXT PRIMARY KEY,
+    entity_id TEXT NOT NULL
+);
+
 -- === FULL-TEXT SEARCH ===
 
 CREATE VIRTUAL TABLE IF NOT EXISTS entity_fts USING fts5(
@@ -175,7 +182,7 @@ def init_schema(conn: sqlite3.Connection) -> None:
 def reset_db(conn: sqlite3.Connection) -> None:
     """Drop all tables and recreate (for reindexing)."""
     tables = [
-        "entity_fts",
+        "entity_fts", "alias_registry",
         "object_composition", "equivalence", "theorem_dependency",
         "theorem_axiom", "theorem_operation", "theorem_property",
         "theorem_object", "operation_argument", "object_property",

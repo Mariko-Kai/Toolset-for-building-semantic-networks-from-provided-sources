@@ -406,6 +406,22 @@ def get_containers(conn: sqlite3.Connection,
 
 
 # ---------------------------------------------------------------------------
+# Aliases & Future Nodes Pruning (PDSE)
+# ---------------------------------------------------------------------------
+
+def lookup_alias(conn: sqlite3.Connection, alias: str) -> Optional[str]:
+    row = conn.execute("SELECT entity_id FROM alias_registry WHERE alias = ?", (alias,)).fetchone()
+    return row["entity_id"] if row else None
+
+
+def filter_future_nodes(conn: sqlite3.Connection, candidate_ids: list[str], current_page: int) -> list[str]:
+    # Placeholder for page-based pruning if page data is injected, or topological pruning.
+    # We return candidates as is for now, or filter if page info becomes available in SQL.
+    # The actual implementation of "страницы > текущей" requires a page column.
+    return candidate_ids
+
+
+# ---------------------------------------------------------------------------
 # Full-text search
 # ---------------------------------------------------------------------------
 

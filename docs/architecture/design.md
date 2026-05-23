@@ -489,7 +489,7 @@ content/
 \section{definition}
 \label{entity:obj-function}
 
-\mForall{\entityref{obj-set}{X},\; \entityref{obj-set}{Y}}
+\Forall{\entityref{obj-set}{X},\; \entityref{obj-set}{Y}}
 \text{\textit{функция}} \; f \colon X \to Y
 \mDefIff
 f \subset \entityref{obj-cartesian-product}{X \times Y} \;\land\;
@@ -613,7 +613,7 @@ All `\section{definition}` / `\section{statement}` in `content/` use these rules
 
 | Rule | Canonical Macro (`mathesis.sty`) | Avoid |
 |---|---|---|
-| Quantifiers | `\mForall{x}`, `\mExists{x}` | `\forall x`, `\exists x` |
+| Quantifiers | `\Forall{x}`, `\mExists{x}` | `\forall x`, `\exists x` |
 | Separator | `\;\;` (or built-in to macro) | comma, colon |
 | Colon before condition | `\colon` + `\quad` | plain `:` |
 | Implication | `\mImplies` | `\Rightarrow`, `\implies` |
@@ -886,10 +886,40 @@ $\varepsilon$-окрестностью точки $x_0$ называется м�
 ### 13.2 Шаблон
 ```latex
 % ПРАВИЛЬНО (Strict Typing Block):
-\mForall{f \colon \entityref{obj-closed-interval}{[a,b]} \mTo \entityref{obj-real-numbers}{\mReal}}
-\mForall{\varepsilon > 0}
+\Forall{f \colon \entityref{obj-closed-interval}{[a,b]} \mTo \entityref{obj-real-numbers}{\mReal}}
+\Forall{\varepsilon > 0}
 ... (тело)
 
 % НЕПРАВИЛЬНО:
 \mAbs{f(x)} < \varepsilon  % Откуда взялись f, x, \varepsilon?
 ```
+
+---
+
+## 14. Semantic Macros and Translation Caching
+
+В архитектуру добавлены механизмы кэширования и семантической макрогенерации для обеспечения надежности компиляции и скорости сборки.
+
+### 14.1 Semantic Macros (`mathesis_macros.sty`)
+Вместо использования регулярных выражений для парсинга и подмены `\entityref{id}{text}` в Python-коде, система перешла на нативные возможности LaTeX для разрешения зависимостей и гиперссылок.
+
+1. **Компилятор макросов (`pipeline/macro_compiler.py`)**:
+   - Сканирует все `.tex` файлы в `content/`.
+   - Читает фронтматтер и извлекает поля: `% macro: \MacroName` и `% args: N`.
+   - Генерирует `output/mathesis_macros.sty` с определениями макросов (например, `\newcommand{\Set}[1]{\hyperlink{obj-set}{#1}}`).
+2. **Преимущества**:
+   - Вычисление зависимостей (DAG) происходит путём сканирования текстов на наличие этих макросов.
+   - Исключаются ошибки с неэкранированными символами и парсингом вложенных скобок.
+
+### 14.2 Translation Caching (`nl_translations_cache.json`)
+Генерация естественного языка (RU/EN параграфы) с помощью LLM (модули `generate_answer.py` и `generate_full_book.py`) кэшируется.
+
+1. **Кэширование**:
+   - Результаты синтеза (`synth_ru`, `synth_en`, `desc_ru`, `desc_en`) сохраняются в `output/nl_translations_cache.json` по ключу `entity_id`.
+   - При повторной сборке `full_book.pdf` или `result.pdf` текст переиспользуется, что ускоряет сборку и экономит ресурсы LLM.
+
+### 14.3 Formula Wrapping (`pipeline/latex_utils.py`)
+Автоматический перенос длинных формул для PDF-формата A4:
+- Функция `process_body_formulas` разбивает слишком длинные формулы на несколько строк.
+- Формулы разбиваются строго по бинарным операторам (`\mIff`, `\mImplies`, `=`, `<`) без разрыва скобок.
+- Используется окружение `flalign*` для аккуратного левого выравнивания математических выражений.

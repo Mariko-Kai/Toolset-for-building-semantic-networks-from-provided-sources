@@ -1,0 +1,18 @@
+% defined-in: spivak (page 525), spivak (page 525)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f_n : ℕ → (A → ℝ), f : A → ℝ, A : Type, s_n : ℕ → (A → ℝ), n : ℕ, ε : ℝ, N : ℕ, x : A]
+% 2. Data Structures: [s_n is defined as the partial sum function: s_n(x) = \sum_{i=1}^n f_i(x)]
+% 3. Implicit Bounds: [n : ℕ, N : ℕ, ε > 0, x \in A]
+% ========================
+
+% entity-id: def-function-uniform-convergence-series
+% entity-type: def
+\begin{object}[Uniform Convergence of a Series of Functions]
+\Forall{A \colon \mathrm{Type}}
+\Forall{f_n \colon \mathbb{N} \mTo (A \mTo \entityref{obj-real-numbers}{\mathbb{R}})}
+\Forall{f \colon A \mTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\mathrm{IsUniformlyConvergentSeries}(f_n, f, A) \mDefinedAs
+\left( \exists s \colon \mathbb{N} \mTo (A \mTo \entityref{obj-real-numbers}{\mathbb{R}}) \right)
+\left( \forall n \colon \mathbb{N}, s(n) = \sum_{i=1}^{n} f_i \right) \And
+\left( \forall \varepsilon > 0, \exists N \colon \mathbb{N}, \forall n \geq N, \forall x \in A, \entityref{op-absolute-value}{\entityref{op-abs-abstract}{\mathrm{abs}}(s(n)(x) - f(x))} < \varepsilon \right)
+\end{object}

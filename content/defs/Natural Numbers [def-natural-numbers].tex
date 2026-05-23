@@ -1,0 +1,21 @@
+% entity-id: def-natural-numbers
+% entity-type: def
+% lean_manual: true
+% defined-in: zorich-1, p. 58
+% macro: \NaturalNumbers
+% args: 0
+% notation: \mathbb{N}
+
+\section{Натуральные числа (Natural Numbers)}
+
+\hypertarget{def-natural-numbers}{}
+\begin{object}[obj-natural-numbers]
+\label{entity:obj-natural-numbers}
+% 1. ОБЪЯВЛЕНИЕ ТИПОВ
+% Натуральные числа как подмножество вещественных чисел, удовлетворяющее индукции
+
+% 2. ТЕЛО ОПРЕДЕЛЕНИЯ
+\[
+\mNatural \subset \RealNumbers \colon (1 \in \mNatural) \And (\TerForall n \in \mNatural \TermImplication n + 1 \in \mNatural)
+\]
+\end{object}
