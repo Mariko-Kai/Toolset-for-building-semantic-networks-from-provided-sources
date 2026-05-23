@@ -19,8 +19,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from pipeline.export_to_lean import query_llm, setup_provider, setup_lean_provider, _LLM_PROVIDER
 from pipeline.config import PROVIDERS, resolve_module_config
+from pipeline.model_manager import ModelManager
 
 DB_PATH = PROJECT_ROOT / "mathesis_index.db"
 CONTENT_DIR = PROJECT_ROOT / "content"
@@ -246,8 +246,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
     from pipeline.export_to_lean import translate_to_lean_via_llm, translate_to_lean_regex, is_semantic_error
     from pipeline.lean_validator import validate_entity, discover_mathlib_signatures
     from pipeline.ensemble_extractor import gather_implicit_assumptions
-    from pipeline.export_to_lean import _LLM_PROVIDER
-    active_provider_name = (_LLM_PROVIDER or "OLLAMA").upper()
+    active_provider_name = "ModelManager (synth)"
 
     while current_attempt <= max_attempts:
         print(f"\n[synthesizer] --- Attempt {current_attempt}/{max_attempts} ---", flush=True)
@@ -266,7 +265,8 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
             for inner_attempt in range(1, 4):
                 print(f"[synthesizer] Sending prompt to {active_provider_name} LLM to generate LaTeX (Inner Attempt {inner_attempt}/3)...", flush=True)
                 t0 = time.time()
-                response = query_llm(current_prompt, model=model)
+                mgr = ModelManager.get_instance()
+                response = mgr.query_llm(current_prompt, role="synth")
                 elapsed = time.time() - t0
                 
                 if response and len(response.strip()) >= 10:
@@ -576,6 +576,12 @@ def main():
                         help="Отдельный провайдер для Lean формализации")
     parser.add_argument("--lean-api-key",  type=str, default=None, help="API Key for Lean provider")
     parser.add_argument("--lean-model",    type=str, default=None, help="Model for Lean provider")
+    
+    # ── Аргументы Embed-провайдера ──────────────────────────────────
+    parser.add_argument("--embed-provider", type=str, default=None, choices=PROVIDERS)
+    parser.add_argument("--embed-api-key",  type=str, default=None)
+    parser.add_argument("--embed-model",    type=str, default=None)
+
     parser.add_argument("--no-validate", action="store_true", help="Skip Lean validation during synthesis")
     parser.add_argument("--canonical-term", type=str, default="", help="The target mathematical term to synthesize")
     args = parser.parse_args()
@@ -591,10 +597,13 @@ def main():
         module_api_key=args.synth_api_key,
     )
 
-    # Initialize LLM providers via shared logic
-    setup_provider(provider, api_key=api_key, model=model)
+    # Initialize LLM providers via ModelManager
+    mgr = ModelManager.get_instance()
+    mgr.setup_role("synth", provider, model, api_key)
     if args.lean_provider:
-        setup_lean_provider(args.lean_provider, api_key=args.lean_api_key, model=args.lean_model)
+        mgr.setup_role("lean", args.lean_provider, args.lean_model, args.lean_api_key)
+    if args.embed_provider:
+        mgr.setup_role("embed", args.embed_provider, args.embed_model, args.embed_api_key)
 
     conn = sqlite3.connect(DB_PATH, timeout=10.0)
     cursor = conn.cursor()
@@ -708,10 +717,15 @@ def main():
         # Generate embedding for the new entity
         embed_blob = None
         try:
-            # We need to import the new get_embedding from ollama_wrapper
-            # But it's simpler to just write it here or import it
-            from pipeline.ollama_wrapper import get_embedding
-            embed_vec = get_embedding(nl_desc, args.embed_provider if hasattr(args, "embed_provider") else None, args.embed_model if hasattr(args, "embed_model") else None)
+            mgr = ModelManager.get_instance()
+            
+            # Use 'embed' role if it exists, otherwise it will fallback to main/provider
+            embed_vec = mgr.get_embedding(
+                nl_desc, 
+                provider=getattr(args, "embed_provider", None), 
+                model=getattr(args, "embed_model", None),
+                role="embed"
+            )
             if embed_vec:
                 import struct
                 embed_blob = struct.pack(f"{len(embed_vec)}f", *embed_vec)

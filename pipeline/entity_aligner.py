@@ -1,6 +1,4 @@
 import sqlite3
-import urllib.request
-import json
 import faiss
 import numpy as np
 from pathlib import Path
@@ -16,17 +14,19 @@ if sys.platform == 'win32':
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = PROJECT_ROOT / "mathesis_index.db"
 
+# Ensure project root is on path for ModelManager import
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from pipeline.model_manager import ModelManager
+
 def get_embedding(text):
-    url = 'http://localhost:11434/api/embeddings'
-    data = {'model': 'snowflake-arctic-embed2:568m', 'prompt': text}
-    req = urllib.request.Request(url, json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})
-    try:
-        with urllib.request.urlopen(req) as response:
-            result = json.loads(response.read().decode('utf-8'))
-            return result.get('embedding', [])
-    except Exception as e:
-        print(f"Embedding error: {e}")
+    """Gets embedding via ModelManager embed role (supports remote Ollama via configured host)."""
+    mgr = ModelManager.get_instance()
+    result = mgr.get_embedding(text, role="embed")
+    if result is None:
         return []
+    return result
 
 def main():
     conn = sqlite3.connect(DB_PATH)

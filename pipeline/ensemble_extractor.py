@@ -18,14 +18,17 @@ import fitz  # PyMuPDF
 
 # Fix Windows console encoding
 if sys.platform == 'win32':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from pipeline.export_to_lean import query_llm, setup_provider, setup_lean_provider, _LLM_PROVIDER
+from pipeline.model_manager import ModelManager
 from pipeline.config import PROVIDERS, resolve_module_config
 
 
@@ -346,8 +349,10 @@ def parse_with_llm(raw_text: str, query: str, entity_type: str, model="llama3.1:
 
 Верни СТРОГО JSON:
 {{ "found": true, "context": "...", "statement": "...", "proof": "...", "deps": [], "page_ref": 0 }}
+}}
 """
-    response = query_llm(prompt, model=model, json_mode=True)
+    mgr = ModelManager.get_instance()
+    response = mgr.query_llm(prompt, json_mode=True, role="extract")
     
     # Strip markdown JSON wrappers if present
     response = re.sub(r'^```json\s*', '', response.strip(), flags=re.MULTILINE)
@@ -447,8 +452,7 @@ def preview_scan(pdf_path: Path, query: str, preview_provider: str, preview_mode
                 if 0 <= i < len(doc):
                     page_data.append((i, doc[i].get_text("text")))
             
-            doc.close()
-
+            
             # Execute with context manager to automatically start and stop the server
             with HybridSearchPipeline(
                 backend=backend, 
@@ -468,7 +472,6 @@ def preview_scan(pdf_path: Path, query: str, preview_provider: str, preview_mode
             return []
 
     # Standard Generative Prompt (Old Fallback logic)
-    from pipeline.export_to_lean import query_llm
     candidates = []
 
     print(f"  [Preview] Scanning {len(pages_to_scan)} pages (generative prompt)...")
@@ -486,7 +489,8 @@ def preview_scan(pdf_path: Path, query: str, preview_provider: str, preview_mode
         ) % (query, text)
         
         try:
-            resp = query_llm(prompt, model=preview_model, json_mode=True, provider='preview')
+            mgr = ModelManager.get_instance()
+            resp = mgr.query_llm(prompt, json_mode=True, role="preview")
             if not resp:
                 consecutive_failures += 1
                 if consecutive_failures >= 3:
@@ -678,7 +682,8 @@ Task: Extract any IMPLICIT ASSUMPTIONS, TYPE DECLARATIONS, or GLOBAL CONVENTIONS
 For example: "Throughout this section, f is a continuous function from R to R" or "Let V be a vector space".
 Return ONLY the extracted mathematical conditions as plain text. If none are found, return exactly: NONE.
 """
-    response = query_llm(prompt, model=model)
+    mgr = ModelManager.get_instance()
+    response = mgr.query_llm(prompt, role="extract")
     
     if not response or response.strip().upper() == "NONE":
         return ""
@@ -747,7 +752,8 @@ def main():
     )
 
     # Initialize LLM provider via shared logic
-    setup_provider(provider, api_key=api_key, model=model)
+    mgr = ModelManager.get_instance()
+    mgr.setup_role("extract", provider, model, api_key)
     # Initialize preview provider (separate client) - bypass if it is a Cross-Encoder
     is_cross_encoder = False
     if preview_provider:
@@ -757,12 +763,10 @@ def main():
             (preview_model and "gte-multilingual" in preview_model.lower())
         )
     
-    from pipeline.export_to_lean import setup_preview_provider
     if preview_provider and not is_cross_encoder:
-        setup_preview_provider(preview_provider, api_key=preview_api_key, model=preview_model)
+        mgr.setup_role("preview", preview_provider, preview_model, preview_api_key)
 
-    from pipeline.export_to_lean import _LLM_PROVIDER
-    active_provider_name = (_LLM_PROVIDER or "OLLAMA").upper()
+    active_provider_name = (provider or "OLLAMA").upper()
     print(f"[*] Провайдер: {active_provider_name} ({model})")
     if preview_provider:
         print(f"[*] Preview провайдер: {preview_provider.upper()} ({preview_model})")

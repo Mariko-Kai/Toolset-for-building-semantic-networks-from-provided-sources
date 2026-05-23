@@ -120,33 +120,48 @@ def setup_preview_provider(provider, api_key=None, model=None):
     mgr = ModelManager.get_instance()
     mgr.setup_role('preview', provider, model, api_key)
 
+
 def query_llm(prompt, model=None, system_prompt=None, json_mode=False, provider=None):
     from pipeline.model_manager import ModelManager
     mgr = ModelManager.get_instance()
-    # provider in query_llm argument is mostly 'main' or 'lean' role context implicitly, 
-    # but the old code passed explicit provider string or None. 
-    # The new query_llm in ModelManager takes provider.
     return mgr.query_llm(prompt, model=model, system_prompt=system_prompt, json_mode=json_mode, provider=provider)
+
+
+# ── LLM Translation ─────────────────────────────────────────────────────────
+
+def is_semantic_error(lean_code: str, errors: list, entity_type: str) -> bool:
+    """
+    Determines if Lean compiler errors or generated code indicate a structural/semantic flaw
+    that requires fixing the original LaTeX formulation (e.g. missing assumptions).
+    """
+    # Check compiler errors for structural hints
+    for err in errors:
+        msg = err.get("message", "").lower()
+        if "type mismatch" in msg:
+            return True
+        if "failed to synthesize instance" in msg:
+            return True
+        if "don't know how to synthesize placeholder" in msg:
+            return True
+            
+    return False
+
+
+def translate_to_lean_via_llm(entity_id, entity_type, tex_content, model="goedel:latest", mathlib_hints="", error_feedback=None, previous_code=None, attempt=None):
+    """
+    Translates LaTeX to Lean 4 using LLM, supporting error feedback for self-correction.
+    """
+        
+    tex_clean = re.sub(r'\\begin\{proof\}.*?\\end\{proof\}', '', tex_content, flags=re.DOTALL)
+    tex_clean = re.sub(r'^%.*$', '', tex_clean, flags=re.MULTILINE).strip()
+    if not tex_clean:
+        return ""
 
     lean_name = entity_id.replace('-', '_')
 
-    # Resolve target provider and model for Lean generation
-    target_provider = _LEAN_PROVIDER or _LLM_PROVIDER
+    from pipeline.model_manager import ModelManager
+    mgr = ModelManager.get_instance()
     target_model = model
-    
-    if _LEAN_PROVIDER:
-        if _LEAN_PROVIDER == "ollama" and _LEAN_OLLAMA_MODEL:
-            target_model = _LEAN_OLLAMA_MODEL
-        elif _LEAN_PROVIDER == "gemini" and _LEAN_GEMINI_MODEL:
-            target_model = _LEAN_GEMINI_MODEL
-        elif _LEAN_PROVIDER == "openai" and _LEAN_OPENAI_MODEL:
-            target_model = _LEAN_OPENAI_MODEL
-        elif _LEAN_PROVIDER == "groq" and _LEAN_GROQ_MODEL:
-            target_model = _LEAN_GROQ_MODEL
-        elif _LEAN_PROVIDER == "hf" and _LEAN_HF_MODEL:
-            target_model = _LEAN_HF_MODEL
-        elif _LEAN_PROVIDER == "llama_cpp" and _LEAN_LLAMA_CPP_MODEL:
-            target_model = _LEAN_LLAMA_CPP_MODEL
 
     if not target_model:
         target_model = "goedel:latest"
@@ -154,14 +169,15 @@ def query_llm(prompt, model=None, system_prompt=None, json_mode=False, provider=
     # Decryption guide of custom LaTeX macros used in the project
     latex_decryption_guide = """=== LaTeX Project Macro Translation Guide ===
 Our LaTeX formulas use custom macro abbreviations that must be translated to standard Lean 4 syntax:
-* \\forall -> universal quantifier (∀ x, ...)
-* \\exists -> existential quantifier (∃ x, ...)
-* \\iff -> logical equivalence / iff (↔)
-* \\implies -> logical implication (→)
-* \\RealNumbers -> Real numbers (ℝ)
-* \\NaturalNumbers -> Natural numbers (ℕ)
-* \\RationalNumbers -> Rational numbers (Rat)
-* \\RealAbsoluteValue{x} -> Absolute value function (|x| or Real.abs x)
+* \\mForall{x \\in X} or \\mForall{x \\colon X} -> universal quantifier (∀ x ∈ X, ...) or (∀ x : X, ...)
+* \\mExists{x \\in X} or \\mExists{x \\colon X} -> existential quantifier (∃ x ∈ X, ...) or (∃ x : X, ...)
+* \\mIff -> logical equivalence / iff (↔)
+* \\mImplies -> logical implication (→)
+* \\entityref{entity-id}{text} -> represents a reference to a core mathematical object/type. Translate to appropriate Lean types:
+  - \\entityref{obj-real-numbers}{\\mathbb{R}} -> Real numbers (ℝ)
+  - \\entityref{obj-natural-numbers}{\\mathbb{N}} -> Natural numbers (ℕ)
+  - \\entityref{obj-rational-numbers}{\\mathbb{Q}} -> Rational numbers (Rat)
+  - \\entityref{op-abs-abstract}{\\mathrm{abs}}(x) -> Absolute value function (|x| or Real.abs x)
 * \\left( and \\right) -> standard parentheses ( and )"""
 
     # Declaration rules based on Entity Type
@@ -249,20 +265,20 @@ CRITICAL HEURISTICS & ANTI-PATTERNS TO AVOID:
    If you find yourself writing repetitive logical tautologies (e.g., `x ≠ y → x ≠ y`) or overly complex index bounds, your underlying type choice is wrong. Stop and re-evaluate your data structures.
 
 5. Strict Semantic Identifiers (The Self-Describing ID Rule):
-   When defining a new entity-id, the `id` MUST be globally unambiguous, self-documenting, and resistant to namespace collisions. 
+   When generating \entityref{id}{text} or defining a new entity-id, the `id` MUST be globally unambiguous, self-documenting, and resistant to namespace collisions. 
    
    NEVER use bare, generic nouns or adjectives. You MUST include the domain or the parent mathematical object in the ID.
    
-   Format: def-{domain_or_parent}-{concept}
+   Format: {type}-{domain_or_parent}-{concept}
    
-   - BAD: `def-mesh` (Mesh of what? A graph? A 3D model? A partition?)
-   - GOOD: `def-partition-mesh` (Clearly states this is the mesh of a partition)
+   - BAD: `op-mesh` (Mesh of what? A graph? A 3D model? A partition?)
+   - GOOD: `op-partition-mesh` (Clearly states this is the mesh of a partition)
    
-   - BAD: `def-bounded` (Is a function bounded? A set? A sequence?)
-   - GOOD: `def-function-bounded` or `def-set-bounded`
+   - BAD: `prop-bounded` (Is a function bounded? A set? A sequence?)
+   - GOOD: `prop-function-bounded` or `prop-set-bounded`
    
-   - BAD: `def-addition` 
-   - GOOD: `def-real-addition` or `def-matrix-addition` (Unless using the Late Binding abstract pattern like `def-add-abstract`)
+   - BAD: `op-addition` 
+   - GOOD: `op-real-addition` or `op-matrix-addition` (Unless using the Late Binding abstract pattern like `op-add-abstract`)
 
    If a concept belongs to a specific mathematical domain, prefix it explicitly to help the Lean 4 translator map it to the correct Mathlib namespace.
 
@@ -329,7 +345,7 @@ Mathlib Hints:
 
 Lean 4 Code:"""
 
-    response = query_llm(user_prompt, model=target_model, system_prompt=system_prompt, provider=target_provider)
+    response = mgr.query_llm(user_prompt, model=target_model, system_prompt=system_prompt, role="lean")
     
     # Log synthesis prompt and response
     synth_log = f"=== SYSTEM PROMPT ===\n{system_prompt}\n\n=== PROMPT ===\n{user_prompt}\n\n=== RESPONSE ===\n{response}\n"
@@ -425,33 +441,45 @@ def translate_to_lean_regex(entity_id, entity_type, tex_content):
     lean_name = entity_id.replace('-', '_')
 
     replacements = [
+        # Quantifiers (Parameterized)
+        (r'\\mForall\{([^}]+)\}', r'∀ \1, '),
+        (r'\\mExists\{([^}]+)\}', r'∃ \1, '),
+        
+        # Mappings
+        (r'\\mMap\{([^}]+)\}\{([^}]+)\}\{([^}]+)\}', r'\1 : \2 → \3'),
+
         # Quantifiers (Standalone)
-        (r'\\forall', '∀'),
-        (r'\\exists', '∃'),
+        (r'\\mForall', '∀'), (r'\\forall', '∀'),
+        (r'\\mExists', '∃'), (r'\\exists', '∃'),
 
         # Logic Connectives
-        (r'\\Rightarrow', '→'), (r'\\implies', '→'),
-        (r'\\Leftrightarrow', '↔'), (r'\\iff', '↔'),
-        (r'\\coloneqq', ':='),
-        (r'\\land', '∧'),
-        (r'\\lor', '∨'),
-        (r'\\lnot', '¬'),
-        (r'\\vdash', '⊢'),
+        (r'\\mImplies', '→'), (r'\\Rightarrow', '→'), (r'\\implies', '→'),
+        (r'\\mIff', '↔'), (r'\\Leftrightarrow', '↔'), (r'\\iff', '↔'),
+        (r'\\mDefIff', ':='), (r'\\mDefinedAs', ':='),
+        (r'\\mAnd', '∧'), (r'\\land', '∧'),
+        (r'\\mOr', '∨'), (r'\\lor', '∨'),
+        (r'\\mNot', '¬'), (r'\\lnot', '¬'),
+        (r'\\mTurnstile', '⊢'), (r'\\vdash', '⊢'),
 
         # Sets
-        (r'\\in', '∈'),
-        (r'\\subseteq', '⊆'),
-        (r'\\subset', '⊆'),
-        (r'\\varnothing', '∅'), (r'\\emptyset', '∅'),
+        (r'\\mIn', '∈'), (r'\\in', '∈'),
+        (r'\\mSubseteq', '⊆'), (r'\\subseteq', '⊆'),
+        (r'\\mSubset', '⊆'), (r'\\subset', '⊆'),
+        (r'\\mEmpty', '∅'), (r'\\varnothing', '∅'), (r'\\emptyset', '∅'),
+
+        # Number Sets
+        (r'\\mReal', 'ℝ'), (r'\\mathbb\{R\}', 'ℝ'),
+        (r'\\mNat', 'ℕ'), (r'\\mathbb\{N\}', 'ℕ'),
+        (r'\\mInt', 'ℤ'), (r'\\mathbb\{Z\}', 'ℤ'),
+        (r'\\mComplex', 'ℂ'), (r'\\mathbb\{C\}', 'ℂ'),
 
         # Formatting / Structural
-        (r'\\hyperlink\{[^}]+\}\{(.*?)\}', r'\1'),
-        (r'\\mathopen\{([^}]+)\}', r'\1'),
+        (r'\\entityref\{[^}]+\}\{(.*?)\}', r'\1'),
         (r'\\quad', ' '), (r'\\;', ' '),
         (r'\\text\{([^}]+)\}', r'\1'),
         (r'\\left', ''), (r'\\right', ''),
         (r'\\colon', ':'),
-        (r'\\to', '→'),
+        (r'\\mTo', '→'), (r'\\to', '→'),
 
         # Relational / Variables
         (r'\\neq', '≠'),

@@ -15,6 +15,7 @@ if sys.platform == 'win32' and getattr(sys.stdout, 'encoding', '').lower() != 'u
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT))
 CONTENT_DIR = PROJECT_ROOT / "content"
+CACHE_PATH = PROJECT_ROOT / "output" / "nl_translations_cache.json"
 
 def load_book_citations():
     citations = {
@@ -116,14 +117,21 @@ def humanize_id(eid):
         return parts[1].replace('-', ' ').title()
     return eid.replace('-', ' ').title()
 
-def synthesize_entity_details(data, provider, model, api_key):
+def synthesize_entity_details(data, provider, model, api_key, force_refresh=False, nl_cache=None):
+    
+    if nl_cache is None: nl_cache = {}
+    if not force_refresh and data["id"] in nl_cache:
+        c = nl_cache[data["id"]]
+        print(f"  [Synth] Loaded cached translations for {data['id']}")
+        return c.get("name_ru", ""), c.get("name_en", ""), c.get("desc_ru", ""), c.get("desc_en", "")
+
     ru_name, en_name = parse_bilingual_title(data["title"])
     if is_id_or_placeholder(ru_name):
         ru_name = None
     if is_id_or_placeholder(en_name):
         en_name = None
 
-    desc_ru = NL_DESCRIPTIONS.get(data["id"], "").strip()
+    desc_ru = ""
     if not desc_ru:
         desc_ru = data.get("nl_desc", "").strip()
 
@@ -149,8 +157,8 @@ def synthesize_entity_details(data, provider, model, api_key):
     print(f"  [Synth] Synthesizing bilingual details for {data['id']} using {provider} ({model})...")
 
     try:
-        from pipeline.export_to_lean import setup_provider
-        setup_provider(provider=provider, api_key=api_key, model=model)
+        from pipeline.model_manager import ModelManager
+        ModelManager.get_instance().setup_role("generate", provider, model, api_key)
     except Exception as e:
         print(f"[Warning] Failed to setup LLM provider: {e}")
         provider = "ollama"
@@ -190,8 +198,8 @@ Return ONLY a valid JSON object with the following schema:
 """
 
     try:
-        from pipeline.export_to_lean import query_llm
-        response = query_llm(prompt, model=model, json_mode=True, provider=provider)
+        from pipeline.model_manager import ModelManager
+        response = ModelManager.get_instance().query_llm(prompt, json_mode=True, role="generate")
         
         response = re.sub(r'^```json\s*', '', response.strip(), flags=re.MULTILINE)
         response = re.sub(r'^```\s*$', '', response.strip(), flags=re.MULTILINE).strip()
@@ -199,8 +207,34 @@ Return ONLY a valid JSON object with the following schema:
         match = re.search(r'(\{.*\})', response, re.DOTALL)
         if match:
             response = match.group(1)
-            
-        res = json.loads(response)
+        
+        # Fix unescaped backslashes from LaTeX in JSON strings (e.g. \mathbb, \in, \forall).
+        # Valid JSON escape chars are: " \\ / b f n r t u. Anything else is invalid.
+        try:
+            # First attempt: try to parse as-is
+            res = json.loads(response)
+        except Exception as parse_err:
+            # Log the raw problematic response for debugging
+            try:
+                from pipeline.export_to_lean import log_to_file
+                log_to_file("synthesis/json-fail", f"RAW RESPONSE:\n{response}", entity_id=data['id'])
+            except Exception:
+                pass
+            # Second attempt: aggressively escape all backslashes (safe fallback)
+            safe_resp = response.replace('\\', '\\\\')
+            try:
+                res = json.loads(safe_resp)
+            except Exception as parse_err2:
+                # As a last resort, try to extract a JSON object substring and parse that
+                m = re.search(r'(\{.*\})', response, re.DOTALL)
+                if m:
+                    try:
+                        res = json.loads(m.group(1))
+                    except Exception:
+                        raise parse_err2
+                else:
+                    raise parse_err2
+        
         
         synth_ru_name = res.get("name_ru", "").strip()
         synth_en_name = res.get("name_en", "").strip()
@@ -215,7 +249,24 @@ Return ONLY a valid JSON object with the following schema:
         synth_ru_name = re.sub(r"\s*\[[^\]]+\]", "", synth_ru_name).strip()
         synth_en_name = re.sub(r"\s*\[[^\]]+\]", "", synth_en_name).strip()
         synth_desc_ru = re.sub(r"\s*\[[^\]]+\]", "", synth_desc_ru).strip()
+        
         synth_desc_en = re.sub(r"\s*\[[^\]]+\]", "", synth_desc_en).strip()
+        
+        # Save to cache
+        nl_cache[data["id"]] = {
+            "id": data["id"],
+            "type": data.get("type", "unknown"),
+            "name_ru": synth_ru_name,
+            "name_en": synth_en_name,
+            "desc_ru": synth_desc_ru,
+            "desc_en": synth_desc_en
+        }
+        try:
+            with open(CACHE_PATH, "w", encoding="utf-8") as f:
+                json.dump(nl_cache, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"[Warning] Failed to write to translation cache: {e}")
+
         
         print(f"  [Synth Success] Name RU: {synth_ru_name} | Name EN: {synth_en_name}")
         return synth_ru_name, synth_en_name, synth_desc_ru, synth_desc_en
@@ -434,10 +485,21 @@ def main():
     parser.add_argument("--lean-provider", type=str, default=None)
     parser.add_argument("--lean-model",    type=str, default=None)
     parser.add_argument("--lean-api-key",  type=str, default=None)
+    parser.add_argument("--embed-provider", type=str, default=None)
+    parser.add_argument("--embed-model",    type=str, default=None)
+    parser.add_argument("--embed-api-key",  type=str, default=None)
     parser.add_argument("--no-validate", action='store_true')
+    parser.add_argument("--force-refresh", action='store_true', help='Force override of cached NLP translations')
     parser.add_argument("--no-enrich", action='store_true', help='Skip enrichment of missing entities; compile only existing content')
 
     args = parser.parse_args()
+
+
+    nl_cache = {}
+    if CACHE_PATH.exists():
+        with open(CACHE_PATH, "r", encoding="utf-8") as f:
+            nl_cache = json.load(f)
+
 
     if args.roots:
         root_ids = [r.strip() for r in args.roots.split(',') if r.strip()]
@@ -465,6 +527,21 @@ def main():
         global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
         module_provider=args.synth_provider, module_model=args.synth_model, module_api_key=args.synth_api_key,
     )
+    embed_provider, embed_model, embed_api_key = resolve_module_config(
+        module="embed",
+        global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
+        module_provider=getattr(args, 'embed_provider', None),
+        module_model=getattr(args, 'embed_model', None),
+        module_api_key=getattr(args, 'embed_api_key', None),
+    )
+
+    # Setup ModelManager roles
+    from pipeline.model_manager import ModelManager
+    mgr = ModelManager.get_instance()
+    mgr.setup_role("extract", extract_provider, extract_model, extract_api_key)
+    mgr.setup_role("synth",   synth_provider,   synth_model,   synth_api_key)
+    mgr.setup_role("embed",   embed_provider,   embed_model,   embed_api_key)
+    print(f"[*] Embed role: provider={embed_provider}, model={embed_model}, host={embed_api_key or 'localhost:11434'}")
 
     print(f"=== DYNAMIC COMPILER: Сборка графа для {root_ids} (Multi-Root BFS) ===\n")
 
@@ -560,8 +637,28 @@ def main():
             data=data,
             provider=synth_provider,
             model=synth_model,
-            api_key=synth_api_key
+            api_key=synth_api_key,
+            force_refresh=args.force_refresh,
+            nl_cache=nl_cache
         )
+        
+        # Enrich NLP descriptions with hyperlinks for known entities in the cache
+        def enrich_text(text):
+            if not text: return text
+            # sort by length descending to match longest names first
+            sorted_entities = sorted(nl_cache.values(), key=lambda x: len(x.get("name_ru", "")), reverse=True)
+            for ent in sorted_entities:
+                n_ru = ent.get("name_ru", "").strip()
+                eid = ent.get("id", "")
+                if len(n_ru) > 3 and eid != data["id"]:
+                    # Match the exact word, case-sensitive or insensitive depending on needs
+                    # Just simple word match for now
+                    pattern = r"(?<!\\hyperlink\{)" + re.escape(n_ru) + r"(?![a-zA-Zа-яА-Я])"
+                    text = re.sub(pattern, lambda m, eid=eid, n_ru=n_ru: f"\\hyperlink{{{eid}}}{{{n_ru}}}", text)
+            return text
+            
+        desc_ru = enrich_text(desc_ru)
+
         
         title_bilingual = f"{synth_ru} / {synth_en}"
         
@@ -615,8 +712,9 @@ def main():
         
         content += block
     
-    
-    result_tex = PROJECT_ROOT / "result.tex"
+    output_dir = PROJECT_ROOT / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    result_tex = output_dir / "result.tex"
     with open(result_tex, "w", encoding="utf-8") as f:
         f.write(TEMPLATE % {"content": content})
     
@@ -629,24 +727,32 @@ def main():
     except Exception as e:
         print(f"[WARN] Failed to rebuild master.tex: {e}")
     
-    if not (PROJECT_ROOT / "mathesis.sty").exists():
-        shutil.copy(CONTENT_DIR / "mathesis.sty", PROJECT_ROOT / "mathesis.sty")
+    # Copy style files into output dir for pdflatex
+    for sty in ["mathesis.sty", "mathesis_macros.sty"]:
+        sty_dest = output_dir / sty
+        if not sty_dest.exists():
+            sty_src = CONTENT_DIR / sty
+            if sty_src.exists():
+                shutil.copy(sty_src, sty_dest)
+            elif (PROJECT_ROOT / sty).exists():
+                shutil.copy(PROJECT_ROOT / sty, sty_dest)
     
+    pdflatex_cmd = [
+        "pdflatex",
+        "-interaction=nonstopmode",
+        f"-output-directory={output_dir}",
+        str(result_tex),
+    ]
+
     print("Compiling result.pdf (pass 1)...")
-    os.chdir(PROJECT_ROOT)
-    subprocess.run(
-        ["pdflatex", "-interaction=nonstopmode", "result.tex"],
-        capture_output=True, text=True
-    )
+    subprocess.run(pdflatex_cmd, capture_output=True, text=True, cwd=str(output_dir))
     
     print("Compiling result.pdf (pass 2 for references)...")
-    result = subprocess.run(
-        ["pdflatex", "-interaction=nonstopmode", "result.tex"],
-        capture_output=True, text=True
-    )
+    result = subprocess.run(pdflatex_cmd, capture_output=True, text=True, cwd=str(output_dir))
     
-    if "Output written on result.pdf" in result.stdout:
-        print("PDF compilation successful! -> result.pdf")
+    result_pdf = output_dir / "result.pdf"
+    if result_pdf.exists():
+        print(f"PDF compilation successful! -> {result_pdf}")
     else:
         print("PDF compilation issue. Last 500 chars of log:")
         print(result.stdout[-500:])

@@ -50,9 +50,22 @@ class ModelStrategy(ABC):
 
 
 class OllamaStrategy(ModelStrategy):
+    def _get_base_url(self) -> str:
+        # Check api_key (often used as host for Ollama in this codebase)
+        if self.api_key and (self.api_key.startswith("http://") or self.api_key.startswith("https://")):
+            return self.api_key.rstrip('/')
+        
+        # Check environment variable
+        env_host = os.environ.get("MATHESIS_OLLAMA_HOST") or os.environ.get("MATHESIS_EMBED_API_KEY")
+        if env_host and (env_host.startswith("http://") or env_host.startswith("https://")):
+            return env_host.rstrip('/')
+            
+        return "http://localhost:11434"
+
     def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False) -> str:
         model = self.model_name or "qwen2.5:14b"
-        url = "http://localhost:11434/api/generate"
+        base_url = self._get_base_url()
+        url = f"{base_url}/api/generate"
         payload = {
             "model": model,
             "prompt": prompt,
@@ -80,12 +93,13 @@ class OllamaStrategy(ModelStrategy):
                     ans = re.sub(r'<think>.*?</think>', '', ans, flags=re.DOTALL).strip()
                 return ans
         except Exception as e:
-            print(f"[OllamaStrategy] Error: {e}")
+            print(f"[OllamaStrategy] Error: {e} (URL: {url})")
             return ""
             
     def get_embedding(self, text: str) -> Optional[List[float]]:
-        model = "nomic-embed-text:latest"
-        url = "http://localhost:11434/api/embeddings"
+        model = self.model_name or "nomic-embed-text:latest"
+        base_url = self._get_base_url()
+        url = f"{base_url}/api/embeddings"
         payload = {
             "model": model,
             "prompt": text
@@ -96,8 +110,27 @@ class OllamaStrategy(ModelStrategy):
             with urllib.request.urlopen(req) as response:
                 result = json.loads(response.read().decode('utf-8'))
                 return result.get("embedding")
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8') if e.fp else ""
+            print(f"[OllamaStrategy] Embedding error: HTTP {e.code} {e.reason} (URL: {url}) Body: {error_body}")
+            
+            # If 404 and we used /api/embeddings, maybe the endpoint is gone or model missing
+            if e.code == 404 and "api/embeddings" in url and "model" not in error_body.lower():
+                print("[OllamaStrategy] Retrying with /api/embed endpoint...")
+                url = f"{base_url}/api/embed"
+                payload = {"model": model, "input": text}
+                try:
+                    req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'))
+                    req.add_header('Content-Type', 'application/json')
+                    with urllib.request.urlopen(req) as response:
+                        result = json.loads(response.read().decode('utf-8'))
+                        # /api/embed returns {"embeddings": [[...]]}
+                        return result.get("embeddings", [None])[0]
+                except Exception as e2:
+                    print(f"[OllamaStrategy] Embedding fallback error: {e2} (URL: {url})")
+            return None
         except Exception as e:
-            print(f"[OllamaStrategy] Embedding error: {e}")
+            print(f"[OllamaStrategy] Embedding error: {e} (URL: {url})")
             return None
 
 
@@ -248,6 +281,76 @@ class GroqStrategy(ModelStrategy):
         return None
 
 
+class LlamaCppStrategy(ModelStrategy):
+    """
+    Local execution of GGUF models using llama-cpp-python.
+    If api_key is an HTTP URL, acts as a client to a local llama.cpp server.
+    Otherwise, loads the .gguf model directly in memory.
+    """
+    def __init__(self, model_name: Optional[str] = None, api_key: Optional[str] = None):
+        super().__init__(model_name, api_key)
+        self._llm = None
+
+    def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False) -> str:
+        model = self.model_name
+        if not model:
+            print("[LlamaCppStrategy] Error: No model path provided.")
+            return ""
+
+        # If api_key is a URL, treat it as an OpenAI-compatible endpoint
+        if self.api_key and (self.api_key.startswith("http://") or self.api_key.startswith("https://")):
+            try:
+                import openai
+                client = openai.OpenAI(api_key="none", base_url=self.api_key)
+                messages = []
+                if system_prompt:
+                    messages.append({"role": "system", "content": system_prompt})
+                messages.append({"role": "user", "content": prompt})
+                
+                kwargs = {"model": model, "messages": messages, "temperature": 0.0}
+                if json_mode:
+                    kwargs["response_format"] = {"type": "json_object"}
+                    
+                response = client.chat.completions.create(**kwargs)
+                return response.choices[0].message.content
+            except Exception as e:
+                print(f"[LlamaCppStrategy] Error (REST): {e}")
+                return ""
+
+        # Otherwise, run it directly in-process via llama_cpp
+        try:
+            from llama_cpp import Llama
+            
+            if self._llm is None or getattr(self, '_current_model', None) != model:
+                print(f"[LlamaCppStrategy] Loading GGUF model in memory: {model}...")
+                # Try to enable GPU if available (n_gpu_layers=-1)
+                self._llm = Llama(model_path=model, n_ctx=4096, n_gpu_layers=-1, verbose=False)
+                self._current_model = model
+
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+
+            kwargs = {"messages": messages, "temperature": 0.0}
+            if json_mode:
+                kwargs["response_format"] = {"type": "json_object"}
+
+            print(f"[LlamaCppStrategy] Inferencing locally...")
+            response = self._llm.create_chat_completion(**kwargs)
+            return response["choices"][0]["message"]["content"]
+            
+        except ImportError:
+            print("[LlamaCppStrategy] Error: llama-cpp-python is not installed. Please `pip install llama-cpp-python`.")
+            return ""
+        except Exception as e:
+            print(f"[LlamaCppStrategy] Error (Local): {e}")
+            return ""
+
+    def get_embedding(self, text: str) -> Optional[List[float]]:
+        # For simplicity, fallback to failure or use embedding if llama_cpp model supports it
+        return None
+
 class ModelFactory:
     @staticmethod
     def create_strategy(provider: str, model_name: Optional[str] = None, api_key: Optional[str] = None) -> ModelStrategy:
@@ -258,6 +361,8 @@ class ModelFactory:
             return OpenAIStrategy(model_name, api_key)
         elif provider == "groq":
             return GroqStrategy(model_name, api_key)
+        elif provider == "llama_cpp":
+            return LlamaCppStrategy(model_name, api_key)
         else:
             return OllamaStrategy(model_name, api_key)
 
@@ -285,9 +390,11 @@ class ModelManager:
         strategy = ModelFactory.create_strategy(provider, model_name, api_key)
         self.strategies[role] = strategy
 
-    def query_llm(self, prompt: str, model: Optional[str] = None, json_mode: bool = False, provider: Optional[str] = None, system_prompt: Optional[str] = None) -> str:
+    def query_llm(self, prompt: str, model: Optional[str] = None, json_mode: bool = False, provider: Optional[str] = None, system_prompt: Optional[str] = None, role: Optional[str] = None) -> str:
         # Determine the role dynamically or just use an ad-hoc strategy if provider is explicitly passed
-        if provider:
+        if role and role in self.strategies:
+            strategy = self.strategies[role]
+        elif provider:
             strategy = ModelFactory.create_strategy(provider, model)
         else:
             strategy = self.strategies.get("main")
@@ -295,8 +402,10 @@ class ModelManager:
                 return ""
         return strategy.generate_content(prompt, system_prompt, json_mode)
         
-    def get_embedding(self, text: str, provider: Optional[str] = None, model: Optional[str] = None) -> Optional[List[float]]:
-        if provider:
+    def get_embedding(self, text: str, provider: Optional[str] = None, model: Optional[str] = None, role: Optional[str] = None) -> Optional[List[float]]:
+        if role and role in self.strategies:
+            strategy = self.strategies[role]
+        elif provider:
             strategy = ModelFactory.create_strategy(provider, model)
         else:
             strategy = self.strategies.get("main")

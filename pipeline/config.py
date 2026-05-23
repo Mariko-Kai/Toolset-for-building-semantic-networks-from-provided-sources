@@ -49,6 +49,10 @@ _MODULE_MODEL_OVERRIDES = {
         "gemini": "gemini-2.5-flash-lite",
         "llama_cpp": "bge-reranker-v2-m3-Q6_K.gguf",
     },
+    "embed": {
+        # Embedding model defaults per provider
+        "ollama": "nomic-embed-text:latest",
+    },
 }
 
 DEFAULTS = {
@@ -63,6 +67,9 @@ DEFAULTS = {
     },
     "preview": {
         "provider": "llama_cpp",  # Модель предпросмотра по умолчанию использует llama_cpp (cross-encoder bge-reranker)
+    },
+    "embed": {
+        "provider": "ollama",
     },
 }
 

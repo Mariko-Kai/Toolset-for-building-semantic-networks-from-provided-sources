@@ -25,8 +25,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from pipeline.export_to_lean import query_llm, setup_provider, setup_lean_provider, _LLM_PROVIDER
 from pipeline.config import PROVIDERS, resolve_module_config
+from pipeline.model_manager import ModelManager
+from pipeline.export_to_lean import setup_provider
 
 
 # ── Path Configuration ───────────────────────────────────────────────────────
@@ -57,7 +58,7 @@ def get_available_entities():
 
 # ── Keyword Extraction ───────────────────────────────────────────────────────
 
-def translate_term(term, model="qwen3:8b", provider=None):
+def extract_term_ru_en(term: str) -> tuple:
     """Translates a term into EN and RU using LLM with a robust local dictionary fallback."""
     term_clean = term.strip().lower()
     
@@ -76,23 +77,19 @@ def translate_term(term, model="qwen3:8b", provider=None):
         "continuous": ("непрерывная", "continuous"),
         "derivative": ("производная", "derivative"),
         "derivative at point": ("производная в точке", "derivative at point"),
-        "derivative of a function at a point": ("производная функции в точке", "derivative of a function at a point"),
+        "integral": ("интеграл", "integral"),
         "limit": ("предел", "limit"),
-        "limit cauchy": ("предел по Коши", "limit cauchy"),
-        "limit heine": ("предел по Гейне", "limit heine"),
-        "limit function cauchy": ("предел функции по Коши", "limit function cauchy"),
-        "limit function heine": ("предел функции по Гейне", "limit function heine"),
-        "limit function": ("предел функции", "limit function"),
-        "metric space": ("метрическое пространство", "metric space"),
-        "open set": ("открытое множество", "open set"),
-        "closed set": ("замкнутое множество", "closed set"),
-        "limit point": ("предельная точка", "limit point"),
+        "set": ("множество", "set"),
+        "real numbers": ("вещественные числа", "real numbers"),
         "sequence": ("последовательность", "sequence"),
         "series": ("ряд", "series"),
-        "function": ("функция", "function"),
-        "neighborhood": ("окрестность", "neighborhood"),
-        "absolute value": ("абсолютная величина", "absolute value"),
-        "riemann integral": ("интеграл Римана", "riemann integral"),
+        "continuous": ("непрерывный", "continuous"),
+        "theorem": ("теорема", "theorem"),
+        "lemma": ("лемма", "lemma"),
+        "axiom": ("аксиома", "axiom"),
+        "supremum": ("супремум", "supremum"),
+        "infimum": ("инфимум", "infimum"),
+        "cartesian product": ("декартово произведение", "cartesian product"),
         "partial order": ("частичный порядок", "partial order"),
         "ordered set": ("упорядоченное множество", "ordered set"),
     }
@@ -100,6 +97,8 @@ def translate_term(term, model="qwen3:8b", provider=None):
     if term_clean in MATH_DICT:
         return MATH_DICT[term_clean]
 
+    from pipeline.model_manager import ModelManager
+    mgr = ModelManager.get_instance()
     prompt = f"""You are a professional mathematical translator.
 Translate the mathematical term '{term}' into:
 1. Russian (term_ru) - MUST be in Russian! E.g. 'производная функции в точке'.
@@ -110,7 +109,7 @@ Return STRICTLY a JSON object with no other text or explanation:
     "term_ru": "exact translation of the mathematical term in Russian",
     "term_en": "exact translation of the mathematical term in English"
 }}"""
-    resp = mgr.query_llm(prompt, model=model, json_mode=True, provider=provider)
+    resp = mgr.query_llm(prompt, json_mode=True, role="extract")
     try:
         parsed = json.loads(resp)
         return parsed.get("term_ru", term), parsed.get("term_en", term)
@@ -118,7 +117,7 @@ Return STRICTLY a JSON object with no other text or explanation:
         return term, term
 
 
-def extract_keyword(query, model, provider=None):
+def extract_keyword(query):
     """
     Deterministically extracts a clean mathematical term from the user query.
     Strips question words to act like a search engine, and translates to RU and EN.
@@ -137,12 +136,12 @@ def extract_keyword(query, model, provider=None):
     clean = clean.translate(str.maketrans('', '', string.punctuation))
     clean = " ".join(clean.split())
     
-    # Translate clean term to both RU and EN using bilingual translation logic
-    ru_term, en_term = translate_term(clean, model=model, provider=provider)
+    # Translate clean term to both RU and EN
+    canonical_ru, canonical_en = extract_term_ru_en(clean)
     
     # Clean them up just in case
-    ru_term = ru_term.translate(str.maketrans('', '', string.punctuation)).lower().strip()
-    en_term = en_term.translate(str.maketrans('', '', string.punctuation)).lower().strip()
+    ru_term = canonical_ru.translate(str.maketrans('', '', string.punctuation)).lower().strip()
+    en_term = canonical_en.translate(str.maketrans('', '', string.punctuation)).lower().strip()
     
     print(f"[*] Целевой термин (RU): '{ru_term}'")
     print(f"[*] Целевой термин (EN): '{en_term}'")
@@ -155,6 +154,7 @@ def normalize_math_term(term):
     """Кастомный стеммер/нормализатор для математических терминов"""
     import re
     t = term.lower()
+    t = re.sub(r'\b(theorem|thm|prop|proposition|def|definition|lemma|axm|axiom)\b', '', t)
     t = re.sub(r'[^\w\s]', '', t)
     words = []
     for w in t.split():
@@ -174,7 +174,7 @@ def cosine_similarity(v1, v2):
     if norm1 == 0 or norm2 == 0: return 0.0
     return dot / (norm1 * norm2)
 
-def resolve_entities(query, canonical_term, model, available_entities, provider=None, embed_provider=None, embed_model=None):
+def resolve_entities(query, canonical_term, available_entities):
     """
     Resolves query using Shift-Left Semantic Search Architecture.
     1. Dictionary (Normalized string match)
@@ -217,7 +217,7 @@ def resolve_entities(query, canonical_term, model, available_entities, provider=
     # 2. Embedding Search (Always run to pool candidates)
     if not candidates:
         try:
-            query_emb = mgr.get_embedding(canonical_term, provider=embed_provider, model=embed_model)
+            query_emb = mgr.get_embedding(canonical_term, role="embed")
             if query_emb:
                 for eid, title, nl_desc, emb_blob, lean_path in rows:
                     if emb_blob:
@@ -254,7 +254,7 @@ Answer EXACTLY with valid JSON:
 {{ "is_identical": true, "reason": "short explanation" }} or {{ "is_identical": false, "reason": "why they differ" }}
 """
         try:
-            response = mgr.query_llm(prompt, model=model, json_mode=True, provider=provider)
+            response = mgr.query_llm(prompt, json_mode=True, role="extract")
             match = re.search(r'(\\{.*\\})', response, re.DOTALL)
             if match: response = match.group(1)
             
@@ -275,6 +275,27 @@ Answer EXACTLY with valid JSON:
 
 
 
+def translate_term(term: str, model: str = None, provider: str = None) -> tuple[str, str]:
+    """Translates the term to RU and EN, ensuring correct search terms are used."""
+    prompt = f"""You are a professional mathematician. Translate the following term to Russian and English.
+Return ONLY valid JSON like this: {{"ru": "...", "en": "..."}}
+
+Term to translate: "{term}"
+"""
+    try:
+        from pipeline.model_manager import ModelManager
+        mgr = ModelManager.get_instance()
+        resp = mgr.query_llm(prompt, json_mode=True, role="extract")
+        import re, json
+        # Strip markdown JSON wrappers if present
+        resp = re.sub(r'^```json\s*', '', resp.strip(), flags=re.MULTILINE)
+        resp = re.sub(r'^```\s*$', '', resp.strip(), flags=re.MULTILINE).strip()
+        data = json.loads(resp)
+        return data.get("ru", term), data.get("en", term)
+    except Exception as e:
+        print(f"[-] Failed to translate term: {e}")
+        return term, term
+
 def run_enrichment_pipeline(
     clean_term, *,
     # Extraction module
@@ -285,6 +306,8 @@ def run_enrichment_pipeline(
     synth_provider=None, synth_api_key=None, synth_model=None,
     # Lean module
     lean_provider=None, lean_api_key=None, lean_model=None,
+    # Embed module
+    embed_provider=None, embed_api_key=None, embed_model=None,
     # OCR
     cv_model="glm-ocr",
     # Skip internal lean validation when synthesizer supports it
@@ -343,6 +366,10 @@ def run_enrichment_pipeline(
         synth_args += ["--lean-provider", lean_provider]
         if lean_api_key: synth_args += ["--lean-api-key", lean_api_key]
         if lean_model:   synth_args += ["--lean-model", lean_model]
+    if embed_provider:
+        synth_args += ["--embed-provider", embed_provider]
+        if embed_api_key: synth_args += ["--embed-api-key", embed_api_key]
+        if embed_model:   synth_args += ["--embed-model", embed_model]
 
     steps = [
         ("1/3", "Извлечение из учебников",
@@ -402,7 +429,6 @@ def get_missing_deps_from_lean_error(error_msgs):
 
 
 def main():
-    global _LLM_PROVIDER, _GEMINI_CLIENT, _GEMINI_MODEL_NAME, _OPENAI_CLIENT, _OPENAI_MODEL_NAME, _GROQ_CLIENT, _GROQ_MODEL_NAME
     parser = argparse.ArgumentParser(description="Mathesis Pipeline — Multi-Result Wrapper")
     parser.add_argument("query", type=str, help="Входной запрос на естественном языке")
     parser.add_argument("--cv-model", type=str, default="glm-ocr",
@@ -435,6 +461,12 @@ def main():
     parser.add_argument("--lean-model",    type=str, default=None)
     parser.add_argument("--lean-api-key",  type=str, default=None)
     parser.add_argument("--no-validate", action='store_true', help='Disable Lean validation inside synthesizer (default: enabled)')
+    parser.add_argument("--force-refresh", action='store_true', help='Force overwrite of cached NLP translations (nl_translations_cache.json)')
+    
+    # ── Per-module: Embedding ────────────────────────────────────────────────
+    parser.add_argument("--embed-provider", type=str, default="ollama", choices=PROVIDERS)
+    parser.add_argument("--embed-model",    type=str, default="nomic-embed-text:latest")
+    parser.add_argument("--embed-api-key",  type=str, default=None)
     
     # ── OCR Pages Override ────────────────────────────────────────────────────
     parser.add_argument("--ocr-pages", type=str, default=None,
@@ -460,16 +492,31 @@ def main():
         global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
         module_provider=args.synth_provider, module_model=args.synth_model, module_api_key=args.synth_api_key,
     )
+    lean_provider, lean_model, lean_api_key = resolve_module_config(
+        module="lean",
+        global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
+        module_provider=args.lean_provider, module_model=args.lean_model, module_api_key=args.lean_api_key,
+    )
+    embed_provider, embed_model, embed_api_key = resolve_module_config(
+        module="embed",
+        global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
+        module_provider=args.embed_provider, module_model=args.embed_model, module_api_key=args.embed_api_key,
+    )
 
-    # Для routing-запросов (extract_keyword, resolve_entities) используем extract-провайдер
-    setup_provider(extract_provider, api_key=extract_api_key, model=extract_model)
+    # Setup ModelManager roles
+    mgr = ModelManager.get_instance()
+    mgr.setup_role("extract", extract_provider, extract_model, extract_api_key)
+    mgr.setup_role("preview", preview_provider, preview_model, preview_api_key)
+    mgr.setup_role("synth", synth_provider, synth_model, synth_api_key)
+    mgr.setup_role("lean", lean_provider, lean_model, lean_api_key)
+    mgr.setup_role("embed", embed_provider, embed_model, embed_api_key)
+    print(f"[*] Embed role: provider={embed_provider}, model={embed_model}, host={embed_api_key or 'localhost:11434'}")
 
-    from pipeline.export_to_lean import _LLM_PROVIDER
-    active_provider_name = (_LLM_PROVIDER or "OLLAMA").upper()
+    active_provider_name = (extract_provider or "OLLAMA").upper()
     print(f"[*] Анализ запроса (Провайдер: {active_provider_name}, Модель: {extract_model}, CV: {args.cv_model})...")
 
     # Step 1: Extract clean keyword
-    keyword, canonical = extract_keyword(args.query, extract_model, provider=extract_provider)
+    keyword, canonical = extract_keyword(args.query)
 
     # Queues for recursive resolution
     synthesis_queue = [canonical]
@@ -496,7 +543,7 @@ def main():
 
             print(f"\n[Queue] Извлечение и синтез для термина: '{term}'")
             available = get_available_entities()
-            matches, _ = resolve_entities(term, term, extract_model, available, provider=extract_provider)
+            matches, _ = resolve_entities(term, term, available)
             
             if matches:
                 print(f"[Queue] Термин '{term}' уже существует в базе:")
@@ -514,6 +561,7 @@ def main():
                 preview_provider=preview_provider, preview_api_key=preview_api_key, preview_model=preview_model,
                 synth_provider=synth_provider,     synth_api_key=synth_api_key,     synth_model=synth_model,
                 lean_provider=args.lean_provider,  lean_api_key=args.lean_api_key,  lean_model=args.lean_model,
+                embed_provider=embed_provider,     embed_api_key=embed_api_key,     embed_model=embed_model,
                 cv_model=args.cv_model,
                 no_validate=args.no_validate,
                 canonical_term=term,
@@ -560,8 +608,35 @@ def main():
             lean_file_path = PROJECT_ROOT / "lean_validator" / "Validated" / f"{eid}.lean"
             if not lean_file_path.exists():
                 print(f"[Queue] [-] Lean файл не найден: {lean_file_path}")
-                # We can't validate it, but it might be a valid entity from text.
-                continue
+                print(f"[Queue] [*] Запуск догенерации Lean для сущности {eid}...")
+                
+                from pipeline.export_to_lean import attempt_generation_with_repair
+                tex_files = list(PROJECT_ROOT.joinpath("content").rglob(f"*[{eid}].tex"))
+                if not tex_files:
+                    print(f"[Queue] [-] Не удалось найти .tex файл для {eid} в content/ для догенерации!")
+                    continue
+                
+                tex_content = tex_files[0].read_text(encoding='utf-8')
+                entity_type = "unknown"
+                if "def" in eid: entity_type = "definition"
+                elif "prop" in eid: entity_type = "property"
+                elif "axm" in eid: entity_type = "axiom"
+                elif "op" in eid: entity_type = "operation"
+                elif "thm" in eid: entity_type = "theorem"
+                
+                lean_strategy = mgr.strategies.get('lean')
+                lean_model = getattr(lean_strategy, 'model_name', 'goedel:latest') if lean_strategy else 'goedel:latest'
+                lean_code, is_valid = attempt_generation_with_repair(
+                    eid, entity_type, tex_content, model=lean_model
+                )
+                
+                if lean_code and is_valid:
+                    lean_file_path.parent.mkdir(parents=True, exist_ok=True)
+                    lean_file_path.write_text(lean_code, encoding='utf-8')
+                    print(f"[Queue] [+] Успешно сгенерирован и сохранен {lean_file_path}")
+                else:
+                    print(f"[Queue] [-] Не удалось догенерировать Lean для {eid}")
+                    continue
                 
             lean_code = lean_file_path.read_text(encoding='utf-8')
             print(f"  Lean validating: {lean_code[:80]}...")
@@ -619,7 +694,7 @@ def main():
     
     # Generate the final PDF with the originally requested canonical entity
     available = get_available_entities()
-    matches, _ = resolve_entities(args.query, canonical, extract_model, available, provider=extract_provider)
+    matches, _ = resolve_entities(args.query, canonical, available)
     
     root_ids = [m["entity_id"] for m in matches]
     
