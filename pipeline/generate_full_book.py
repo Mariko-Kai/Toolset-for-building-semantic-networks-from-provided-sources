@@ -95,7 +95,16 @@ def main():
         print("[-] В базе данных нет сущностей. Сначала запустите конвейер обогащения.")
         return
 
-    print(f"[+] Найдено сущностей в БД: {len(entity_ids)}")
+    # 1. Regenerate macros
+    print("[main] Regenerating mathesis_macros.sty...")
+    try:
+        subprocess.run([sys.executable, str(PROJECT_ROOT / "pipeline" / "generate_macros.py")], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"[!] Warning: generate_macros.py failed: {e}")
+
+    # 2. Setup inputs
+    print("[main] Reading DB and topological sorting...")
+    print(f"    Найдено сущностей в БД: {len(entity_ids)}")
     print(f"    Первые 10: {entity_ids[:10]}")
     roots_arg = ",".join(entity_ids)
 

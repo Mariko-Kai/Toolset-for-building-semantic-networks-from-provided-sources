@@ -1,0 +1,21 @@
+% defined-in: apostol (page 175)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f : \RealNumbers \to \RealNumbers, a, b, \alpha, \delta \colon \RealNumbers, \varepsilon \colon \RealNumbers^+, n \colon \mathbb{N}, P \colon \text{Partition}([a, b])]
+% 2. Data Structures: [Partition P is represented as a finite set of points \{x_0, \dots, x_n\} such that a = x_0 < x_1 < \dots < x_n = b. Span is defined as \sup_{x, y \in [x_i, x_{i+1}]} |f(x) - f(y)|.]
+% 3. Implicit Bounds: [The sequence of intervals [a_n, b_n] is defined by recursion on n \colon \mathbb{N}.]
+% ========================
+
+% entity-id: prop-cantor-uniform-continuity
+% entity-type: prop
+
+\begin{proposition}[Cantor's Theorem on Uniform Continuity]
+\forall f \colon \ClosedInterval{a, b} \to \RealNumbers, \quad \Continuous{f} \implies \forall \varepsilon \in \RealNumbers^+, \exists P \in \text{Partition}(\ClosedInterval{a, b}) \quad \forall I \in P \quad \text{Span}(f, I) < \varepsilon
+\end{proposition}
+
+\begin{proof}[RU]
+Предположим от противного, что существует такое \varepsilon_0 > 0, что для любого разбиения P интервала \ClosedInterval{a, b} найдется подынтервал I \in P, для которого \text{Span}(f, I) \geq \varepsilon_0. Используя метод последовательного деления пополам, построим вложенную последовательность интервалов \ClosedInterval{a_n, b_n}, в каждом из которых утверждение ложно. Пусть \alpha = \sup \{a_n \mid n \in \mathbb{N}\}. В силу непрерывности f в точке \alpha, существует \delta > 0, такое что \forall x \in (\alpha - \delta, \alpha + \delta) \cap \ClosedInterval{a, b}, \RealAbsoluteValue{f(x) - f(\alpha)} < \varepsilon_0 / 2, откуда \text{Span}(f, I) < \varepsilon_0 для любого I \subset (\alpha - \delta, \alpha + \delta). При достаточно большом n, \ClosedInterval{a_n, b_n} \subset (\alpha - \delta, \alpha + \delta), что противоречит предположению \text{Span}(f, \ClosedInterval{a_n, b_n}) \geq \varepsilon_0.
+\end{proof}
+
+\begin{proof}[EN]
+Assume for contradiction that there exists \varepsilon_0 > 0 such that for every partition P of \ClosedInterval{a, b}, there exists a subinterval I \in P with \text{Span}(f, I) \geq \varepsilon_0. By the method of successive bisections, we construct a nested sequence of intervals \ClosedInterval{a_n, b_n} where the theorem fails. Let \alpha = \sup \{a_n \mid n \in \mathbb{N}\}. By the continuity of f at \alpha, there exists \delta > 0 such that \forall x \in (\alpha - \delta, \alpha + \delta) \cap \ClosedInterval{a, b}, \RealAbsoluteValue{f(x) - f(\alpha)} < \varepsilon_0 / 2, implying \text{Span}(f, I) < \varepsilon_0 for any I \subset (\alpha - \delta, \alpha + \delta). For sufficiently large n, \ClosedInterval{a_n, b_n} \subset (\alpha - \delta, \alpha + \delta), contradicting the assumption \text{Span}(f, \ClosedInterval{a_n, b_n}) \geq \varepsilon_0.
+\end{proof}

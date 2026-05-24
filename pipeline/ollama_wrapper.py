@@ -217,9 +217,14 @@ def resolve_entities(query, canonical_term, available_entities):
     
     for eid, title, nl_desc, emb_blob, lean_path in rows:
         norm_title = normalize_math_term(title)
-        if norm_query == norm_title:
+        
+        query_words = set(norm_query.split())
+        title_words = set(norm_title.split())
+        
+        # Match if exact match, or if one is a proper subset of the other (with at least 2 words to avoid false positives on 'the' etc)
+        if norm_query == norm_title or (len(title_words) >= 2 and title_words.issubset(query_words)) or (len(query_words) >= 2 and query_words.issubset(title_words)):
             candidates.append({"entity_id": eid, "title": title, "nl_desc": nl_desc, "score": 1.0, "method": "dictionary"})
-            
+    
     # 2. Embedding Search (Always run to pool candidates)
     if not candidates:
         try:

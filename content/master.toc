@@ -35,8 +35,8 @@
 \contentsline {section}{\numberline {7.4}Отрицание (Negation)}{10}{section.7.4}%
 \contentsline {section}{\numberline {7.5}Импликация (Implication)}{10}{section.7.5}%
 \contentsline {section}{\numberline {7.6}Квантор всеобщности (Universal Quantifier)}{11}{section.7.6}%
-\contentsline {section}{\numberline {7.7}Аксиома специализации (Specialization [axm-fol-4])}{11}{section.7.7}%
-\contentsline {section}{\numberline {7.8}Аксиома распределения квантора (Distribution [axm-fol-5])}{11}{section.7.8}%
-\contentsline {section}{\numberline {7.9}Правило вывода (Modus Ponens [axm-fol-modus-ponens])}{11}{section.7.9}%
-\contentsline {section}{\numberline {7.10}Правило обобщения (Generalization Rule [axm-fol-generalization])}{11}{section.7.10}%
+\contentsline {section}{\numberline {7.7}Аксиома специализации (Specialization [def-fol-4])}{11}{section.7.7}%
+\contentsline {section}{\numberline {7.8}Аксиома распределения квантора (Distribution [def-fol-5])}{11}{section.7.8}%
+\contentsline {section}{\numberline {7.9}Правило вывода (Modus Ponens [def-fol-modus-ponens])}{11}{section.7.9}%
+\contentsline {section}{\numberline {7.10}Правило обобщения (Generalization Rule [def-fol-generalization])}{11}{section.7.10}%
 \contentsline {section}{\numberline {7.11}Теорема о дистрибутивности квантора (Quantifier Distribution Theorem)}{12}{section.7.11}%

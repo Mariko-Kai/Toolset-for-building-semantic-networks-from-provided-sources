@@ -186,6 +186,41 @@ def discover_mathlib_signatures(terms: list[str]) -> list[str]:
     # Placeholder for discovery if needed.
     return []
 
+def validate_tree(entities: list[dict]) -> dict:
+    temp_file = LEAN_DIR / "TempTreeValidation.lean"
+    try:
+        imports = {"import Mathlib"}
+        all_body_lines = []
+        
+        for ent in entities:
+            eid = ent["id"]
+            lean_code = ent["lean_code"]
+            body_lines = []
+            
+            for line in lean_code.splitlines():
+                trimmed = line.strip()
+                if trimmed.startswith("import "):
+                    imports.add(trimmed)
+                else:
+                    body_lines.append(line)
+                    
+            all_body_lines.append(f"-- Validation for {eid}")
+            all_body_lines.extend(body_lines)
+            all_body_lines.append("")
+            
+        with open(temp_file, 'w', encoding='utf-8') as f:
+            for imp in sorted(imports):
+                f.write(imp + "\n")
+            f.write("\n")
+            f.write("\n".join(all_body_lines) + "\n")
+
+        return validate_semantics_with_lean(str(temp_file))
+    finally:
+        try:
+            temp_file.unlink()
+        except Exception:
+            pass
+
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1:

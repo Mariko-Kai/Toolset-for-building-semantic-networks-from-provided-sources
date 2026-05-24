@@ -1,30 +1,30 @@
 import Mathlib
 
--- axm-zfc-choice
+-- def-zfc-choice
 axiom axm_zfc_choice : ∀ \mathcal{F, } ( ∀ A, B, ( A \in \mathcal{F} \land B \in \mathcal{F} \land A \neq B → \lnot ∃ x, (x \in A \land x \in B) ) \land \lnot(\\varnothing \in \mathcal{F}) ) → ∃ C, ∀ A, ( A \in \mathcal{F} → ∃ ! x, (x \in A \land x \in C) )
 
--- axm-zfc-extensionality
+-- def-zfc-extensionality
 axiom axm_zfc_extensionality : ∀ A, B, (A = B) ↔ (∀ x, x \in A ↔ x \in B)
 
--- axm-zfc-infinity
+-- def-zfc-infinity
 axiom axm_zfc_infinity : ∃ I, ( \\varnothing \in I \;\land\; ∀ x, ( x \in I → ∃ y, (y \in I \land ∀ z, (z \in y ↔ z \in x \lor z = x)) ) )
 
--- axm-zfc-pairing
+-- def-zfc-pairing
 axiom axm_zfc_pairing : ∀ A, B, ∃ C, ∀ x, ( x \in C ↔ (x = A \lor x = B) )
 
--- axm-zfc-power-set
+-- def-zfc-power-set
 axiom axm_zfc_power_set : ∀ X, ∃ P, ∀ A, (A \in P ↔ A \subset X)
 
--- axm-zfc-regularity
+-- def-zfc-regularity
 axiom axm_zfc_regularity : ∀ S, ( (∃ y, y \in S) → ∃ x, ( x \in S \land \lnot ∃ z, (z \in S \land z \in x) ) )
 
--- axm-zfc-replacement
+-- def-zfc-replacement
 axiom axm_zfc_replacement : ( ∀ x, ∃ ! y, \, \phi(x, y) ) → ∀ X, ∃ Y, ∀ y, ( y \in Y ↔ ∃ x, ( x \in X \land \phi(x, y) ) )
 
--- axm-zfc-specification
+-- def-zfc-specification
 axiom axm_zfc_specification : ∀ X, ∃ Y, ∀ z, ( z \in Y ↔ (z \in X \land \phi(z)) )
 
--- axm-zfc-union
+-- def-zfc-union
 axiom axm_zfc_union : ∀ \mathcal{F, } ∃ U, ∀ x, ( x \in U ↔ ∃ A, (A \in \mathcal{F} \land x \in A) )
 
 -- ax-completeness

@@ -24,17 +24,6 @@ class MathesisSemanticMerger:
         # Настройка логирования
         self.setup_logging()
         
-        # Разрешаем конфигурацию для классификатора (модуль extract)
-        self.classifier_provider, self.classifier_model, self.classifier_api_key = resolve_module_config(
-            module="extract",
-            global_provider=getattr(cli_args, 'provider', None),
-            global_model=getattr(cli_args, 'model', None),
-            global_api_key=getattr(cli_args, 'api_key', None),
-            module_provider=getattr(cli_args, 'extract_provider', None),
-            module_model=getattr(cli_args, 'extract_model', None),
-            module_api_key=getattr(cli_args, 'extract_api_key', None)
-        )
-        
         # Разрешаем конфигурацию для Lean-валидации (модуль lean)
         self.lean_provider, self.lean_model, self.lean_api_key = resolve_module_config(
             module="lean",
@@ -57,12 +46,9 @@ class MathesisSemanticMerger:
         self.embed_model = "nomic-embed-text:latest"
         
         # Допустимые роли для семантического сравнения
-        self.valid_roles = ['obj', 'prop', 'oper', 'thm', 'lem']
+        self.valid_roles = ['def', 'prop']
         
         # Инициализируем провайдеры в глобальном окружении Mathesis
-        self.logger.info(f"Инициализация классификатора (Провайдер: {self.classifier_provider.upper()}, Модель: {self.classifier_model})")
-        setup_provider(self.classifier_provider, api_key=self.classifier_api_key, model=self.classifier_model)
-        
         self.logger.info(f"Инициализация Lean-валидатора (Провайдер: {self.lean_provider.upper()}, Модель: {self.lean_model})")
         setup_lean_provider(self.lean_provider, api_key=self.lean_api_key, model=self.lean_model)
 
@@ -97,7 +83,7 @@ class MathesisSemanticMerger:
         """Эвристика извлечения значимого текста из LaTeX"""
         # Ищет тело окружения (object, operation, property, axiom, theorem, lemma, etc.)
         form_match = re.search(
-            r'\\begin\{(object|operation|property|axiom|theorem|lemma|corollary|terminal)\}(.*?)\\end\{\1\}',
+            r'\\begin\{(definition|proposition)\}(.*?)\\end\{\1\}',
             content,
             re.DOTALL | re.IGNORECASE
         )
@@ -109,53 +95,11 @@ class MathesisSemanticMerger:
         return content[:500]
 
     def get_true_role(self, entity_id, formulation):
-        """Определяет истинную роль сущности. Теоремы пропускают проверку."""
-        # 1. Если префикс уже валидный, возвращаем его мгновенно
-        match = re.search(r"^([a-z]+)-", entity_id)
+        """Определяет истинную роль сущности по префиксу. В новой архитектуре классификатор LLM не нужен."""
+        match = re.search(r"^(def|prop)-", entity_id)
         if match:
-            role = match.group(1)
-            if role == "op":
-                return "oper"
-            if role in self.valid_roles or role in ['axm', 'term']:
-                return role
-
-        if entity_id.startswith("thm-"):
-            return "thm"
-            
-        prompt = f"""
-        Ты математический классификатор. Твоя задача — определить роль математического утверждения.
-        Доступные роли:
-        - obj (Объект/Определение)
-        - prop (Свойство)
-        - oper (Операция)
-        - thm (Теорема)
-        - axm (Аксиома)
-        - lem (Лемма)
-        
-        Утверждение: {formulation}
-        
-        В ответе напиши ТОЛЬКО ОДНО слово — аббревиатуру роли из списка выше. Без точек и пояснений.
-        """
-        
-        try:
-            # Делаем запрос через централизованный query_llm Mathesis
-            reply = ModelManager.get_instance().query_llm(
-                prompt=prompt,
-                model=self.classifier_model,
-                provider=self.classifier_provider
-            ).strip().lower()
-            
-            for role in self.valid_roles + ['axm', 'term']:
-                if role in reply:
-                    return role
-            
-            # Fallback к префиксу из текущего ID
-            match = re.search(r"^([a-z]+)-", entity_id)
-            return match.group(1) if match and match.group(1) in self.valid_roles else "obj"
-        except Exception as e:
-            self.logger.error(f"Ошибка LLM классификации для {entity_id}: {e}")
-            match = re.search(r"^([a-z]+)-", entity_id)
-            return match.group(1) if match and match.group(1) in self.valid_roles else "obj"
+            return match.group(1)
+        return "def"
 
     def load_and_classify_entities(self):
         """Загрузка контента и определение истинных ролей с выделением чистого ID"""
@@ -179,11 +123,6 @@ class MathesisSemanticMerger:
             formulation = self.extract_formulation(content)
             true_role = self.get_true_role(entity_id, formulation)
             
-            # Исключаем аксиомы (axm) и термы (term/terminal) из проверки дубликатов
-            if true_role in ['axm', 'term', 'terminal']:
-                self.logger.debug(f"[{entity_id}] Классифицирован как {true_role}. Исключен из проверки дубликатов.")
-                continue
-            
             entities.append({
                 "path": filepath,
                 "filename_base": filename_base,
@@ -194,7 +133,7 @@ class MathesisSemanticMerger:
             })
             self.logger.debug(f"[{entity_id}] ({filename_base}) классифицирован как роль: {true_role}")
             
-        self.logger.info(f"Успешно загружено {len(entities)} семантически значимых сущностей (аксиомы и термы отфильтрованы).")
+        self.logger.info(f"Успешно загружено {len(entities)} семантически значимых сущностей.")
         return entities
 
     def get_embedding(self, text):
@@ -389,8 +328,7 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
 
     def enforce_naming_design(self, original_id, true_role):
         """Создает правильное имя с учетом перерассчитанной роли"""
-        # Удаляем старый префикс типа obj-, prop- и т.д.
-        clean_id = re.sub(r'^(obj|prop|oper|thm|axm|lem|term)-', '', original_id)
+        clean_id = re.sub(r'^(def|prop)-', '', original_id)
         clean_id = re.sub(r'[^a-zA-Z0-9-]', '', clean_id).strip().lower()
         return f"{true_role}-{clean_id}"
 
@@ -619,7 +557,7 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
                         pairs_to_check.append((entities[i], entities[j], sim))
 
         if not pairs_to_check:
-            self.logger.info("Семантических дубликатов в категориях (obj, prop, oper, thm, lem) не обнаружено.")
+            self.logger.info("Семантических дубликатов в категориях (def, prop) не обнаружено.")
             # Запускаем актуализацию Lean файлов
             self.actualize_lean_files()
             return

@@ -147,10 +147,13 @@ def is_semantic_error(lean_code: str, errors: list, entity_type: str) -> bool:
     return False
 
 
-def translate_to_lean_via_llm(entity_id, entity_type, tex_content, model="goedel:latest", mathlib_hints="", error_feedback=None, previous_code=None, attempt=None):
+def translate_to_lean_via_llm(entity_id, entity_type, tex_content, model="goedel:latest", mathlib_hints="", error_feedback=None, previous_code=None, attempt=None, local_lemmas=None):
     """
     Translates LaTeX to Lean 4 using LLM, supporting error feedback for self-correction.
     """
+    
+    proof_match = re.search(r'\\begin\{proof\}(.*?)\\end\{proof\}', tex_content, flags=re.DOTALL)
+    informal_proof = proof_match.group(1).strip() if proof_match else ""
         
     tex_clean = re.sub(r'\\begin\{proof\}.*?\\end\{proof\}', '', tex_content, flags=re.DOTALL)
     tex_clean = re.sub(r'^%.*$', '', tex_clean, flags=re.MULTILINE).strip()
@@ -177,7 +180,13 @@ The target entity has type: '{entity_type}'.
 ADDITIONAL CONSTRAINTS:
 1. Do NOT generate `open` statements. Use fully qualified names (e.g., `Set.Icc`) or rely on the implicit scope of `import Mathlib`.
 2. Verify exact Mathlib identifiers (e.g., use `UniformContinuousOn` instead of `UniformlyContinuousOn`). Do not guess names without verifying their exact spelling in Lean 4.
+3. TACTIC DELEGATION: For routine calculations and trivial logical steps (like "obviously" or "hence"), delegate to automated tactics (`by aesop`, `by linarith`, `by ring`, `by simp`). Do not write them out manually.
+4. STEP-BY-STEP ISOLATION: Break down long proofs into intermediate logical assertions using `have h1 : ... := by ...` to isolate compilation errors.
 """
+
+    local_lemmas_str = ""
+    if local_lemmas:
+        local_lemmas_str = f"\n=== Dictionary of Local Lemmas ===\nYou MUST use these previously formalized entities when translating the proof:\n" + "\n".join([f"- {l}" for l in local_lemmas]) + "\n"
 
     # Detect if we are using the Goedel-Formalizer model
     is_goedel = "goedel" in target_model.lower()
@@ -186,10 +195,12 @@ ADDITIONAL CONSTRAINTS:
         problem_name = lean_name
         informal_statement_content = f"We define a mathematical {entity_type}.\n"
         informal_statement_content += f"Formal definition/theorem in LaTeX:\n${tex_clean}$\n"
+        if informal_proof:
+            informal_statement_content += f"\nInformal proof from textbook:\n{informal_proof}\n"
         if mathlib_hints:
             informal_statement_content += f"\nRelevant Mathlib signatures:\n{mathlib_hints}\n"
             
-        informal_statement_content += f"\n{declaration_rules}\n\n{latex_decryption_guide}\n"
+        informal_statement_content += f"\n{declaration_rules}\n{local_lemmas_str}\n{latex_decryption_guide}\n"
         system_prompt = None
 
         # Смена фрейма и Prefix Forcing

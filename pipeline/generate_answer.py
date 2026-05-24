@@ -163,7 +163,7 @@ def synthesize_entity_details(data, provider, model, api_key, force_refresh=Fals
         print(f"[Warning] Failed to setup LLM provider: {e}")
         provider = "ollama"
 
-    prompt = f"""You are a world-class mathematician and textbook editor.
+    prompt = rf"""You are a world-class mathematician and textbook editor.
 We are compiling a high-quality mathematical analysis textbook/handbook.
 Your task is to synthesize/translate/clean up the bilingual names and natural language descriptions for the following mathematical entity.
 
@@ -183,10 +183,12 @@ INSTRUCTIONS:
    - Absolutely HIDE/REMOVE any IDs (like `[axm-fol-4]` or `op-riemann-integral`) or internal codes.
 
 2. Descriptions ("desc_ru" and "desc_en"):
-   - "desc_ru" must be a clean, beautiful, mathematically rigorous formulation/definition of this entity in Russian, using standard inline LaTeX math mode (e.g., $f(x)$, $[a, b]$). If "Existing RU Description" is provided, clean it up (removing any IDs or brackets). If not provided, generate it from the Canonical Math Block.
+   - "desc_ru" must be a clean, beautiful, mathematically rigorous formulation/definition of this entity in Russian, using standard inline LaTeX math mode. YOU MUST wrap ALL math variables, equations, and macros in `$ ... $` (e.g., write $f(x)$ instead of f(x), and $\ClosedInterval{{a, b}}$ instead of \ClosedInterval{{a, b}}). If "Existing RU Description" is provided, clean it up (removing any IDs or brackets). If not provided, generate it from the Canonical Math Block.
    - "desc_en" must be a high-quality, professional mathematical English translation/equivalent of "desc_ru".
    - Do NOT include headers like "Формулировка на русском языке" or "Математическая формулировка" inside the description fields.
    - Make sure absolutely NO internal IDs or reference codes appear in either description.
+
+CRITICAL ESCAPING RULE: NEVER escape or drop backslashes in LaTeX macros! Ensure all math macros like \AbsAbstract, \RealNumbers, etc., retain their backslashes. Since you are outputting JSON, you MUST double-escape backslashes in your JSON strings (e.g. write "\\AbsAbstract" instead of "\AbsAbstract", "\\mathbb{{R}}" instead of "\mathbb{{R}}").
 
 Return ONLY a valid JSON object with the following schema:
 {{
@@ -320,7 +322,7 @@ def parse_canonical(filepath):
     # Match \textbf{Описание:} ... up to \begin{definition/proposition} or \end{document}
     # Use a non-greedy match that also captures \begin{itemize} blocks within the description
     desc_match = re.search(
-        r'\\textbf\{Описание:\}\s*(.*?)(?=\\begin\{(?:object|axiom|theorem|operation|property)\}|\\textbf\{(?!Описание)\}|\\section|$)',
+        r'\\textbf\{Описание:\}\s*(.*?)(?=\\begin\{(?:object|axiom|theorem|operation|property|definition|proposition|lemma|corollary)\}|\\textbf\{(?!Описание)|\\section|$)',
         full_body, flags=re.DOTALL
     )
     if desc_match:
@@ -328,7 +330,7 @@ def parse_canonical(filepath):
 
     # Strip the Описание block from canonical output as it violates PURE MATH RULE
     full_body = re.sub(
-        r'\\textbf\{Описание:\}\s*.*?(?=\\begin\{(?:object|axiom|theorem|operation|property)\}|\\textbf\{(?!Описание)\}|\\section|$)',
+        r'\\textbf\{Описание:\}\s*.*?(?=\\begin\{(?:object|axiom|theorem|operation|property|definition|proposition|lemma|corollary)\}|\\textbf\{(?!Описание)|\\section|$)',
         '', full_body, flags=re.DOTALL
     )
     full_body = full_body.strip()
@@ -554,7 +556,7 @@ def main():
     if args.no_validate or args.no_enrich:
         print("[SKIP] Lean validation/enrichment loop skipped (--no-validate or --no-enrich).\n")
     else:
-        from pipeline.lean_validator import validate_entity
+        from pipeline.lean_validator import validate_tree
         from pipeline.ollama_wrapper import get_missing_deps_from_lean_error, run_enrichment_pipeline
 
         max_iters = 5
@@ -564,18 +566,23 @@ def main():
             iter_count += 1
             roots_changed = False
             missing_terms = []
-            for ent in entities:
+            
+            tree_entities = []
+            for ent in reversed(entities):
                 eid = ent["id"]
                 lean_path = PROJECT_ROOT / "lean_validator" / "Validated" / f"{eid}.lean"
                 if not lean_path.exists():
                     continue
                 lean_code = lean_path.read_text(encoding='utf-8')
-                result = validate_entity(eid, lean_code)
+                tree_entities.append({"id": eid, "lean_code": lean_code})
+                
+            if tree_entities:
+                result = validate_tree(tree_entities)
                 if result.get("status") != "success":
                     # Log the Lean compile errors
                     error_feedback = "\n".join([f"Line {e['line']}: {e['message']}" for e in result.get("errors", [])])
                     from pipeline.export_to_lean import log_to_file
-                    log_to_file("lean_errors", error_feedback, entity_id=eid)
+                    log_to_file("lean_errors", error_feedback, entity_id="tree_validation")
                     
                     missing = get_missing_deps_from_lean_error(result.get("errors", []))
                     mathesis_deps = [d for d in missing if any(d.startswith(p) for p in ["obj-", "prop-", "op-", "thm-", "def-"]) ]
@@ -708,6 +715,15 @@ def main():
         clean_body = data.get("full_body", "")
         clean_body = re.sub(r'\\begin\{(definition|proposition)\}\[[^\]]+\]', r'\\begin{\1}', clean_body)
         
+        # LaTeX throws an error if there are empty lines inside display math \[ ... \]
+        def remove_empty_lines(match):
+            s = match.group(0)
+            while re.search(r'\n\s*\n', s):
+                s = re.sub(r'\n\s*\n', '\n', s)
+            return s
+            
+        clean_body = re.sub(r'\\\[.*?\\\]', remove_empty_lines, clean_body, flags=re.DOTALL)
+        
         block += f"{clean_body}\n\n"
         
         content += block
@@ -727,15 +743,21 @@ def main():
     except Exception as e:
         print(f"[WARN] Failed to rebuild master.tex: {e}")
     
+    # Regenerate macros automatically
+    print("[main] Regenerating mathesis_macros.sty...")
+    try:
+        subprocess.run([sys.executable, str(PROJECT_ROOT / "pipeline" / "generate_macros.py")], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"[!] Warning: generate_macros.py failed: {e}")
+
     # Copy style files into output dir for pdflatex
     for sty in ["mathesis.sty", "mathesis_macros.sty"]:
         sty_dest = output_dir / sty
-        if not sty_dest.exists():
-            sty_src = CONTENT_DIR / sty
-            if sty_src.exists():
-                shutil.copy(sty_src, sty_dest)
-            elif (PROJECT_ROOT / sty).exists():
-                shutil.copy(PROJECT_ROOT / sty, sty_dest)
+        sty_src = CONTENT_DIR / sty
+        if sty_src.exists():
+            shutil.copy(sty_src, sty_dest)
+        elif (PROJECT_ROOT / sty).exists():
+            shutil.copy(PROJECT_ROOT / sty, sty_dest)
     
     pdflatex_cmd = [
         "pdflatex",

@@ -43,60 +43,92 @@ def detect_entity_type_from_text(raw_texts, has_proof=False):
     # Default fallback
     return "def"
 
-def get_available_macros_for_text(text_input, mgr):
-    """Shift-Left semantic macro retrieval."""
+def prepare_macros_from_deps(deps, mgr):
+    """Strict Dependency Resolution & Macro Injection."""
+    if not deps:
+        return ""
+    
+    unique_deps = list({d.strip() for d in deps if d and isinstance(d, str)})
+    
+    from pipeline.ollama_wrapper import resolve_entities
+    import re
+    import json
+    import sqlite3
+    
     macros_map = {}
     macro_file = PROJECT_ROOT / "content" / "mathesis_macros.sty"
     if macro_file.exists():
         m_content = macro_file.read_text(encoding="utf-8")
-        import re
-        for match in re.finditer(r'\\newcommand\{\\([a-zA-Z0-9_]+)\}\{\\hyperlink\{([a-zA-Z0-9_\-]+)\}', m_content):
-            macro_name = "\\" + match.group(1)
-            eid = match.group(2)
-            macros_map[eid] = macro_name
+        for match in re.finditer(r'\\newcommand\{\\([a-zA-Z0-9_]+)\}(?:\[\d+\])?\{.*?\\hyperlink\{([a-zA-Z0-9_\-]+)\}', m_content):
+            macros_map[match.group(2)] = "\\" + match.group(1)
 
-    if not macros_map:
-        return ""
-        
-    try:
-        query_emb = mgr.get_embedding(text_input[:2000], role="embed")
-        if not query_emb:
-            return ""
-            
-        import sqlite3
-        import struct
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("SELECT entity_id, embedding FROM entities WHERE embedding IS NOT NULL")
-        rows = cursor.fetchall()
-        conn.close()
-        
-        candidates = []
-        for eid, emb_blob in rows:
-            num_floats = len(emb_blob) // 4
-            emb_vec = struct.unpack(f"{num_floats}f", emb_blob)
-            
-            dot = sum(a*b for a,b in zip(query_emb, emb_vec))
-            norm1 = sum(a*a for a in query_emb)**0.5
-            norm2 = sum(b*b for b in emb_vec)**0.5
-            if norm1 > 0 and norm2 > 0:
-                sim = dot / (norm1 * norm2)
-                candidates.append((sim, eid))
-                
-        candidates.sort(reverse=True)
-        top_eids = [eid for sim, eid in candidates[:20] if sim > 0.5]
-        
-        relevant_macros = []
-        for eid in top_eids:
+    available_macros = []
+    resolved_eids = []
+    
+    conn = sqlite3.connect(DB_PATH, timeout=10.0)
+    cursor = conn.cursor()
+
+    for dep in unique_deps:
+        resolved, _ = resolve_entities("", dep, [])
+        if resolved:
+            eid = resolved[0]["entity_id"]
+            resolved_eids.append(eid)
             if eid in macros_map:
-                relevant_macros.append(macros_map[eid])
+                available_macros.append(f"{macros_map[eid]} (from {eid})")
+            else:
+                # Stub it if not in .sty
+                pascal_name = "".join(w.title() for w in re.sub(r'[^\w\s]', '', dep).strip().split())
+                if not pascal_name: continue
+                new_macro = f"\\{pascal_name}"
+                available_macros.append(f"{new_macro} (from {eid})")
+                if macro_file.exists():
+                    macro_def = f"\\newcommand{{{new_macro}}}{{\\hyperlink{{{eid}}}{{\\text{{{pascal_name}}}}}}}"
+                    with open(macro_file, "a", encoding="utf-8") as f:
+                        f.write(f"\n% Auto-generated stub for {dep}\n{macro_def}\n")
+        else:
+            # Complete Miss: generate stub entity + macro
+            clean_dep = re.sub(r'[^\w\s]', '', dep).strip()
+            if not clean_dep:
+                continue
+            
+            pascal_name = "".join(w.title() for w in clean_dep.split())
+            new_eid = f"def-{clean_dep.replace(' ', '-').lower()}"
+            new_macro = f"\\{pascal_name}"
+            
+            # Quick arity check via LLM
+            prompt = f'What is the standard LaTeX notation for "{dep}" and how many arguments does it take? Return EXACTLY valid JSON with keys "notation" (e.g. "C(#1)") and "args" (integer).'
+            try:
+                resp = mgr.query_llm(prompt, json_mode=True, role="extract")
+                match = re.search(r'(\{.*\})', resp, re.DOTALL)
+                if match: resp = match.group(1)
+                data = json.loads(resp)
+                args = data.get("args", 0)
+                notation = data.get("notation", pascal_name)
+            except:
+                args = 0
+                notation = pascal_name
                 
-        if relevant_macros:
-            return "\nAVAILABLE RELEVANT MACROS (Use these instead of standard LaTeX for concepts/types. Do NOT wrap local variables in macros!):\n" + ", ".join(relevant_macros) + "\n"
-    except Exception as e:
-        print(f"[-] Shift-Left macro retrieval failed: {e}")
+            cursor.execute("INSERT OR IGNORE INTO entities (entity_id, type, title) VALUES (?, ?, ?)", (new_eid, "def", dep))
+            conn.commit()
+            
+            if args > 0:
+                macro_def = f"\\newcommand{{{new_macro}}}[{args}]{{\\mathopen{{\\hyperlink{{{new_eid}}}{{{notation}}}}}}}\\mathclose{{}}"
+            else:
+                macro_def = f"\\newcommand{{{new_macro}}}{{\\hyperlink{{{new_eid}}}{{{notation}}}}}"
+                
+            if macro_file.exists():
+                with open(macro_file, "a", encoding="utf-8") as f:
+                    f.write(f"\n% Auto-generated stub for {dep}\n{macro_def}\n")
+                    
+            available_macros.append(f"{new_macro} (from {new_eid})")
+            resolved_eids.append(new_eid)
+
+    conn.close()
+
+    if not available_macros:
+        return "", resolved_eids
         
-    return ""
+    return "\nAVAILABLE MACROS (CRITICAL: You MUST use these instead of standard LaTeX for concepts/types. DO NOT invent standard commands if they are in this list. Example: use \\RealNumbers instead of \\mathbb{R}):\n" + "\n".join([f"- {m}" for m in available_macros]) + "\n", resolved_eids
 
 def build_synthesis_prompt(cluster_id, formulations, sources, entity_type, implicit_assumptions="", canonical_term="", relevant_macros_str=""):
     """Строит компактный промпт для синтеза. Оптимизирован для скорости на GTX 1650."""
@@ -149,7 +181,6 @@ CRITICAL HEURISTICS & ANTI-PATTERNS TO AVOID:
 CRITICAL NAMING RULE: The entity-id MUST follow the Mathesis architecture standard:
 - if type is def: prefix MUST be `def-` (e.g. def-real-numbers, def-continuous, def-riemann-integral)
 - if type is prop: prefix MUST be `prop-` (e.g. prop-weierstrass)
-DO NOT use `obj-`, `thm-`, `axm-` or `op-` as prefixes.
 
 CRITICAL: Generate EXACTLY ONE mathematical entity. DO NOT repeat the output. DO NOT provide multiple versions. One % entity-id, one % entity-type, and the LaTeX block(s).
 
@@ -162,7 +193,7 @@ TYPING: Every formula MUST start with variable declarations via quantors:
 \forall f \colon \RealNumbers \to \RealNumbers
 
 PURE MATH RULE: For \begin{definition} and \begin{proposition} blocks, NO NATURAL LANGUAGE IS ALLOWED AT ALL. NO English, NO Russian, NO plain text, NO "Note", NO "Remark", NO explanations. The content MUST be 100% formal math symbols and macros. ALL formulas MUST be wrapped in display math blocks \[ ... \]. Inline math $...$ is FORBIDDEN.
-Natural language and explanatory notes are ONLY permitted inside \begin{proof} blocks. ALL math objects/variables in proofs MUST be correctly wrapped with math macros.
+Natural language and explanatory notes are ONLY permitted inside \begin{proof} blocks. ALL math objects/variables/operators in proofs MUST be wrapped in inline math mode `$ ... $`. For example, write $\ClosedInterval{a, b}$ and $f(x)$ instead of \ClosedInterval{a, b} and f(x). Leaving mathematical text/variables naked without `$` is STRICTLY FORBIDDEN!
 """
 
     if relevant_macros_str:
@@ -258,7 +289,7 @@ def check_forbidden_macros(latex: str, entity_type: str) -> list:
         errors.append("ОШИБКА: Использование \\iff в определениях/операциях строго запрещено. Используйте предикат и макрос \\coloneqq.")
     return errors
 
-def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=False, model="qwen3:8b", skip_validation=False, canonical_term="", processed_entities=None):
+def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=False, model="qwen3:8b", skip_validation=False, canonical_term="", processed_entities=None, deps=None):
     import time
     print(f"\n{'='*60}", flush=True)
     print(f"[synthesizer] Cluster: {cluster_id}", flush=True)
@@ -291,8 +322,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
         # 1. Regenerate LaTeX if missing or if semantic error occurred
         if not latex_content or semantic_error_feedback:
             mgr = ModelManager.get_instance()
-            text_input_for_macros = "\n".join([f"[{s}]: {t}" for s, t in zip(sources, formulations)])
-            relevant_macros_str = get_available_macros_for_text(text_input_for_macros, mgr)
+            relevant_macros_str, resolved_eids = prepare_macros_from_deps(deps, mgr)
             prompt = build_synthesis_prompt(cluster_id, formulations, sources, entity_type, implicit_assumptions, canonical_term, relevant_macros_str)
             current_prompt = prompt
             
@@ -407,7 +437,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
                 temp_eid, temp_etype, latex_content, 
                 model=model, mathlib_hints=hints, 
                 error_feedback=syntax_error_feedback, previous_code=lean_code,
-                attempt=current_attempt
+                attempt=current_attempt, local_lemmas=[eid.replace('-', '_') for eid in resolved_eids] if 'resolved_eids' in locals() else []
             )
             if lean_code_new:
                 break
@@ -512,6 +542,16 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
             error_feedback = "\n".join([f"Line {e['line']}: {e['message']}" for e in result.get("errors", [])])
             from pipeline.export_to_lean import log_to_file
             log_to_file("lean_errors", error_feedback, entity_id=temp_eid, attempt=current_attempt)
+            
+            if current_attempt == max_attempts:
+                print(f"  [synthesizer] Max attempts reached for {temp_eid}. Applying Fallback to `sorry`...")
+                if temp_etype == "prop" and "sorry" not in lean_code:
+                    fallback_code = re.sub(r':=.*', ':= by sorry', lean_code, flags=re.DOTALL)
+                    res = validate_entity(temp_eid, fallback_code)
+                    if res["status"] == "success":
+                        print("  [OK] Fallback to sorry compiled successfully.")
+                        valid_lean_code = fallback_code
+                        break
 
             current_attempt += 1
 
@@ -693,7 +733,7 @@ def main():
             cid, data['texts'], data['sources'], data['page_refs'], 
             has_proof=data['has_proof'], model=args.model, 
             skip_validation=args.no_validate, canonical_term=args.canonical_term,
-            processed_entities=processed_entities
+            processed_entities=processed_entities, deps=data.get('deps', [])
         )
         if not synthesized_tex:
             continue

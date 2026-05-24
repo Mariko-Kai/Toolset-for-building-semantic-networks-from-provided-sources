@@ -1,1 +1,0 @@
-axiom obj_predicate : Type
