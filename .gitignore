@@ -47,7 +47,7 @@ build/
 
 # Temporary validator files
 /lean_validator/temp_check.lean
-/scratch/Научная работа
+/scratch/
 mathesis_index.db-shm
 mathesis_index.db-wal
 

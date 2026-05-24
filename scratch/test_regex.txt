@@ -1,6 +1,0 @@
-\begin{object}
-\textbf{Описание:}
-foo
-\textbf{Аксиоматика:}
-bar
-\end{object}
