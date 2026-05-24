@@ -15,7 +15,7 @@
   {\bfseries} % theorem head font
   {.}     % punctuation after theorem head
   {\newline} % space after theorem head — \newline forces a line break!
-  {}      % theorem head spec (empty = default)
+  {\thmname{#1}\thmnumber{ #2}\thmnote{ (#3)}\leavevmode} % theorem head spec
 
 \theoremstyle{mathesisstyle}
 \newtheorem{object}{Объект}[chapter]

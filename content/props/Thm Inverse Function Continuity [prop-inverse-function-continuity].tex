@@ -8,7 +8,7 @@
 %    - \varepsilon, \delta : \RealNumbers^{+}
 % 2. Data Structures: 
 %    - Intervals are represented as \ClosedInterval{a, b} and \OpenInterval{c, d}.
-%    - The inverse function g is defined via the property \FunctionContinuous{g(f(x)) = x}.
+%    - The inverse function g is defined via the property \Continuous{g(f(x)) = x}.
 % 3. Implicit Bounds: 
 %    - f is assumed to be strictly monotonic and continuous to ensure the existence of a continuous inverse g.
 % ========================
@@ -24,10 +24,10 @@
 \[
 \TerForall f \colon \ClosedInterval{a, b} \TermTo \ClosedInterval{c, d}
 \TerForall g \colon \ClosedInterval{c, d} \TermTo \ClosedInterval{a, b}
-\left( \FunctionContinuous{g \circ f = \mathrm{id}_{[a,b]} \And f \circ g = \mathrm{id}_{[c,d]}} \right)
+\left( \Continuous{g \circ f = \mathrm{id}_{[a,b]} \TermConjunction f \circ g = \mathrm{id}_{[c,d]}} \right)
 \TermImplication
 \TerForall y_0 \in \OpenInterval{c, d}
-\left( \FunctionContinuousAtPoint{g, y_0} \right)
+\left( \Continuous{g, y_0} \right)
 \]
 \end{theorem}
 

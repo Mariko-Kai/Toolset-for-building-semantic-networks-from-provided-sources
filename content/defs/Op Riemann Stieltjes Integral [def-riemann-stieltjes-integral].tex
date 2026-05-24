@@ -30,9 +30,9 @@
 \TerForall I \colon \RealNumbers
 \mathrm{IsRiemannStieltjesIntegral}(\Function{f}, \Function{g}, a, b, I) \TermDefinedAs
 \left( I = \LimitFunctionBase{\lim}_{\Partition{\lambda}(P) \to 0} \sum_{i=1}^{n} f(\xi_i) \Delta g_i \right)
-\And
+\TermConjunction
 \left( \Delta g_i \TermDefinedAs g(x_i) - g(x_{i-1}) \right)
-\And
+\TermConjunction
 \left( \Partition{\lambda}(P) \TermDefinedAs \Supremum{\sup}_{1 \leq i \leq n} (x_i - x_{i-1}) \right)
 \]
 \end{operation}

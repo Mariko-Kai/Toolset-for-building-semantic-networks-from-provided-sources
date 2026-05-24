@@ -16,6 +16,6 @@
 \[
 \TerForall p \colon \RealNumbers
 \TerForall N \subseteq \RealNumbers
-\mathrm{IsNeighborhood}(N, p) \TermDefinedAs \TermExists \varepsilon \in \RealNumbers \left( \varepsilon > 0 \And N = \{ x \colon \RealNumbers \mid p - \varepsilon < x < p + \varepsilon \} \right)
+\mathrm{IsNeighborhood}(N, p) \TermDefinedAs \TermExists \varepsilon \in \RealNumbers \left( \varepsilon > 0 \TermConjunction N = \{ x \colon \RealNumbers \mid p - \varepsilon < x < p + \varepsilon \} \right)
 \]
 \end{property}

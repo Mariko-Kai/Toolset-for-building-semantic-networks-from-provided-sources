@@ -17,7 +17,7 @@
 \TerForall a \colon \RealNumbers
 \mathrm{IsContinuous}(f, a) \TermDefinedAs
 \TerForall \varepsilon \in \RealNumbers \left( \varepsilon > 0 \TermImplication
-\TermExists \delta \in \RealNumbers \left( \delta > 0 \And
+\TermExists \delta \in \RealNumbers \left( \delta > 0 \TermConjunction
 \TerForall x \in \RealNumbers \left( \AbsAbstract{ x - a } < \delta \TermImplication
 \AbsAbstract{ f(x) - f(a) } < \varepsilon \right) \right) \right)
 \]

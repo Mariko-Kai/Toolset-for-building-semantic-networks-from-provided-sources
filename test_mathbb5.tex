@@ -1,0 +1,15 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\RealNumbers}{\mathrel{}\hyperlink{def-real-numbers}{\mathbb{R}}\mathrel{}}
+\newcommand{\ClosedInterval}[1]{\hyperlink{def-closed-interval}{#1}}
+\newcommand{\Continuous}[1]{\hyperlink{def-continuous}{#1}}
+
+\begin{document}
+\[
+\forall a \colon \RealNumbers \;\; \forall b \colon \RealNumbers \;\; (a \leq b) \implies \forall f \colon \ClosedInterval{[a,b]} \to \RealNumbers \;\; \Continuous{f}
+\]
+\end{document}

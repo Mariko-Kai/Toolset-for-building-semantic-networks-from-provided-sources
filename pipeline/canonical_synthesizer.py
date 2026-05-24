@@ -28,28 +28,77 @@ CONTENT_DIR = PROJECT_ROOT / "content"
 
 
 def detect_entity_type_from_text(raw_texts, has_proof=False):
-    """Определяет тип сущности. Согласно архитектуре, всё, что имеет доказательство — теорема."""
+    """Определяет тип сущности. Согласно архитектуре, всё, что имеет доказательство — prop."""
     if has_proof:
-        return "theorem"
+        return "prop"
         
     combined = " ".join(raw_texts).lower()
-    theorem_keywords = ["теорема", "лемма", "следствие", "theorem", "lemma", "corollary"]
-    def_keywords = ["определение", "называется", "определим", "definition", "defined as"]
+    prop_keywords = ["теорема", "лемма", "следствие", "theorem", "lemma", "corollary", "свойство", "property"]
     
-    # 1. Strong theorem check
-    for kw in theorem_keywords:
+    # Strong prop check
+    for kw in prop_keywords:
         if kw in combined:
-            return "theorem"
-            
-    # 2. Strong definition check
-    for kw in def_keywords:
-        if kw in combined:
-            return "definition"
+            return "prop"
             
     # Default fallback
-    return "definition"
+    return "def"
 
-def build_synthesis_prompt(cluster_id, formulations, sources, entity_type, implicit_assumptions="", canonical_term=""):
+def get_available_macros_for_text(text_input, mgr):
+    """Shift-Left semantic macro retrieval."""
+    macros_map = {}
+    macro_file = PROJECT_ROOT / "content" / "mathesis_macros.sty"
+    if macro_file.exists():
+        m_content = macro_file.read_text(encoding="utf-8")
+        import re
+        for match in re.finditer(r'\\newcommand\{\\([a-zA-Z0-9_]+)\}\{\\hyperlink\{([a-zA-Z0-9_\-]+)\}', m_content):
+            macro_name = "\\" + match.group(1)
+            eid = match.group(2)
+            macros_map[eid] = macro_name
+
+    if not macros_map:
+        return ""
+        
+    try:
+        query_emb = mgr.get_embedding(text_input[:2000], role="embed")
+        if not query_emb:
+            return ""
+            
+        import sqlite3
+        import struct
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT entity_id, embedding FROM entities WHERE embedding IS NOT NULL")
+        rows = cursor.fetchall()
+        conn.close()
+        
+        candidates = []
+        for eid, emb_blob in rows:
+            num_floats = len(emb_blob) // 4
+            emb_vec = struct.unpack(f"{num_floats}f", emb_blob)
+            
+            dot = sum(a*b for a,b in zip(query_emb, emb_vec))
+            norm1 = sum(a*a for a in query_emb)**0.5
+            norm2 = sum(b*b for b in emb_vec)**0.5
+            if norm1 > 0 and norm2 > 0:
+                sim = dot / (norm1 * norm2)
+                candidates.append((sim, eid))
+                
+        candidates.sort(reverse=True)
+        top_eids = [eid for sim, eid in candidates[:20] if sim > 0.5]
+        
+        relevant_macros = []
+        for eid in top_eids:
+            if eid in macros_map:
+                relevant_macros.append(macros_map[eid])
+                
+        if relevant_macros:
+            return "\nAVAILABLE RELEVANT MACROS (Use these instead of standard LaTeX for concepts/types. Do NOT wrap local variables in macros!):\n" + ", ".join(relevant_macros) + "\n"
+    except Exception as e:
+        print(f"[-] Shift-Left macro retrieval failed: {e}")
+        
+    return ""
+
+def build_synthesis_prompt(cluster_id, formulations, sources, entity_type, implicit_assumptions="", canonical_term="", relevant_macros_str=""):
     """Строит компактный промпт для синтеза. Оптимизирован для скорости на GTX 1650."""
     text_input = "\n".join([f"[{s}]: {t}" for s, t in zip(sources, formulations)])
 
@@ -70,7 +119,7 @@ Before writing the final LaTeX code, you MUST output a `<semantic_mapping>` bloc
 
 OUTPUT: Only LaTeX. No ```latex blocks. Include:
 % entity-id: <prefix-short-id>
-% entity-type: <object|property|operation|theorem>"""
+% entity-type: <def|prop>"""
     
     if target_requirement:
         rules += target_requirement
@@ -85,8 +134,6 @@ CRITICAL HEURISTICS & ANTI-PATTERNS TO AVOID:
 
 2. Analytical vs. Computational Structures (The List rule):
    Never use computational data structures like `List` or `Array` to represent continuous mathematical concepts (partitions, sequences, covers).
-   - BAD: Representing a partition as `P : List ℝ`.
-   - GOOD: Representing a partition as a function `(n : ℕ) (t : ℕ → ℝ)` bounded by `Finset.range n`.
 
 3. Unpacking Informal Notation (The Ellipsis rule):
    Textbooks use informal ellipses like "{t_0, ..., t_n}". You must explicitly unpack these into rigorous functions and index bounds. Identify implicit dependencies (e.g., if a sequence is finite, you must introduce its length `n : ℕ` as a separate variable).
@@ -97,32 +144,19 @@ CRITICAL HEURISTICS & ANTI-PATTERNS TO AVOID:
 5. Strict Semantic Identifiers (The Self-Describing ID Rule):
    When defining a new entity-id, the `id` MUST be globally unambiguous, self-documenting, and resistant to namespace collisions. 
    
-   NEVER use bare, generic nouns or adjectives. You MUST include the domain or the parent mathematical object in the ID.
-   
-   Format: def-{domain_or_parent}-{concept}
-   
-   - BAD: `def-mesh` (Mesh of what? A graph? A 3D model? A partition?)
-   - GOOD: `def-partition-mesh` (Clearly states this is the mesh of a partition)
-   
-   - BAD: `def-bounded` (Is a function bounded? A set? A sequence?)
-   - GOOD: `def-function-bounded` or `def-set-bounded`
-   
-   - BAD: `def-addition` 
-   - GOOD: `def-real-addition` or `def-matrix-addition` (Unless using the Late Binding abstract pattern like `def-add-abstract`)
-
-   If a concept belongs to a specific mathematical domain, prefix it explicitly to help the Lean 4 translator map it to the correct Mathlib namespace.
+   Format: <type>-{domain_or_parent}-{concept}
 
 CRITICAL NAMING RULE: The entity-id MUST follow the Mathesis architecture standard:
-- if type is object, property, operation, or any definition: prefix MUST be `def-` (e.g. def-real-numbers, def-continuous, def-riemann-integral)
-- if type is theorem/lemma: prefix MUST be `thm-` (e.g. thm-weierstrass)
-- if type is axiom: prefix MUST be `axm-`(e.g. axm-zfc-axiom-of-pairing)
-DO NOT use `obj-`, `prop-`, or `op-` as prefixes.
+- if type is def: prefix MUST be `def-` (e.g. def-real-numbers, def-continuous, def-riemann-integral)
+- if type is prop: prefix MUST be `prop-` (e.g. prop-weierstrass)
+DO NOT use `obj-`, `thm-`, `axm-` or `op-` as prefixes.
 
 CRITICAL: Generate EXACTLY ONE mathematical entity. DO NOT repeat the output. DO NOT provide multiple versions. One % entity-id, one % entity-type, and the LaTeX block(s).
 
 TERMINALS: \emptyset = < > \leq \geq 0 1 \infty \varepsilon \delta \mathrm
 
-CRITICAL WRAPPING RULE: By default, ALL mathematical entities/concepts/operators in your formulas MUST be wrapped in semantic macros (e.g. \RealNumbers, \Continuous{f}, \AbsAbstract{x}) or standard LaTeX if no semantic macro exists. DO NOT use the legacy \entityref command. Do not use legacy \mForall, \mExists, \mReal commands; use standard \forall, \exists, \mathbb{R} or the available semantic macros.
+CRITICAL WRAPPING RULE: ALL mathematical entities/concepts/operators in your formulas MUST be written using dynamic semantic macros (e.g. \RealNumbers, \Continuous, \AbsAbstract). DO NOT use hardcoded LaTeX like \mathbb{R}, \sup, \in if a macro exists!
+NOTE: Local variables (like a, b, f, x) introduced in the current formula MUST NOT be wrapped in semantic macros. Only wrap the types, spaces, and operators.
 
 TYPING: Every formula MUST start with variable declarations via quantors:
 \forall f \colon \RealNumbers \to \RealNumbers
@@ -131,12 +165,15 @@ PURE MATH RULE: For \begin{theorem}, \begin{object}, \begin{property}, and \begi
 Natural language and explanatory notes are ONLY permitted inside \begin{proof} blocks. ALL math objects/variables in proofs MUST be correctly wrapped with math macros.
 """
 
+    if relevant_macros_str:
+        rules += relevant_macros_str
+
     if implicit_assumptions:
         rules += f"\nIMPLICIT ASSUMPTIONS DETECTED IN TEXTBOOK (Apply these to your variable declarations!):\n{implicit_assumptions}\n"
 
     example = r"""EXAMPLE:
-% entity-id: thm-weierstrass-extreme
-% entity-type: theorem
+% entity-id: prop-weierstrass-extreme
+% entity-type: prop
 \begin{theorem}[Weierstrass Extreme Value]
 \forall f \colon \ClosedInterval{[a,b]} \to \RealNumbers \;\; \Continuous{f}
 \implies \exists c \in \ClosedInterval{[a,b]} \;\;
@@ -144,7 +181,7 @@ Natural language and explanatory notes are ONLY permitted inside \begin{proof} b
 \end{theorem}
 """
 
-    if entity_type == "theorem":
+    if entity_type == "prop":
         prompt = rf"""Synthesize a strict formal THEOREM + PROOFS from these sources:
 {text_input}
 
@@ -193,7 +230,7 @@ def enforce_single_entity(latex: str) -> str:
         return latex
 
     # 2. Truncate if we see a second main block of the same type
-    main_envs = ['theorem', 'object', 'property', 'operation', 'axiom']
+    main_envs = ['theorem', 'lemma', 'property', 'definition', 'axiom', 'object', 'operation']
     for env in main_envs:
         pattern = rf'\\begin\{{{env}\}}'
         starts = list(re.finditer(pattern, latex))
@@ -253,7 +290,10 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
         
         # 1. Regenerate LaTeX if missing or if semantic error occurred
         if not latex_content or semantic_error_feedback:
-            prompt = build_synthesis_prompt(cluster_id, formulations, sources, entity_type, implicit_assumptions, canonical_term=canonical_term)
+            mgr = ModelManager.get_instance()
+            text_input_for_macros = "\n".join([f"[{s}]: {t}" for s, t in zip(sources, formulations)])
+            relevant_macros_str = get_available_macros_for_text(text_input_for_macros, mgr)
+            prompt = build_synthesis_prompt(cluster_id, formulations, sources, entity_type, implicit_assumptions, canonical_term, relevant_macros_str)
             current_prompt = prompt
             
             if semantic_error_feedback:
@@ -443,7 +483,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
                 # Check for sorry abuse in definitions or theorem formulations
                 has_sorry_abuse = False
                 sorry_warning = ""
-                if temp_etype not in ["theorem"]:
+                if temp_etype != "prop":
                     # Isolate the definition block by splitting at the first theorem/lemma keyword
                     parts = re.split(r'\b(?:theorem|lemma)\b', lean_code, maxsplit=1)
                     definition_part = parts[0]
@@ -673,11 +713,8 @@ def main():
 
         # Decide directory based on type (correct pluralization)
         TYPE_DIR_MAP = {
-            "axiom": "foundations",
-            "object": "objects",
-            "property": "properties",
-            "operation": "operations",
-            "theorem": "theorems",
+            "def": "defs",
+            "prop": "props",
         }
         type_dir = TYPE_DIR_MAP.get(entity_type, entity_type + "s")
         target_dir = CONTENT_DIR / type_dir

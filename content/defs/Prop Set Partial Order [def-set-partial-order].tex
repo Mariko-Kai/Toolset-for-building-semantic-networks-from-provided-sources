@@ -19,9 +19,9 @@
 \mathrm{IsPartialOrder}(X, R) \TermDefinedAs
 \left(
 \begin{aligned}
-& \left( \TerForall x \colon X \RelationPartialOrder{R}(x, x) \right) \And \\
-& \left( \TerForall x \colon X \TerForall y \colon X \TerForall z \colon X \left( R(x, y) \And R(y, z) \TermImplication R(x, z) \right) \right) \And \\
-& \left( \TerForall x \colon X \TerForall y \colon X \left( R(x, y) \And R(y, x) \TermImplication x = y \right) \right)
+& \left( \TerForall x \colon X \RelationPartialOrder{R}(x, x) \right) \TermConjunction \\
+& \left( \TerForall x \colon X \TerForall y \colon X \TerForall z \colon X \left( R(x, y) \TermConjunction R(y, z) \TermImplication R(x, z) \right) \right) \TermConjunction \\
+& \left( \TerForall x \colon X \TerForall y \colon X \left( R(x, y) \TermConjunction R(y, x) \TermImplication x = y \right) \right)
 \end{aligned}
 \right)
 \]

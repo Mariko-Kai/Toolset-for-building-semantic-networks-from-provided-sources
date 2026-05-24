@@ -53,3 +53,85 @@ open BigOperators Real Nat Topology Rat
 def def_sequence_uniform_convergence (A : Type*) (f : ℕ → A → ℝ) (g : A → ℝ) : Prop :=
   ∀ ε > 0, ∃ N : ℕ, ∀ n > N, ∀ x : A, |f n x - g x| < ε
 
+-- Entity: prop-weierstrass-extreme-value
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsWeierstrassExtremeValue (f : ℝ → ℝ) (a b : ℝ) (ha : a ≤ b) (hf : ContinuousOn f (Set.Icc a b)) : Prop :=
+  ∃ x ∈ Set.Icc a b, ∀ y ∈ Set.Icc a b, f y ≤ f x
+
+theorem WeierstrassExtremeValue (f : ℝ → ℝ) (a b : ℝ) (ha : a ≤ b) (hf : ContinuousOn f (Set.Icc a b)) : 
+  IsWeierstrassExtremeValue f a b ha hf := by sorry
+
+-- Entity: prop-weierstrass-extreme-value
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsWeierstrassExtremeValue (f : ℝ → ℝ) (a b : ℝ) (ha : a ≤ b) (hf : ContinuousOn f (Set.Icc a b)) : Prop :=
+  ∃ x ∈ Set.Icc a b, ∀ y ∈ Set.Icc a b, f y ≤ f x
+
+theorem WeierstrassExtremeValue (f : ℝ → ℝ) (a b : ℝ) (ha : a ≤ b) (hf : ContinuousOn f (Set.Icc a b)) : 
+  IsWeierstrassExtremeValue f a b ha hf := by sorry
+
+-- Entity: prop-weierstrass-extreme-value
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsWeierstrassExtremeValue (f : ℝ → ℝ) (a b : ℝ) (ha : a ≤ b) (hf : ContinuousOn f (Set.Icc a b)) : Prop :=
+  ∃ x ∈ Set.Icc a b, ∀ y ∈ Set.Icc a b, f y ≤ f x
+
+theorem WeierstrassExtremeValue (f : ℝ → ℝ) (a b : ℝ) (ha : a ≤ b) (hf : ContinuousOn f (Set.Icc a b)) : 
+  IsWeierstrassExtremeValue f a b ha hf := by sorry
+
+-- Entity: prop-weierstrass-extreme-value
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsWeierstrassExtremeValue (f : ℝ → ℝ) (a b : ℝ) (ha : a ≤ b) (hf : ContinuousOn f (Set.Icc a b)) : Prop :=
+  ∃ x ∈ Set.Icc a b, ∀ y ∈ Set.Icc a b, f y ≤ f x
+
+theorem WeierstrassExtremeValue (f : ℝ → ℝ) (a b : ℝ) (ha : a ≤ b) (hf : ContinuousOn f (Set.Icc a b)) : 
+  IsWeierstrassExtremeValue f a b ha hf := by sorry
+
+-- Entity: thm-weierstrass-extreme-value | Type: theorem
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem Weierstrass_extreme_value (a b : ℝ) (hab : a ≤ b) (f : ℝ → ℝ) 
+  (hf : ContinuousOn f (Set.Icc a b)) :
+  ∃ c d : ℝ, c ∈ Set.Icc a b ∧ d ∈ Set.Icc a b ∧ 
+  f c = sSup (f '' Set.Icc a b) ∧ f d = sInf (f '' Set.Icc a b) := by sorry
+
+-- Entity: thm-weierstrass-extreme-value
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem Weierstrass_extreme_value (a b : ℝ) (hab : a ≤ b) (f : ℝ → ℝ) 
+  (hf : ContinuousOn f (Set.Icc a b)) :
+  ∃ c d : ℝ, c ∈ Set.Icc a b ∧ d ∈ Set.Icc a b ∧ 
+  f c = sSup (f '' Set.Icc a b) ∧ f d = sInf (f '' Set.Icc a b) := by sorry
+

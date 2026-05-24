@@ -1,0 +1,21 @@
+% entity-id: axm-completeness
+% entity-type: axiom
+% defined-in: zorich-1, p. 77
+% macro: \Completeness
+% args: 1
+% notation: #1
+
+\section{Аксиома полноты (Completeness Axiom)}
+
+\hypertarget{axm-completeness}{}
+\begin{axiom}[axm-completeness]
+\label{entity:axm-completeness}
+% 1. ОБЪЯВЛЕНИЕ ТИПОВ
+$\Set{X, Y} \subset \RealNumbers$
+
+% 2. ТЕЛО АКСИОМЫ
+\[
+(\TerForall x \in \Set{X} \TermConjunction \TerForall y \in \Set{Y} \colon x \SetPartialOrder{\le} y) \TermImplication 
+(\TermExists c \in \RealNumbers \TerForall x \in \Set{X}, \TerForall y \in \Set{Y} \colon x \SetPartialOrder{\le} c \SetPartialOrder{\le} y)
+\]
+\end{axiom}

@@ -15,6 +15,6 @@
 \begin{property}
 \[
 \TerForall f \colon \ClosedInterval{a, b} \TermTo \RealNumbers
-\mathrm{IsBounded}(f) \TermDefinedAs \TermExists M \in \RealNumbers \left( (M > 0) \And \TerForall x \in \ClosedInterval{a, b} \left( \AbsAbstract{ f(x) } < M \right) \right)
+\mathrm{IsBounded}(f) \TermDefinedAs \TermExists M \in \RealNumbers \left( (M > 0) \TermConjunction \TerForall x \in \ClosedInterval{a, b} \left( \AbsAbstract{ f(x) } < M \right) \right)
 \]
 \end{property}

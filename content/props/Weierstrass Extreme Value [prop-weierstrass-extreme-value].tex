@@ -1,0 +1,51 @@
+% defined-in: apostol (page 174), apostol (page 173)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types:
+%     *   $a, b$: Real numbers ($\RealNumbers$).
+%     *   $f$: Function from the closed interval $[a, b]$ to $\RealNumbers$ ($f \colon [a, b] \to \RealNumbers$).
+%     *   $x, c, d$: Real numbers ($\RealNumbers$).
+%     *   $M$: Real number ($\RealNumbers$), representing the supremum.
+%     *   $g$: Function from $[a, b]$ to $\RealNumbers$ ($g \colon [a, b] \to \RealNumbers$).
+% 2. Data Structures:
+%     *   Closed Interval $[a, b]$: A subset of $\RealNumbers$ defined by $x \in \RealNumbers \mid a \leq x \leq b$.
+% 3. Implicit Bounds:
+%     *   $a, b$: The endpoints of the closed interval, requiring $a \leq b$.
+% ========================
+
+% entity-id: prop-weierstrass-extreme-value
+% entity-type: prop
+\begin{theorem}[Weierstrass Extreme Value Theorem]
+\[
+\forall a \colon \RealNumbers \;\; \forall b \colon \RealNumbers \;\; (a \leq b) \implies \forall f \colon \ClosedInterval{[a,b]} \to \RealNumbers \;\; \Continuous{f}
+\implies \exists c \in \ClosedInterval{[a,b]} \;\; \left( f(c) = \Supremum{f(\ClosedInterval{[a,b]})} \right)
+\land \exists d \in \ClosedInterval{[a,b]} \;\; \left( f(d) = \Infimum{f(\ClosedInterval{[a,b]})} \right)
+\]
+\end{theorem}
+
+\begin{proof}[RU]
+Теорема утверждает, что если функция $f$ непрерывна на замкнутом интервале $[a, b]$, то она достигает своего абсолютного максимума и минимума на этом интервале. Достаточно доказать достижение супремума.
+Пусть $M = \sup_{x \in [a, b]} f(x)$. Предположим, что $f(x) < M$ для всех $x \in [a, b]$.
+Определим функцию $g(x) = M - f(x)$. Тогда $g(x) > 0$ для всех $x \in [a, b]$.
+Поскольку $f$ непрерывна, $g$ также непрерывна.
+Рассмотрим функцию $h(x) = 1/g(x)$. Поскольку $g(x)$ непрерывна и положительна на компактном множестве $[a, b]$, то $h(x)$ непрерывна на $[a, b]$.
+По теореме о достижении экстремума, $h(x)$ достигает своего максимального значения $C$ на $[a, b]$.
+Следовательно, $1/g(x) \leq C$ для всех $x \in [a, b]$.
+Это означает, что $g(x) \geq 1/C$ для всех $x \in [a, b]$.
+Отсюда следует, что $M - f(x) \geq 1/C$, или $f(x) \leq M - 1/C$ для всех $x \in [a, b]$.
+Это противоречит тому факту, что $M$ является наименьшей верхней границей для $f$ на $[a, b]$, поскольку мы нашли верхнюю границу $M - 1/C < M$.
+Следовательно, наше предположение неверно, и должно существовать $c \in [a, b]$ такое, что $f(c) = M$.
+Аналогично, поскольку $\inf f = -\sup (-f)$, достижение минимума следует из достижения максимума.
+\end{proof}
+\begin{proof}[EN]
+The theorem states that if a function $f$ is continuous on a closed interval $[a, b]$, then it attains both its absolute maximum and absolute minimum on this interval. It suffices to prove the attainment of the supremum.
+Let $M = \sup_{x \in [a, b]} f(x)$. We proceed by contradiction. Assume that $f(x) < M$ for all $x \in [a, b]$.
+Define the function $g(x) = M - f(x)$. Since $f$ is continuous, $g$ is also continuous. By assumption, $g(x) > 0$ for all $x \in [a, b]$.
+Consider the function $h(x) = 1/g(x)$. Since $g(x)$ is continuous and strictly positive on the compact set $[a, b]$, $h(x)$ is continuous on $[a, b]$.
+By the Extreme Value Theorem, $h(x)$ attains a maximum value $C$ on $[a, b]$.
+Thus, $1/g(x) \leq C$ for all $x \in [a, b]$.
+This implies $g(x) \geq 1/C$ for all $x \in [a, b]$.
+Therefore, $M - f(x) \geq 1/C$, which means $f(x) \leq M - 1/C$ for all $x \in [a, b]$.
+This contradicts the fact that $M$ is the least upper bound of $f$ on $[a, b]$, since we have found an upper bound $M - 1/C$ that is strictly less than $M$.
+Hence, our initial assumption must be false, and there must exist $c \in [a, b]$ such that $f(c) = M$.
+The attainment of the minimum follows similarly, as $\inf f = -\sup (-f)$.
+\end{proof}

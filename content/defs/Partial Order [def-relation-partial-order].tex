@@ -22,8 +22,8 @@
 
 % 2. ТЕЛО ОПРЕДЕЛЕНИЯ
 \mathrm{IsPartialOrder}(R, X) \TermDefinedAs \left(
-    \RelationPartialOrder{\mathrm{IsReflexive}}(R, X) \And
-    \RelationPartialOrder{\mathrm{IsAntisymmetric}}(R, X) \And
+    \RelationPartialOrder{\mathrm{IsReflexive}}(R, X) \TermConjunction
+    \RelationPartialOrder{\mathrm{IsAntisymmetric}}(R, X) \TermConjunction
     \RelationPartialOrder{\mathrm{IsTransitive}}(R, X)
 \right)
 \]

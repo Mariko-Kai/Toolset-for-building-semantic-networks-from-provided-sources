@@ -11,9 +11,9 @@
 \left(
 \SetPartialOrder{\mathrm{IsPartialOrder}}(R, S) \TermEquivalence
 \left(
-\left( \TerForall a \in S \quad (a, a) \in R \right) \And
-\left( \TerForall a, b \in S \quad ((a, b) \in R \And (b, a) \in R) \TermImplication a = b \right) \And
-\left( \TerForall a, b, c \in S \quad ((a, b) \in R \And (b, c) \in R) \TermImplication (a, c) \in R \right)
+\left( \TerForall a \in S \quad (a, a) \in R \right) \TermConjunction
+\left( \TerForall a, b \in S \quad ((a, b) \in R \TermConjunction (b, a) \in R) \TermImplication a = b \right) \TermConjunction
+\left( \TerForall a, b, c \in S \quad ((a, b) \in R \TermConjunction (b, c) \in R) \TermImplication (a, c) \in R \right)
 \right)
 \right)
 \]

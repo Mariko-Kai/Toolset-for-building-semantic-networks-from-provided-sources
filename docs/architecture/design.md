@@ -4,87 +4,28 @@
 
 ### 1.1 Logical Model (Entities)
 
+The system strictly adheres to Lean's paradigm by categorizing all mathematical concepts into two primary types:
+
+1. **`def`**: Objects, structures, definitions, axioms, operations, and functions. Anything that constructs data or sets a foundational premise.
+2. **`prop`**: Properties, theorems, lemmas, and corollaries. Anything that asserts truth and is expected to have a proof (or is a proposition).
+
+*Note on Axioms*: Axioms are treated as `def` entities. They can optionally use the `% lean_manual: true` flag in their LaTeX source to indicate that they are foundational and should not be processed by the automated Lean code generator.
+
 ```mermaid
 erDiagram
-    AXIOM {
-        string id PK "e.g. axm-zfc-choice"
-        string name "Axiom of Choice"
-        string system "ZFC | FOL | Tool"
-        text statement "LaTeX"
+    ENTITY {
+        string id PK "e.g. def-sequence, prop-bounded"
+        string type "def | prop"
+        string title "Human readable title"
+        text nl_desc "Natural language description for semantic search"
+        blob embedding "Vector embedding"
     }
 
-    OBJECT {
-        string id PK "e.g. obj-sequence"
-        string name "Sequence"
-        text aliases "JSON array"
-        string module "e.g. analysis"
-        text formal_definition "LaTeX"
-        text intuition "LaTeX"
-    }
-
-    PROPERTY {
-        string id PK "e.g. prop-bounded"
-        string name "Bounded"
-        text aliases "JSON array"
-        string module "e.g. analysis"
-        text formal_definition "LaTeX"
-        text equivalent_forms "LaTeX, optional"
-    }
-
-    OPERATION {
-        string id PK "e.g. op-addition"
-        string name "Addition"
-        text aliases "JSON array"
-        string module "e.g. algebra"
-        int arity "1, 2, ..."
-        text formal_definition "LaTeX"
-        string codomain_id FK "result object type"
-    }
-
-    OPERATION_ARGUMENT {
-        string operation_id FK,PK
-        int position PK "0, 1, 2, ..."
-        string object_id FK
-        string role "operand | parameter"
-    }
-
-    THEOREM {
-        string id PK "e.g. thm-bolzano-weierstrass"
-        string name "Bolzano-Weierstrass"
-        string subtype "theorem | lemma"
-        string parent_theorem_id FK "NOT NULL for lemmas"
-        string module "e.g. analysis"
-        text statement "LaTeX"
-        text proof "LaTeX, full"
-        text strategy "proof method summary"
-    }
-
-    OBJECT_PROPERTY {
-        int id PK "surrogate"
-        string object_id FK
-        string property_id FK
-        text context "LaTeX, nullable"
-        string context_ref FK "nullable, obj-id"
-    }
-
-    THEOREM_DEPENDENCY {
-        string theorem_id FK,PK "who uses"
-        string used_thm_id FK,PK "what is used"
-        string proof_step "e.g. Step 3"
-    }
-
-    EQUIVALENCE {
-        string entity_a_id FK,PK "a_id < b_id"
-        string entity_b_id FK,PK
-        string proof_id FK "thm proving A iff B"
-    }
-
-    OBJECT_COMPOSITION {
-        string container_id FK
-        string obj_comp_id FK "nullable, object"
-        string prop_comp_id FK "nullable, property"
-        string op_comp_id FK "nullable, operation"
-        string role "base_set | structure | axiom"
+    FORMULATION_SOURCE {
+        int id PK
+        string entity_id FK
+        string source_book
+        string page_info
     }
 
     ENTITY_DEPENDENCY {
@@ -92,244 +33,39 @@ erDiagram
         string target_id FK,PK "what is referenced"
     }
 
-    BOOK {
-        string key PK "zorich-1"
-        string author "Зорич В.А."
-        string title "Математический анализ т. I"
-        string edition "10-е изд."
-        int year "2012"
-        string file "path in Books/"
-    }
-
-    FORMULATION {
-        int id PK "autoincrement"
-        string entity_id FK
-        string entity_type "object | property | axiom | theorem"
-        string source_book FK "book.key"
-        string source_ref "p. 42 (scan page)"
-        text content "verbatim LaTeX"
-    }
-
-    %% --- Core Relationships ---
-
-    OBJECT ||--o{ OBJECT_PROPERTY : ""
-    PROPERTY ||--o{ OBJECT_PROPERTY : ""
-
-    OPERATION }o--|| OBJECT : "codomain"
-    OPERATION ||--|{ OPERATION_ARGUMENT : "has_args"
-    OPERATION_ARGUMENT }o--|| OBJECT : "typed_by"
-
-    THEOREM }o--o{ OBJECT : "about"
-    THEOREM }o--o{ PROPERTY : "uses"
-    THEOREM }o--o{ OPERATION : "uses"
-    THEOREM }o--o{ AXIOM : "grounded_in"
-    THEOREM ||--o{ THEOREM : "parent_of"
-
-    %% --- Edge Case Structures ---
-
-    THEOREM ||--o{ THEOREM_DEPENDENCY : "depends_on"
-    OBJECT ||--o{ EQUIVALENCE : "equivalent_to"
-    OBJECT ||--o{ OBJECT_COMPOSITION : "composed_of"
-
-    %% --- Cross-References (\entityref) ---
-
-    ENTITY_DEPENDENCY }o--|| AXIOM : "depends_on"
-    ENTITY_DEPENDENCY }o--|| OBJECT : "depends_on"
-    ENTITY_DEPENDENCY }o--|| PROPERTY : "depends_on"
-    ENTITY_DEPENDENCY }o--|| OPERATION : "depends_on"
-    ENTITY_DEPENDENCY }o--|| THEOREM : "depends_on"
-
-    %% --- Multi-Source Formulations ---
-
-    BOOK ||--o{ FORMULATION : "provides"
-    FORMULATION }o--|| OBJECT : "formulates"
-    FORMULATION }o--|| PROPERTY : "formulates"
-    FORMULATION }o--|| AXIOM : "formulates"
-    FORMULATION }o--|| THEOREM : "formulates"
+    ENTITY ||--o{ FORMULATION_SOURCE : "extracted from"
+    ENTITY ||--o{ ENTITY_DEPENDENCY : "depends on"
+    ENTITY_DEPENDENCY }o--|| ENTITY : "used by"
 ```
 
 ### 1.2 SQL Physical Schema (SQLite)
 
 ```sql
--- Dialect: SQLite 3.38+
--- PRAGMA foreign_keys = ON;
--- === CORE ENTITIES ===
-
-CREATE TABLE axiom (
-    id       TEXT PRIMARY KEY,
-    name     TEXT NOT NULL,
-    system   TEXT NOT NULL,       -- 'ZFC' | 'FOL' | 'Tool'
-    statement TEXT NOT NULL,      -- LaTeX (canonical)
-    file_path TEXT NOT NULL
+CREATE TABLE IF NOT EXISTS entities (
+    entity_id TEXT PRIMARY KEY,
+    type TEXT NOT NULL CHECK(type IN ('def', 'prop')),
+    title TEXT NOT NULL,
+    path TEXT NOT NULL,
+    file_path TEXT,
+    lean_path TEXT,
+    nl_desc TEXT,
+    embedding BLOB
 );
 
-CREATE TABLE object (
-    id               TEXT PRIMARY KEY,
-    name             TEXT NOT NULL,
-    aliases          TEXT,         -- JSON array
-    module           TEXT NOT NULL,
-    formal_definition TEXT NOT NULL, -- LaTeX (canonical)
-    intuition        TEXT,
-    file_path        TEXT NOT NULL
+CREATE TABLE IF NOT EXISTS formulation_sources (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_id TEXT NOT NULL REFERENCES entities(entity_id),
+    source_book TEXT NOT NULL,
+    page_info TEXT
 );
 
-CREATE TABLE property (
-    id               TEXT PRIMARY KEY,
-    name             TEXT NOT NULL,
-    aliases          TEXT,
-    module           TEXT NOT NULL,
-    formal_definition TEXT NOT NULL,
-    equivalent_forms TEXT,
-    file_path        TEXT NOT NULL
-);
-
-CREATE TABLE operation (
-    id               TEXT PRIMARY KEY,
-    name             TEXT NOT NULL,
-    aliases          TEXT,
-    module           TEXT NOT NULL,
-    arity            INTEGER NOT NULL DEFAULT 1,
-    formal_definition TEXT NOT NULL,
-    codomain_id      TEXT REFERENCES object(id),
-    file_path        TEXT NOT NULL
-);
-
-CREATE TABLE theorem (
-    id                TEXT PRIMARY KEY,
-    name              TEXT NOT NULL,
-    subtype           TEXT NOT NULL CHECK (subtype IN ('theorem','lemma')),
-    parent_theorem_id TEXT REFERENCES theorem(id),
-    module            TEXT NOT NULL,
-    statement         TEXT NOT NULL,
-    proof             TEXT NOT NULL,
-    strategy          TEXT,
-    file_path         TEXT NOT NULL,
-    CHECK (
-        (subtype = 'lemma' AND parent_theorem_id IS NOT NULL) OR
-        (subtype = 'theorem' AND parent_theorem_id IS NULL)
-    )
-);
-
--- === JUNCTION / RELATIONSHIP TABLES ===
-
-CREATE TABLE object_property (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    object_id   TEXT NOT NULL REFERENCES object(id),
-    property_id TEXT NOT NULL REFERENCES property(id),
-    context     TEXT,
-    context_ref TEXT REFERENCES object(id)
-);
-
-CREATE TABLE operation_argument (
-    operation_id TEXT REFERENCES operation(id),
-    position     INTEGER NOT NULL,
-    object_id    TEXT REFERENCES object(id),
-    role         TEXT DEFAULT 'operand',
-    PRIMARY KEY (operation_id, position)
-);
-
-CREATE TABLE theorem_object (
-    theorem_id TEXT REFERENCES theorem(id),
-    object_id  TEXT REFERENCES object(id),
-    PRIMARY KEY (theorem_id, object_id)
-);
-
-CREATE TABLE theorem_property (
-    theorem_id  TEXT REFERENCES theorem(id),
-    property_id TEXT REFERENCES property(id),
-    PRIMARY KEY (theorem_id, property_id)
-);
-
-CREATE TABLE theorem_operation (
-    theorem_id   TEXT REFERENCES theorem(id),
-    operation_id TEXT REFERENCES operation(id),
-    PRIMARY KEY (theorem_id, operation_id)
-);
-
-CREATE TABLE theorem_axiom (
-    theorem_id TEXT REFERENCES theorem(id),
-    axiom_id   TEXT REFERENCES axiom(id),
-    PRIMARY KEY (theorem_id, axiom_id)
-);
-
-CREATE TABLE theorem_dependency (
-    theorem_id  TEXT REFERENCES theorem(id),
-    used_thm_id TEXT REFERENCES theorem(id),
-    proof_step  TEXT,
-    PRIMARY KEY (theorem_id, used_thm_id)
-);
-
-CREATE TABLE equivalence (
-    entity_a_id TEXT NOT NULL,
-    entity_b_id TEXT NOT NULL,
-    proof_id    TEXT REFERENCES theorem(id),
-    PRIMARY KEY (entity_a_id, entity_b_id),
-    CHECK (entity_a_id < entity_b_id)
-);
-
-CREATE TABLE object_composition (
-    container_id   TEXT NOT NULL REFERENCES object(id),
-    obj_comp_id    TEXT REFERENCES object(id),
-    prop_comp_id   TEXT REFERENCES property(id),
-    op_comp_id     TEXT REFERENCES operation(id),
-    role           TEXT NOT NULL,
-    CHECK (
-        (obj_comp_id  IS NOT NULL) +
-        (prop_comp_id IS NOT NULL) +
-        (op_comp_id   IS NOT NULL) = 1
-    )
-);
-
--- === CROSS-REFERENCES (from \entityref in content/) ===
-
-CREATE TABLE entity_dependency (
-    source_id  TEXT NOT NULL,  -- entity that references another
-    target_id  TEXT NOT NULL,  -- entity being referenced
+CREATE TABLE IF NOT EXISTS entity_dependency (
+    source_id TEXT REFERENCES entities(entity_id),
+    target_id TEXT REFERENCES entities(entity_id),
     PRIMARY KEY (source_id, target_id)
 );
-
--- === MULTI-SOURCE FORMULATIONS ===
-
-CREATE TABLE book (
-    key     TEXT PRIMARY KEY,
-    author  TEXT NOT NULL,
-    title   TEXT NOT NULL,
-    edition TEXT,
-    year    INTEGER,
-    file    TEXT
-);
-
-CREATE TABLE formulation (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    entity_id   TEXT NOT NULL,
-    entity_type TEXT NOT NULL CHECK (entity_type IN
-                    ('axiom','object','property','operation','theorem')),
-    source_book TEXT NOT NULL REFERENCES book(key),
-    source_ref  TEXT NOT NULL, -- format: 'p. PAGE_NUM' to prevent ambiguity
-    content     TEXT NOT NULL,
-    UNIQUE(entity_id, source_book)
-);
-
-CREATE TABLE formulation_sources (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    entity_id TEXT NOT NULL,
-    source_book TEXT NOT NULL,
-    source_ref TEXT
-);
-
-CREATE TABLE formulation_raw_cache (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    book_id TEXT NOT NULL,
-    query TEXT NOT NULL,
-    raw_text TEXT NOT NULL,
-    cluster_id TEXT
-);
-
--- FTS index
-CREATE VIRTUAL TABLE entity_fts USING fts5(
-    entity_id, entity_type, name, content
-);
 ```
+
 
 ### 1.3 Reading the Diagram
 
@@ -373,88 +109,32 @@ Pipeline:  content/ + sources/  →  parser.py  →  seed_from_content.py  →  
 
 ```
 content/
-├── mathesis.sty                        ← shared preamble (\entityref)
+├── mathesis.sty                        ← shared preamble
+├── mathesis_macros.sty                 ← Auto-generated semantic macros
 ├── master.tex                          ← master doc → PDF with hyperlinks
 │
-├── foundations/
-│   ├── Modus Ponens [axm-fol-modus-ponens].tex
-│   ├── Universal Instantiation [axm-fol-univ-inst].tex
-│   ├── Axiom of Extensionality [axm-zfc-extensionality].tex
-│   ├── Axiom of Choice [axm-zfc-choice].tex
-│   ├── Completeness Axiom [axm-zfc-completeness].tex
-│   └── Well-Ordering Principle [tool-well-ordering].tex
+├── defs/
+│   ├── Set [def-set].tex
+│   ├── Sequence [def-sequence].tex
+│   ├── Cartesian Product [def-cartesian-product].tex
+│   └── Negation [axiom-negation].tex
 │
-├── objects/
-│   ├── Set [obj-set].tex
-│   ├── Empty Set [obj-empty-set].tex
-│   ├── Function [obj-function].tex
-│   ├── Sequence [obj-sequence].tex
-│   ├── Subsequence [obj-subsequence].tex
-│   ├── Natural Numbers [obj-natural-numbers].tex
-│   ├── Real Numbers [obj-real-numbers].tex
-│   ├── Group [obj-group].tex
-│   ├── Ring [obj-ring].tex
-│   └── Field [obj-field].tex
-│
-├── properties/
-│   ├── Bounded [prop-bounded].tex
-│   ├── Continuity [prop-continuity].tex
-│   ├── Convergent [prop-convergent].tex
-│   ├── Commutativity [prop-commutative].tex
-│   └── Completeness [prop-complete].tex
-│
-├── operations/
-│   ├── Limit of Sequence [op-limit-seq].tex
-│   ├── Derivative [op-derivative].tex
-│   ├── Integral [op-integral].tex
-│   ├── Set Union [op-union].tex
-│   └── Absolute Value [op-absolute-value].tex
-│
-└── theorems/
-    ├── Bolzano-Weierstrass [thm-bolzano-weierstrass].tex
-    ├── BW Bisection [lemma-bw-bisection].tex
-    ├── BW Subsequence Extraction [lemma-bw-subsequence].tex
-    ├── Nested Intervals [thm-nested-intervals].tex
-    ├── Intermediate Value [thm-intermediate-value].tex
-    └── Cantor Diagonal [thm-cantor-diagonal].tex
+└── props/
+    ├── Bounded [prop-bounded].tex
+    ├── Continuity [prop-continuous].tex
+    └── Weierstrass Extreme Value [prop-weierstrass-extreme-value].tex
 ```
 
 > [!IMPORTANT]
 > **Pure Math Absolute Rule.** Канонические файлы в `content/` НЕ ДОЛЖНЫ содержать
-> текста на естественном языке (русском, английском и т.д.). Внутри
-> `\begin{object}` / `\begin{axiom}` / `\begin{theorem}` допускаются **исключительно**
-> математические символы в LaTeX math mode. Единственное исключение — содержимое
-> `\text{}` для стандартных терминов (e.g. `\text{sgn}`). Все словесные пояснения
-> формируются **только** на этапе генерации ответа инструментом `pipeline/generate_answer.py`
-> (см. Раздел 9).
-
-> [!IMPORTANT]
-> **Recursive Exhaustion Rule.** Каждый символ, предикат или `\entityref`, используемый
-> в каноническом определении, **обязан** иметь собственный `.tex` файл в `content/`.
-> При создании новой сущности агент обязан выполнить **обход в ширину (BFS)** по всем
-> зависимостям и создать канонические записи для каждой обнаруженной сущности,
-> вплоть до аксиом ZFC/FOL из `content/foundations/`, которые не требуют доказательств.
-> BFS останавливается, когда зависимость уже существует как файл `.tex` в `content/`
-> или является аксиомой.
+> текста на естественном языке (русском, английском и т.д.) в определениях. Внутри
+> `\begin{definition}` / `\begin{theorem}` допускаются **исключительно**
+> математические символы в LaTeX math mode.
+> Доказательства (`\begin{proof}`) могут содержать текст.
 
 > [!CAUTION]
-> **Full `\entityref` Coverage Rule.** Каждый символ в формуле, имеющий самостоятельное
-> математическое определение, **ОБЯЗАН** быть обёрнут в `\entityref{entity-id}{символ}`.
-> BFS-алгоритм обнаруживает зависимости **исключительно** через `\entityref`. Необёрнутый
-> символ = невидимая зависимость = разрыв в цепочке до аксиом.
->
-> **Оборачивать (семантические сущности):**
-> - Операторы: `\sup` → `\entityref{op-supremum}{\sup}`, `\inf`, `\lim`, `\sum`, `\int`
-> - Объекты: `f` → `\entityref{obj-function}{f}`, `[a,b]` → `\entityref{obj-closed-interval}{[a,b]}`
-> - Свойства: «ограниченная f» → `\entityref{prop-bounded}{f}`
->
-> **НЕ оборачивать (терминалы):**
-> - Логические примитивы FOL: `\forall`, `\exists`, `\Rightarrow`, `\Leftrightarrow`, `\land`, `\lor`, `\lnot`
-> - Примитивы ZFC: `\in`, `\emptyset`, `\subset` (определены в `content/foundations/`)
-> - Локальные переменные: `x`, `n`, `i`, `a`, `b`
-> - Нотационные сокращения: `\Delta x_i`, индексы, скобки
-> - Числовые литералы: `0`, `1`, `\infty`
-> - Равенство и неравенства: `=`, `<`, `>`, `\leq`, `\geq`
+> **Semantic Macros Rule.** Хардкод LaTeX-примитивов (например, `\mathbb{R}`, `\sup`, `\in`) **ЗАПРЕЩЕН**. Все сущности, определенные в `defs/` или `props/`, получают автоматически сгенерированный PascalCase макрос в `mathesis_macros.sty` (например, `\RealNumbers`, `\Supremum`, `\ClosedInterval`). LLM обязана использовать эти динамические макросы. Старая нотация `\mType` полностью признана устаревшей и больше не используется.
+
 
 ### 2.3 Cross-References: `\entityref`
 

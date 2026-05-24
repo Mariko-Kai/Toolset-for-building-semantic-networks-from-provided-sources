@@ -19,7 +19,7 @@
 \TerForall A \colon \RealNumbers
 \mathrm{HasLimit}(f, p, A) \TermDefinedAs
 \left( \TerForall \varepsilon \in \RealNumbers \quad \varepsilon > 0 \TermImplication
-\TermExists \delta \in \RealNumbers \quad \delta > 0 \And
+\TermExists \delta \in \RealNumbers \quad \delta > 0 \TermConjunction
 \left( \TerForall x \in D \quad 0 < \AbsAbstract{ x - p } < \delta \TermImplication \AbsAbstract{ f(x) - A } < \varepsilon \right) \right)
 \]
 \end{property}

@@ -28,7 +28,7 @@
 \TerForall t \colon \{0, \dots, n\} \to \RealNumbers
 \TerForall x \colon \{1, \dots, n\} \to \RealNumbers
 \TerForall f \colon \ClosedInterval{a, b} \to \RealNumbers
-\left( \Partition{t, a, b, n} \And \Partition{x, t, n} \right)
+\left( \Partition{t, a, b, n} \TermConjunction \Partition{x, t, n} \right)
 \TermImplication
 \mathrm{RiemannSum}(f, t, x, n) \TermDefinedAs \sum_{i=1}^{n} f(x(i)) \cdot (t(i) - t(i-1))
 \]
