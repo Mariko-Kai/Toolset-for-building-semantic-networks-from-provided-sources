@@ -96,7 +96,7 @@ def log_to_file(category: str, content: str, entity_id: str = None, attempt: int
         print(f"  [logging-error] Failed to write log to category {category}: {e}")
         sys.stdout.flush()
 
-DB_PATH = PROJECT_ROOT / "mathesis_index.db"
+DB_PATH = PROJECT_ROOT / "db/mathesis_index.db"
 CONTENT_DIR = PROJECT_ROOT / "content"
 LEAN_DIR = PROJECT_ROOT / "lean_validator"
 VALIDATED_DIR = LEAN_DIR / "Validated"
@@ -172,7 +172,12 @@ Our LaTeX formulas use semantic macros to represent standard mathematical concep
 
     # Declaration rules based on Entity Type
     declaration_rules = f"""=== Lean 4 Declaration Mapping Rules ===
-The target entity has type: '{entity_type}'."""
+The target entity has type: '{entity_type}'.
+
+ADDITIONAL CONSTRAINTS:
+1. Do NOT generate `open` statements. Use fully qualified names (e.g., `Set.Icc`) or rely on the implicit scope of `import Mathlib`.
+2. Verify exact Mathlib identifiers (e.g., use `UniformContinuousOn` instead of `UniformlyContinuousOn`). Do not guess names without verifying their exact spelling in Lean 4.
+"""
 
     # Detect if we are using the Goedel-Formalizer model
     is_goedel = "goedel" in target_model.lower()
@@ -222,10 +227,10 @@ Your task is to translate mathematical statements into valid Lean 4 declarations
 Textbooks use informal Set Theory (ZFC) and often abuse notation. Your target environment (Lean 4) uses strict Type Theory (Calculus of Inductive Constructions). You must bridge this gap by performing a rigorous semantic translation before generating the final code.
 
 CRITICAL HEURISTICS & ANTI-PATTERNS TO AVOID:
-1. Types vs. Sets (The \colon vs \in rule): 
+1. Types vs. Sets (The \\\\colon vs \\\\in rule): 
    Never confuse belonging to a fundamental type with belonging to a subset. 
-   - BAD: "x \in \mathbb{R}" when declaring a variable. 
-   - GOOD: "x \colon \mathbb{R}" (in LaTeX) or "(x : ℝ)" (in Lean). Use "\in" ONLY for subsets, e.g., "x \in [a, b]".
+   - BAD: "x \\\\in \\\\mathbb{R}" when declaring a variable. 
+   - GOOD: "x \\\\colon \\\\mathbb{R}" (in LaTeX) or "(x : ℝ)" (in Lean). Use "\\\\in" ONLY for subsets, e.g., "x \\\\in [a, b]".
 
 2. Analytical vs. Computational Structures (The List rule):
    Never use computational data structures like `List` or `Array` to represent continuous mathematical concepts (partitions, sequences, covers).
@@ -239,7 +244,7 @@ CRITICAL HEURISTICS & ANTI-PATTERNS TO AVOID:
    If you find yourself writing repetitive logical tautologies (e.g., `x ≠ y → x ≠ y`) or overly complex index bounds, your underlying type choice is wrong. Stop and re-evaluate your data structures.
 
 5. Strict Semantic Identifiers (The Self-Describing ID Rule):
-   When generating \entityref{id}{text} or defining a new entity-id, the `id` MUST be globally unambiguous, self-documenting, and resistant to namespace collisions. 
+   When generating \\semantic_macro{{id}}{{text}} or defining a new entity-id, the `id` MUST be globally unambiguous, self-documenting, and resistant to namespace collisions. 
    
    NEVER use bare, generic nouns or adjectives. You MUST include the domain or the parent mathematical object in the ID.
    
@@ -324,6 +329,13 @@ Lean 4 Code:"""
     # Log synthesis prompt and response
     synth_log = f"=== SYSTEM PROMPT ===\n{system_prompt}\n\n=== PROMPT ===\n{user_prompt}\n\n=== RESPONSE ===\n{response}\n"
     log_to_file("synthesis/lean", synth_log, entity_id=entity_id, attempt=attempt)
+    
+    # Strip DeepSeek reasoning blocks completely
+    response = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL | re.IGNORECASE)
+    if '</think>' in response.lower():
+        # If there's a stray closing tag (opening tag was swallowed by LLM prefix), remove everything before it
+        response = re.split(r'</think>', response, flags=re.IGNORECASE)[-1]
+    response = response.strip()
     
     # Extract Lean code blocks robustly
     prompt_ends_in_code_block = is_goedel and entity_type == "def"
@@ -448,7 +460,7 @@ def translate_to_lean_regex(entity_id, entity_type, tex_content):
         (r'\\mComplex', 'ℂ'), (r'\\mathbb\{C\}', 'ℂ'),
 
         # Formatting / Structural
-        (r'\\entityref\{[^}]+\}\{(.*?)\}', r'\1'),
+        (r'\\semantic macro\{[^}]+\}\{(.*?)\}', r'\1'),
         (r'\\quad', ' '), (r'\\;', ' '),
         (r'\\text\{([^}]+)\}', r'\1'),
         (r'\\left', ''), (r'\\right', ''),

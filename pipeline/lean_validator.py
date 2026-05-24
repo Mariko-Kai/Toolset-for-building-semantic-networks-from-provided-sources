@@ -82,28 +82,43 @@ class LeanREPL:
             self.p.stdin.write(req + '\n\n')
             self.p.stdin.flush()
             
-            # Read line from stdout
-            line = self.p.stdout.readline().strip()
-            if not line:
-                return {"status": "failed", "errors": [{"line": 0, "message": "REPL crashed or returned empty response"}]}
+            # Read lines until a complete JSON object is parsed
+            buffer = ""
+            decoder = json.JSONDecoder()
+            while True:
+                line = self.p.stdout.readline()
+                if not line:
+                    return {"status": "failed", "errors": [{"line": 0, "message": "REPL crashed or returned empty response"}]}
                 
-            try:
-                resp = json.loads(line)
-                return self._parse_repl_response(resp)
-            except json.JSONDecodeError:
-                return {"status": "failed", "errors": [{"line": 0, "message": f"Invalid JSON from REPL: {line}"}]}
+                buffer += line
+                start_idx = buffer.find('{')
+                if start_idx != -1:
+                    json_str = buffer[start_idx:]
+                    try:
+                        resp, _ = decoder.raw_decode(json_str)
+                        return self._parse_repl_response(resp)
+                    except json.JSONDecodeError:
+                        # Continue reading lines until the JSON object is complete
+                        pass
                 
+                # Prevent infinite loops in case of massive unexpected output
+                if len(buffer) > 5 * 1024 * 1024: # 5MB limit
+                    return {"status": "failed", "errors": [{"line": 0, "message": "REPL output too large without valid JSON"}]}
+                    
         except Exception as e:
             return {"status": "failed", "errors": [{"line": 0, "message": f"Exception communicating with REPL: {str(e)}"}]}
 
     def _parse_repl_response(self, resp: dict) -> dict:
         errors = []
         for msg in resp.get("messages", []):
-            if msg.get("severity") in ("error", "warning"):
+            severity = msg.get("severity")
+            data = msg.get("data", "")
+            
+            if severity == "error" or (severity == "warning" and "uses `sorry`" not in data and "uses 'sorry'" not in data):
                 errors.append({
                     "line": msg.get("pos", {}).get("line", 0),
                     "column": msg.get("pos", {}).get("column", 0),
-                    "message": msg.get("data", "")[:500]
+                    "message": data[:500]
                 })
         
         if not errors and "env" in resp:

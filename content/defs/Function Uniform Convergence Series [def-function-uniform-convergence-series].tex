@@ -7,12 +7,12 @@
 
 % entity-id: def-function-uniform-convergence-series
 % entity-type: def
-\begin{object}[Uniform Convergence of a Series of Functions]
+\begin{definition}[def-function-uniform-convergence-series]
 \Forall{A \colon \mathrm{Type}}
-\Forall{f_n \colon \mathbb{N} \TermTo (A \TermTo \entityref{obj-real-numbers}{\mathbb{R}})}
-\Forall{f \colon A \TermTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\Forall{f_n \colon \mathbb{N} \TermTo (A \TermTo macro{def-real-numbers}{\mathbb{R}})}
+\Forall{f \colon A \TermTo macro{def-real-numbers}{\mathbb{R}}}
 \mathrm{IsUniformlyConvergentSeries}(f_n, f, A) \TermDefinedAs
-\left( \exists s \colon \mathbb{N} \TermTo (A \TermTo \entityref{obj-real-numbers}{\mathbb{R}}) \right)
+\left( \exists s \colon \mathbb{N} \TermTo (A \TermTo macro{def-real-numbers}{\mathbb{R}}) \right)
 \left( \forall n \colon \mathbb{N}, s(n) = \sum_{i=1}^{n} f_i \right) \TermConjunction
-\left( \forall \varepsilon > 0, \exists N \colon \mathbb{N}, \forall n \geq N, \forall x \in A, \entityref{op-absolute-value}{\entityref{op-abs-abstract}{\mathrm{abs}}(s(n)(x) - f(x))} < \varepsilon \right)
-\end{object}
+\left( \forall \varepsilon > 0, \exists N \colon \mathbb{N}, \forall n \geq N, \forall x \in A, macro{def-real-absolute-value}{macro{def-abs-abstract}{\mathrm{abs}}(s(n)(x) - f(x))} < \varepsilon \right)
+\end{definition}

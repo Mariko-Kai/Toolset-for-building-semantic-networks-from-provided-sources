@@ -317,7 +317,7 @@ def parse_canonical(filepath):
     
     # Extract description before removing it
     nl_desc = ""
-    # Match \textbf{Описание:} ... up to \begin{object/axiom/theorem/operation} or \end{document}
+    # Match \textbf{Описание:} ... up to \begin{definition/proposition} or \end{document}
     # Use a non-greedy match that also captures \begin{itemize} blocks within the description
     desc_match = re.search(
         r'\\textbf\{Описание:\}\s*(.*?)(?=\\begin\{(?:object|axiom|theorem|operation|property)\}|\\textbf\{(?!Описание)\}|\\section|$)',
@@ -706,7 +706,7 @@ def main():
         block += "\\section*{Математическая формулировка}\n"
         # Strip internal ID leaks (math env arguments)
         clean_body = data.get("full_body", "")
-        clean_body = re.sub(r'\\begin\{(object|operation|property|axiom|theorem|lemma|corollary)\}\[[^\]]+\]', r'\\begin{\1}', clean_body)
+        clean_body = re.sub(r'\\begin\{(definition|proposition)\}\[[^\]]+\]', r'\\begin{\1}', clean_body)
         
         block += f"{clean_body}\n\n"
         

@@ -30,7 +30,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 GENERATE_SCRIPT = PROJECT_ROOT / "pipeline" / "generate_answer.py"
-DB_PATH = PROJECT_ROOT / "mathesis_index.db"
+DB_PATH = PROJECT_ROOT / "db/mathesis_index.db"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 
 

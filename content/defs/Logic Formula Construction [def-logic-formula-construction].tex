@@ -17,8 +17,8 @@
 % notation: #1
 
 \hypertarget{def-logic-formula-construction}{}
-\begin{operation}[LogicalFormulaConstruction]
+\begin{definition}[def-logic-formula-construction]
 \[
 \mathrm{IsLogicalFormula}(\phi) \TermDefinedAs \left( \phi \in \mathcal{A} \right) \TermDisjunction \left( \exists \psi \in \mathcal{L} : \phi = \TermNegation{\neg} \psi \right) \TermDisjunction \left( \exists \psi_1, \psi_2 \in \mathcal{L} : \phi \in \{ \psi_1 \TermConjunction{\wedge} \psi_2, \psi_1 \TermDisjunction{\vee} \psi_2, \psi_1 \Rightarrow \psi_2 \} \right)
 \]
-\end{operation}
+\end{definition}

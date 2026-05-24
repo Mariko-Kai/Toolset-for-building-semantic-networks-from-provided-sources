@@ -1,5 +1,5 @@
 % entity-id: def-completeness
-% entity-type: axiom
+% entity-type: def
 % defined-in: zorich-1, p. 77
 % macro: \Completeness
 % args: 1
@@ -7,8 +7,8 @@
 
 \section{Аксиома полноты (Completeness Axiom)}
 
-\hypertarget{axm-completeness}{}
-\begin{axiom}[axm-completeness]
+\hypertarget{def-completeness}{}
+\begin{definition}[def-completeness]
 \label{entity:axm-completeness}
 % 1. ОБЪЯВЛЕНИЕ ТИПОВ
 $\Set{X, Y} \subset \RealNumbers$
@@ -18,4 +18,4 @@ $\Set{X, Y} \subset \RealNumbers$
 (\TerForall x \in \Set{X} \TermConjunction \TerForall y \in \Set{Y} \colon x \SetPartialOrder{\le} y) \TermImplication 
 (\TermExists c \in \RealNumbers \TerForall x \in \Set{X}, \TerForall y \in \Set{Y} \colon x \SetPartialOrder{\le} c \SetPartialOrder{\le} y)
 \]
-\end{axiom}
+\end{definition}

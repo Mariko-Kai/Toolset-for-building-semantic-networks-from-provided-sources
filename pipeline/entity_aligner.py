@@ -12,7 +12,7 @@ if sys.platform == 'win32':
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = PROJECT_ROOT / "mathesis_index.db"
+DB_PATH = PROJECT_ROOT / "db/mathesis_index.db"
 
 # Ensure project root is on path for ModelManager import
 if str(PROJECT_ROOT) not in sys.path:

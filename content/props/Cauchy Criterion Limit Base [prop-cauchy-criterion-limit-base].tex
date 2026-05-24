@@ -6,7 +6,7 @@
 % notation: #1
 
 \hypertarget{prop-cauchy-criterion-limit-base}{}
-\begin{theorem}[Cauchy Criterion for Limits over a Base]
+\begin{proposition}[prop-cauchy-criterion-limit-base]
 \[
 \TerForall X \in \mathrm{Set}
 \TerForall \mathcal{B} \subseteq \mathcal{P}(X)
@@ -17,7 +17,7 @@
 \TermEquivalence
 \left( \TerForall \varepsilon > 0 \TermExists B \in \mathcal{B} \left( \Supremum{\sup}_{x_1, x_2 \in B} \AbsAbstract{ f(x_1) - f(x_2) } < \varepsilon \right) \right)
 \]
-\end{theorem}
+\end{proposition}
 
 \begin{proof}[RU]
 Необходимость: Пусть $\LimitFunctionBase{\lim}_{\mathcal{B}} f(x) = A$. Тогда для любого $\varepsilon > 0$ существует $B \in \mathcal{B}$ такое, что для любого $x \in B$ выполняется $\AbsAbstract{ f(x) - A } < \frac{\varepsilon}{3}$. Для любых $x_1, x_2 \in B$ имеем $\AbsAbstract{ f(x_1) - f(x_2) } \leq \AbsAbstract{ f(x_1) - A } + \AbsAbstract{ f(x_2) - A } < \frac{2}{3}\varepsilon < \varepsilon$.

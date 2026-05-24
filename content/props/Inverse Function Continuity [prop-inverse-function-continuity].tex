@@ -20,7 +20,7 @@
 % notation: #1
 
 \hypertarget{prop-inverse-function-continuity}{}
-\begin{theorem}[Continuity of Inverse Function]
+\begin{proposition}[prop-inverse-function-continuity]
 \[
 \TerForall f \colon \ClosedInterval{a, b} \TermTo \ClosedInterval{c, d}
 \TerForall g \colon \ClosedInterval{c, d} \TermTo \ClosedInterval{a, b}
@@ -29,7 +29,7 @@
 \TerForall y_0 \in \OpenInterval{c, d}
 \left( \Continuous{g, y_0} \right)
 \]
-\end{theorem}
+\end{proposition}
 
 \begin{proof}[RU]
 Пусть $x_0 = \Function{g}(y_0)$, тогда $f(x_0) = y_0$. Пусть задано $\varepsilon > 0$. Выберем $\delta = \min(f(x_0) - f(x_0 - \varepsilon), f(x_0 + \varepsilon) - f(x_0))$. Тогда для любого $y \in (y_0 - \delta, y_0 + \delta)$ выполняется неравенство $\Function{g}(y_0) - \varepsilon < \Function{g}(y) < \Function{g}(y_0) + \varepsilon$, что доказывает непрерывность $\Function{g}$ в точке $y_0$.

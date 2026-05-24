@@ -6,13 +6,13 @@
 % notation: #1
 
 \hypertarget{prop-rolles-zero-derivative}{}
-\begin{theorem}[Rolle's Theorem on the Zero of a Derivative]
+\begin{proposition}[prop-rolles-zero-derivative]
 \[
 \TerForall \Function{f} \colon \ClosedInterval{0, 1} \TermTo \RealNumbers
 \left( \Continuous{f} \TermConjunction \TerForall a \in \OpenInterval{0, 1} \DerivativeAtPoint{f'}(a) = 0 \right)
 \TermImplication f(0) = f(1)
 \]
-\end{theorem}
+\end{proposition}
 
 \begin{proof}[RU]
 Пусть $\Function{g}(x) = \Function{f}(x) + cx$. Так как $\DerivativeAtPoint{g'}(x) = \DerivativeAtPoint{f'}(x) + c = c$, то из теоремы о среднем значении следует, что $\Function{f}(1) - \Function{f}(0) > -c$. Аналогично, рассматривая $\Function{h}(x) = cx - \Function{f}(x)$, получаем $\Function{f}(1) - \Function{f}(0) < c$. Поскольку это верно для любого $\RealNumbers{c} > 0$, заключаем, что $\Function{f}(0) = \Function{f}(1)$.

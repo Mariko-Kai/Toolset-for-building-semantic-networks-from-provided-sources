@@ -127,14 +127,14 @@ def update_todo_queue() -> set:
             if file.endswith(".tex") and file not in ["master.tex", "TEMPLATE.tex"]:
                 existing_entities.add(file.replace(".tex", ""))
                 
-    # 2. Extract all \entityref{ID} from all files
+    # 2. Extract all \semantic_macro{ID} from all files
     referenced_entities = set()
     for root, _, files in os.walk(CONTENT_DIR):
         for file in files:
             if file.endswith(".tex") and file not in ["master.tex", "TEMPLATE.tex"]:
                 with open(os.path.join(root, file), "r", encoding="utf-8") as f:
                     content = f.read()
-                    refs = re.findall(r"\\entityref\{([^}]+)\}", content)
+                    refs = re.findall(r"\\semantic_macro\{([^}]+)\}", content)
                     referenced_entities.update(refs)
                     
     # 3. Queue = Referenced - Existing

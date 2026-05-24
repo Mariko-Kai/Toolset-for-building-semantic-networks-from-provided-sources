@@ -101,8 +101,10 @@ def extract_term_ru_en(term: str) -> tuple:
     mgr = ModelManager.get_instance()
     prompt = f"""You are a professional mathematical translator.
 Translate the mathematical term '{term}' into:
-1. Russian (term_ru) - MUST be in Russian! E.g. 'производная функции в точке'.
-2. English (term_en) - MUST be in English! E.g. 'derivative of a function at a point'.
+1. Russian (term_ru) - MUST be in Russian!
+2. English (term_en) - MUST be in English!
+
+IMPORTANT: Translate the term completely and literally, preserving all descriptive mathematical properties and contextual constraints present in the original term. Do NOT condense or simplify the translation into short eponymous names if the original term explicitly includes descriptive characteristics.
 
 Return STRICTLY a JSON object with no other text or explanation:
 {{
@@ -157,8 +159,11 @@ def normalize_math_term(term):
     t = term.lower()
     t = re.sub(r'\b(theorem|thm|prop|proposition|def|definition|lemma|axm|axiom)\b', '', t)
     t = re.sub(r'[^\w\s\-]', '', t)
+    stop_words = {"the", "of", "on", "in", "a", "an", "for", "at", "by", "and", "or", "to"}
     words = []
     for w in t.split():
+        if w in stop_words:
+            continue
         if len(w) > 4:
             w = re.sub(r'(ый|ая|ое|ые|ого|ей|их|ом|ем|ой|у|а|о|е|и|ы|я|ic|al|ion|ing|ed|s)$', '', w)
         words.append(w)
@@ -190,7 +195,7 @@ def resolve_entities(query, canonical_term, available_entities):
     import re
     from pathlib import Path
     
-    db_path = PROJECT_ROOT / "mathesis_index.db"
+    db_path = PROJECT_ROOT / "db/mathesis_index.db"
     if not db_path.exists():
         return [], canonical_term
         
@@ -580,7 +585,7 @@ def main():
                 # Immediate handling of generated deps: enqueue raw dep strings for synthesis and record pending edges
                 if generated_deps:
                     import sqlite3 as _sqlite3
-                    db_path = PROJECT_ROOT / "mathesis_index.db"
+                    db_path = PROJECT_ROOT / "db/mathesis_index.db"
                     conn2 = _sqlite3.connect(db_path)
                     cur2 = conn2.cursor()
                     cur2.execute("CREATE TABLE IF NOT EXISTS pending_edges (source_id TEXT, raw_dep TEXT, status TEXT DEFAULT 'pending')")

@@ -3,7 +3,7 @@
 ```
 Учебник по матанализу/
 ├── content/                      ← Layer 1: Канонические сущности
-│   ├── mathesis.sty              ← Пакет макросов (\entityref, \Forall, ...)
+│   ├── mathesis.sty              ← Пакет макросов (\semantic macro, \Forall, ...)
 │   ├── master.tex                ← Мастер-документ → PDF
 │   ├── TEMPLATE.tex              ← Шаблон новой сущности
 │   ├── foundations/              ← Аксиомы, правила вывода (9 файлов)

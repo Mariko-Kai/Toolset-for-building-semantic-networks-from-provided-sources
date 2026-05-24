@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = PROJECT_ROOT / "mathesis_index.db"
+DB_PATH = PROJECT_ROOT / "db/mathesis_index.db"
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)

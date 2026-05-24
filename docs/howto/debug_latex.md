@@ -37,7 +37,7 @@ l.42 \Forall
 LaTeX Warning: Reference `entity:obj-topological-space' on page 12 undefined.
 ```
 
-**Причина:** `\entityref` ссылается на сущность, файл которой не содержит соответствующий `\label`.
+**Причина:** `\semantic macro` ссылается на сущность, файл которой не содержит соответствующий `\label`.
 
 **Решение:**
 

@@ -1,0 +1,15 @@
+% defined-in: zorich (page 19), zorich (page 37), zorich (page 37), zorich (page 39)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [A, B : \Set; x : \Universe]
+% 2. Data Structures: [The equality of sets is defined via the Extensionality Axiom as a predicate on the product of the Universe of Sets.]
+% 3. Implicit Bounds: [The universe of discourse \Universe is assumed to contain all elements x under consideration.]
+% ========================
+
+% entity-id: def-set-equality
+% entity-type: def
+
+\begin{definition}[def-set-equality]
+\[
+\forall A \colon \Set \quad \forall B \colon \Set \quad \mathrm{IsEqualSet}(A, B) \coloneqq \forall x \colon \Universe \left( (x \in A) \iff (x \in B) \right)
+\]
+\end{definition}

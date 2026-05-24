@@ -418,7 +418,7 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
 
     def cleanup_database(self, e1_id, e2_id):
         """Очищает базу данных mathesis_index.db от удаленной сущности e2_id и перенаправляет связи на e1_id."""
-        db_path = os.path.join(PROJECT_ROOT, "mathesis_index.db")
+        db_path = os.path.join(PROJECT_ROOT, "db/mathesis_index.db")
         if not os.path.exists(db_path):
             self.logger.warning(f"База данных {db_path} не найдена. Пропуск очистки БД.")
             return

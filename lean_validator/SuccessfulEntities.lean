@@ -149,3 +149,33 @@ def UniformConvergence (f : ℕ → ℝ → ℝ) (L : ℝ) : Prop :=
 theorem UniformConvergenceAndContinuity (f : ℕ → ℝ → ℝ) (L : ℝ) :
   UniformConvergence f L → Continuous (fun x => f x) := by sorry
 
+-- Entity: prop-cantor-uniform-continuity | Type: prop
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem cantor_uniform_continuity (a b : ℝ) (hab : a ≤ b) (f : ℝ → ℝ) 
+  (hf : ContinuousOn f (Set.Icc a b)) :
+  ∀ ε > 0, ∃ (P : Finset (Set ℝ)), 
+    (∀ I ∈ P, ∃ c d : ℝ, c ≤ d ∧ I = Set.Icc c d) ∧
+    (⋃ I ∈ P, I) = Set.Icc a b ∧
+    (∀ I ∈ P, ∀ x y, x ∈ I → y ∈ I → |f x - f y| < ε) := by sorry
+
+-- Entity: prop-cantor-uniform-continuity
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem cantor_uniform_continuity (a b : ℝ) (hab : a ≤ b) (f : ℝ → ℝ) 
+  (hf : ContinuousOn f (Set.Icc a b)) :
+  ∀ ε > 0, ∃ (P : Finset (Set ℝ)), 
+    (∀ I ∈ P, ∃ c d : ℝ, c ≤ d ∧ I = Set.Icc c d) ∧
+    (⋃ I ∈ P, I) = Set.Icc a b ∧
+    (∀ I ∈ P, ∀ x y, x ∈ I → y ∈ I → |f x - f y| < ε) := by sorry
+

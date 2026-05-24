@@ -14,7 +14,7 @@ The system strictly adheres to Lean's paradigm by categorizing all mathematical 
 ```mermaid
 erDiagram
     ENTITY {
-        string id PK "e.g. def-sequence, prop-bounded"
+        string id PK "e.g. def-sequence, prdef-bounded"
         string type "def | prop"
         string title "Human readable title"
         text nl_desc "Natural language description for semantic search"
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS entity_dependency (
 
 | Relationship | Cardinality | Rationale |
 |---|---|---|
-| `OBJECT ↔ PROPERTY` | **M:N + context** | `prop-bounded` применимо к разным объектам; `context` указывает условия |
+| `OBJECT ↔ PROPERTY` | **M:N + context** | `prdef-bounded` применимо к разным объектам; `context` указывает условия |
 | `OPERATION → OPERATION_ARGUMENT` | 1:N | Поддержка N-арных операций |
 | `OPERATION → OBJECT (codomain)` | N:1 | Каждая операция имеет один тип результата |
 | `THEOREM ↔ OBJECT/PROPERTY/OPERATION/AXIOM` | M:N | Через junction tables |
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS entity_dependency (
 | `THEOREM → THEOREM (dependency)` | **M:N (DAG)** | Логические зависимости |
 | `OBJECT ↔ OBJECT (equivalence)` | M:N sym. | Эквивалентные определения, с proof_id |
 | `OBJECT → OBJECT (composition)` | 1:N | Объект-контейнер |
-| `ENTITY → ENTITY (entity_dependency)` | **M:N (DAG)** | Перекрёстные ссылки `\entityref` в `content/` |
+| `ENTITY → ENTITY (entity_dependency)` | **M:N (DAG)** | Перекрёстные ссылки `semantic macros` в `content/` |
 | `BOOK → FORMULATION` | 1:N | Книга предоставляет N формулировок |
 | `ENTITY ← FORMULATION` | 1:N | Сущность может иметь N формулировок из разных книг |
 
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS entity_dependency (
 ┌────────────────────────────────────────┐
 │  Layer 1: content/                     │  Канонические сущности
 │  Одна формула на сущность              │  (source of truth for WHAT)
-│  \entityref{id}{text} — гиперссылки    │  → entity_dependency таблица
+│  text — гиперссылки    │  → entity_dependency таблица
 ├────────────────────────────────────────┤
 │  Layer 2: sources/                     │  Транскрипции учебников
 │  .tex по разделам                      │  (source of truth for HOW)
@@ -117,18 +117,18 @@ content/
 │   ├── Set [def-set].tex
 │   ├── Sequence [def-sequence].tex
 │   ├── Cartesian Product [def-cartesian-product].tex
-│   └── Negation [axiom-negation].tex
+│   └── Negation [def-negation].tex
 │
 └── props/
-    ├── Bounded [prop-bounded].tex
-    ├── Continuity [prop-continuous].tex
-    └── Weierstrass Extreme Value [prop-weierstrass-extreme-value].tex
+    ├── Bounded [prdef-bounded].tex
+    ├── Continuity [prdef-continuous].tex
+    └── Weierstrass Extreme Value [prdef-weierstrass-extreme-value].tex
 ```
 
 > [!IMPORTANT]
 > **Pure Math Absolute Rule.** Канонические файлы в `content/` НЕ ДОЛЖНЫ содержать
 > текста на естественном языке (русском, английском и т.д.) в определениях. Внутри
-> `\begin{definition}` / `\begin{theorem}` допускаются **исключительно**
+> `\begin{definition}` / `\begin{proposition}` допускаются **исключительно**
 > математические символы в LaTeX math mode.
 > Доказательства (`\begin{proof}`) могут содержать текст.
 
@@ -136,9 +136,9 @@ content/
 > **Semantic Macros Rule.** Хардкод LaTeX-примитивов (например, `\mathbb{R}`, `\sup`, `\in`) **ЗАПРЕЩЕН**. Все сущности, определенные в `defs/` или `props/`, получают автоматически сгенерированный PascalCase макрос в `mathesis_macros.sty` (например, `\RealNumbers`, `\Supremum`, `\ClosedInterval`). LLM обязана использовать эти динамические макросы. Старая нотация `\mType` полностью признана устаревшей и больше не используется.
 
 
-### 2.3 Cross-References: `\entityref`
+### 2.3 Cross-References: `semantic macros`
 
-Файлы в `content/` ссылаются друг на друга через `\entityref{id}{text}`.
+Файлы в `content/` ссылаются друг на друга через `text`.
 
 **Пакет** `content/mathesis.sty`:
 
@@ -146,7 +146,7 @@ content/
 \ProvidesPackage{mathesis}
 \RequirePackage{hyperref}
 \RequirePackage{amsmath, amssymb, mathtools}
-\newcommand{\entityref}[2]{\hyperref[entity:#1]{#2}}
+\newcommand{semantic macros}[2]{\hyperref[entity:#1]{#2}}
 ```
 
 **Мастер-документ** `content/master.tex` собирает все файлы → один PDF с рабочими гиперссылками:
@@ -155,8 +155,8 @@ content/
 \documentclass[a4paper]{article}
 \usepackage{mathesis}
 \begin{document}
-\input{foundations/Axiom of Extensionality [axm-zfc-extensionality]}
-\input{objects/Set [obj-set]}
+\input{foundations/Axiom of Extensionality [def-zfc-extensionality]}
+\input{objects/Set [def-set]}
 % ...
 \end{document}
 ```
@@ -164,15 +164,15 @@ content/
 **Пример использования** в файле сущности:
 
 ```tex
-% entity-id: obj-function
+% entity-id: def-function
 % entity-type: object
 \section{definition}
-\label{entity:obj-function}
+\label{entity:def-function}
 
-\Forall{\entityref{obj-set}{X},\; \entityref{obj-set}{Y}}
+\Forall{X,\; Y}
 \text{\textit{функция}} \; f \colon X \to Y
 \mDefIff
-f \subset \entityref{obj-cartesian-product}{X \times Y} \;\land\;
+f \subset X \times Y \;\land\;
 \forall\, x \in X \;\; \exists!\, y \in Y \colon\quad (x, y) \in f
 ```
 
@@ -181,10 +181,10 @@ f \subset \entityref{obj-cartesian-product}{X \times Y} \;\land\;
 ```python
 import re
 def extract_dependencies(content: str) -> list[str]:
-    return list(set(re.findall(r'\\entityref\{([^}]+)\}', content)))
+    return list(set(re.findall(r'\semantic macros\{([^}]+)\}', content)))
 ```
 
-Результат: `['obj-set', 'obj-cartesian-product']` → записывается в `entity_dependency`.
+Результат: `['def-set', 'def-cartesian-product']` → записывается в `entity_dependency`.
 
 **Обратные ссылки** (`used_by`) вычисляются API-запросом:
 ```sql
@@ -209,15 +209,15 @@ sources/
 
 ```tex
 \begin{definition}
-\label{entity:prop-convergent}
+\label{entity:prdef-convergent}
 Число $A$ называется пределом последовательности $\{x_n\}$, если
 для любого $\varepsilon > 0$ найдётся номер $N$...
 \end{definition}
 ```
 
 > [!IMPORTANT]
-> `\entityref` используется **только** в `content/` (канонические определения).
-> Файлы `sources/` содержат `\label{entity:ID}` для линковки с Layer 1, но **не** используют `\entityref`.
+> `semantic macros` используется **только** в `content/` (канонические определения).
+> Файлы `sources/` содержат `\label{entity:ID}` для линковки с Layer 1, но **не** используют `semantic macros`.
 
 ---
 
@@ -237,8 +237,8 @@ sources/
 Лемма именуется с префиксом родительской теоремы:
 
 ```
-BW Bisection [lemma-bw-bisection].tex
-BW Subsequence Extraction [lemma-bw-subseq].tex
+BW Bisection [prop-bw-bisection].tex
+BW Subsequence Extraction [prop-bw-subseq].tex
 ```
 
 ---
@@ -254,7 +254,7 @@ Human Name [id].tex
 ### 4.2 Rules
 
 1. **Human Name** — English, Title Case, spaces allowed
-2. **`[id]`** — lowercase, alphanumeric, hyphenated, prefixed by type: `obj-`, `prop-`, `op-`, `thm-`, `lemma-`, `axm-`. Digits are allowed to prevent collisions of similarly named objects (e.g., `obj-sequence-1`, `prop-bounded-2`).
+2. **`[id]`** — lowercase, alphanumeric, hyphenated, prefixed by type: `def-`, `prdef-`, `def-`, `prop-`, `prop-`, `def-`. Digits are allowed to prevent collisions of similarly named objects (e.g., `def-sequence-1`, `prdef-bounded-2`).
 3. No nested folders inside entity directories (flat)
 
 ### 4.3 Parsing Rule
@@ -392,7 +392,7 @@ class MathesisDB:
     def get_lemmas(theorem_id) -> list[Theorem]
     def get_dependencies(theorem_id) -> list[Theorem]
 
-    # --- Cross-References (\entityref) ---
+    # --- Cross-References ---
     def get_entity_dependencies(entity_id) -> list[str]   # what this entity references
     def get_entity_dependents(entity_id) -> list[str]     # who references this entity
 
@@ -458,10 +458,10 @@ class MathesisDB:
 
 | Operation | Arity | Arg 0 | Arg 1 | Codomain |
 |---|---|---|---|---|
-| `op-limit-seq` (Предел) | 1 | `obj-sequence` | — | `obj-real-numbers` |
-| `op-addition` (Сложение) | 2 | `obj-real-numbers` | `obj-real-numbers` | `obj-real-numbers` |
-| `op-composition` (Композиция) | 2 | `obj-function` | `obj-function` | `obj-function` |
-| `op-derivative` (Производная) | 1 | `obj-function` | — | `obj-function` |
+| `def-limit-seq` (Предел) | 1 | `def-sequence` | — | `def-real-numbers` |
+| `def-addition` (Сложение) | 2 | `def-real-numbers` | `def-real-numbers` | `def-real-numbers` |
+| `def-composition` (Композиция) | 2 | `def-function` | `def-function` | `def-function` |
+| `def-derivative` (Производная) | 1 | `def-function` | — | `def-function` |
 
 ---
 
@@ -515,7 +515,7 @@ $\varepsilon$-окрестностью точки $x_0$ называется м�
 
 4. **Linking (Связывание)** (`pipeline/link_content.py`)
    - Парсит мета-тег `% defined-in:` из `.tex` файлов и создает записи в `formulation_sources`, связывая каноническую сущность со списком использованных книг.
-   - Автоматически прописывает ссылки `\entityref` с использованием `\ensuremath`, чтобы защитить математический контекст.
+   - Автоматически прописывает ссылки `semantic macros` с использованием `\ensuremath`, чтобы защитить математический контекст.
 
 ---
 
@@ -524,7 +524,7 @@ $\varepsilon$-окрестностью точки $x_0$ называется м�
 Терминальные примитивы (Terminal Primitives) — это фундаментальные математические символы (листья в DAG), которые определены либо аксиоматикой ZFC, либо логикой первого порядка (FOL).
 
 ### 11.1 Правила терминалов
-- **ЗАПРЕЩЕНО** оборачивать их макросом `\entityref`.
+- **ЗАПРЕЩЕНО** оборачивать их макросом `semantic macros`.
 - **НЕ генерируют** ребер в графе зависимостей `entity_dependency`.
 - Жестко закодированы в `pipeline/terminals.py` (`\forall`, `\in`, `\land`, `\emptyset` и т.д.).
 
@@ -545,13 +545,13 @@ $\varepsilon$-окрестностью точки $x_0$ называется м�
 ```latex
 % #1 — optional entity-id (default = abstract interface id)
 % #2 — mandatory operand
-\newcommand{\mNorm}[2][op-norm-abstract]{\left\| #2 \right\|}
+\newcommand{\mNorm}[2][def-norm-abstract]{\left\| #2 \right\|}
 ```
 
 ### 12.2 Разделение ответственности
 1. **LLM-Экстрактор**: Генерирует только абстрактный вызов без квадратных скобок (Surface Syntax): `\mNorm{x}`.
 2. **Lean Elaborator (Future)**: Анализирует типы из Strict Typing Block и выполняет Typeclass Resolution.
-3. **Graph Mutator (Future)**: Возвращается к исходному `.tex` файлу и инжектирует вычисленный конкретный инстанс в опциональный аргумент: `\mNorm[op-norm-euclidean]{x}`.
+3. **Graph Mutator (Future)**: Возвращается к исходному `.tex` файлу и инжектирует вычисленный конкретный инстанс в опциональный аргумент: `\mNorm[def-norm-euclidean]{x}`.
 
 ---
 
@@ -566,7 +566,7 @@ $\varepsilon$-окрестностью точки $x_0$ называется м�
 ### 13.2 Шаблон
 ```latex
 % ПРАВИЛЬНО (Strict Typing Block):
-\Forall{f \colon \entityref{obj-closed-interval}{[a,b]} \mTo \entityref{obj-real-numbers}{\mReal}}
+\Forall{f \colon [a,b] \mTo \mReal}
 \Forall{\varepsilon > 0}
 ... (тело)
 
@@ -581,12 +581,12 @@ $\varepsilon$-окрестностью точки $x_0$ называется м�
 В архитектуру добавлены механизмы кэширования и семантической макрогенерации для обеспечения надежности компиляции и скорости сборки.
 
 ### 14.1 Semantic Macros (`mathesis_macros.sty`)
-Вместо использования регулярных выражений для парсинга и подмены `\entityref{id}{text}` в Python-коде, система перешла на нативные возможности LaTeX для разрешения зависимостей и гиперссылок.
+Вместо использования регулярных выражений для парсинга и подмены `text` в Python-коде, система перешла на нативные возможности LaTeX для разрешения зависимостей и гиперссылок.
 
 1. **Компилятор макросов (`pipeline/macro_compiler.py`)**:
    - Сканирует все `.tex` файлы в `content/`.
    - Читает фронтматтер и извлекает поля: `% macro: \MacroName` и `% args: N`.
-   - Генерирует `output/mathesis_macros.sty` с определениями макросов (например, `\newcommand{\Set}[1]{\hyperlink{obj-set}{#1}}`).
+   - Генерирует `output/mathesis_macros.sty` с определениями макросов (например, `\newcommand{\Set}[1]{\hyperlink{def-set}{#1}}`).
 2. **Преимущества**:
    - Вычисление зависимостей (DAG) происходит путём сканирования текстов на наличие этих макросов.
    - Исключаются ошибки с неэкранированными символами и парсингом вложенных скобок.

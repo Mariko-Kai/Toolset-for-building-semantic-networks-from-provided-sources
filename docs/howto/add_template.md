@@ -82,12 +82,12 @@ Bolzano-Weierstrass [thm-bolzano-weierstrass].tex
 
 ---
 
-## Использование `\entityref`
+## Использование `\semantic macro`
 
 Для ссылок на другие сущности используйте **только** макрос из `mathesis.sty`:
 
 ```latex
-\entityref{obj-set}{X}
+\semantic macro{obj-set}{X}
 ```
 
 Это создаёт гиперссылку в PDF и позволяет автоматически извлечь граф зависимостей.

@@ -1,12 +1,12 @@
 % entity-id: def-zfc-infinity
-% entity-type: axiom
+% entity-type: def
 % defined-in: vereshchagin-shen
 % macro: \ZfcInfinity
 % args: 1
 % notation: #1
 
-\hypertarget{axm-zfc-infinity}{}
-\begin{axiom}[axm-zfc-infinity] % Аксиома бесконечности (Axiom of Infinity)
+\hypertarget{def-zfc-infinity}{}
+\begin{definition}[def-zfc-infinity] % Аксиома бесконечности (Axiom of Infinity)
 
 
 
@@ -14,4 +14,4 @@
 \TermExists I
 \left( \ZfcPairing{\varnothing} \in I \;\TermConjunction{\land}\; \TerForall x \left( x \in I \TermImplication \TermExists y (y \in I \TermConjunction{\land} \TerForall z (z \in y \TermEquivalence z \in x \TermDisjunction{\lor} z = x)) \right) \right)
 \]
-\end{axiom}
+\end{definition}

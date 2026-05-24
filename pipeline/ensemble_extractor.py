@@ -33,7 +33,7 @@ from pipeline.config import PROVIDERS, resolve_module_config
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = PROJECT_ROOT / "mathesis_index.db"
+DB_PATH = PROJECT_ROOT / "db/mathesis_index.db"
 BOOKS_DIR = PROJECT_ROOT / "Books"
 TOC_CACHE_PATH = PROJECT_ROOT / "pipeline" / "book_toc_cache.json"
 
@@ -194,7 +194,7 @@ def get_search_roots(query: str, lang: str = "ru") -> list:
         "from", "on", "at", "be", "as", "it", "its", "are", "was",
         "definition", "theorem", "proof", "show", "about", "through",
     }
-    clean = re.sub(r'[^\w\s]', '', query)
+    clean = re.sub(r'[^\w\s\-]', '', query)
     words = [w for w in clean.lower().split() if w not in stop_words and len(w) > 1]
     roots = list(set(stem_word(w, lang) for w in words))
     return roots

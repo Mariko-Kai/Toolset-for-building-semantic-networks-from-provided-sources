@@ -8,12 +8,12 @@
 
 % entity-id: def-sequence-uniform-convergence
 % entity-type: def
-\begin{object}[Uniform Convergence]
+\begin{definition}[def-sequence-uniform-convergence]
 \Forall{A \colon \mathrm{Type}}
-\Forall{f_n \colon \mathbb{N} \TermTo (A \TermTo \entityref{obj-real-numbers}{\mathbb{R}})}
-\Forall{f \colon A \TermTo \entityref{obj-real-numbers}{\mathbb{R}}}
+\Forall{f_n \colon \mathbb{N} \TermTo (A \TermTo macro{def-real-numbers}{\mathbb{R}})}
+\Forall{f \colon A \TermTo macro{def-real-numbers}{\mathbb{R}}}
 \mathrm{IsUniformLimit}(f_n, f, A) \TermDefinedAs
 \Forall{\varepsilon \in \mathbb{R}} \quad (\varepsilon > 0) \TermImplication
 \TermExists{N \colon \mathbb{N}} \quad \Forall{n \colon \mathbb{N}} \quad (n > N) \TermImplication
-\Forall{x \in A} \quad \entityref{op-absolute-value}{\entityref{op-abs-abstract}{\mathrm{abs}}(} f_n(x) - f(x) \entityref{op-absolute-value}{)} < \varepsilon
-\end{object}
+\Forall{x \in A} \quad macro{def-real-absolute-value}{macro{def-abs-abstract}{\mathrm{abs}}(} f_n(x) - f(x) macro{def-real-absolute-value}{)} < \varepsilon
+\end{definition}

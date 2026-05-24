@@ -62,19 +62,19 @@ pdf_to_images.py → agent.py (Vision API) → raw JSON с определени�
 \end{<TYPE>}
 ```
 
-### 3.2 Правило ПОЛНОГО `\entityref`-покрытия
+### 3.2 Правило ПОЛНОГО `\semantic_macro`-покрытия
 
 > **КРИТИЧЕСКОЕ ПРАВИЛО**: Каждый символ в формуле, имеющий
 > самостоятельное математическое определение, ОБЯЗАН быть обёрнут
-> в `\entityref{entity-id}{символ}`.
+> в `\semantic_macro{entity-id}{символ}`.
 
 #### Чек-лист при создании формулы:
 
 | Категория | Примеры | Что делать |
 |---|---|---|
-| **Операторы** | `\sup`, `\inf`, `\lim`, `\sum`, `\prod`, `\int` | Обернуть: `\entityref{op-supremum}{\sup}` |
-| **Объекты** | `f`, `P`, `[a,b]`, `\mathbb{R}` | Обернуть: `\entityref{obj-function}{f}` |
-| **Свойства** | «ограниченная», «непрерывная» | Обернуть: `\entityref{prop-bounded}{f}` |
+| **Операторы** | `\sup`, `\inf`, `\lim`, `\sum`, `\prod`, `\int` | Обернуть: `\semantic_macro{op-supremum}{\sup}` |
+| **Объекты** | `f`, `P`, `[a,b]`, `\mathbb{R}` | Обернуть: `\semantic_macro{obj-function}{f}` |
+| **Свойства** | «ограниченная», «непрерывная» | Обернуть: `\semantic_macro{prop-bounded}{f}` |
 | **Отношения** | `\in`, `\subset`, `<`, `=` | НЕ оборачивать (примитивы FOL/ZFC) |
 | **Кванторы** | `\forall`, `\exists` | НЕ оборачивать (примитивы FOL) |
 | **Нотация** | `\Delta x_i`, `x_0`, индексы | НЕ оборачивать (локальные переменные) |
@@ -89,10 +89,10 @@ BFS видит: ∅ (ноль зависимостей в теле формул�
 
 **ПРАВИЛЬНО**:
 ```latex
-s(\entityref{obj-function}{f}, \entityref{obj-partition}{P}) \mDefIff
-\entityref{op-finite-sum}{\sum_{i=1}^{n}} \left(
-  \entityref{op-infimum}{\inf}_{x \in \entityref{obj-closed-interval}{[x_{i-1}, x_i]}}
-  \entityref{obj-function}{f}(x)
+s(\semantic_macro{obj-function}{f}, \semantic_macro{obj-partition}{P}) \mDefIff
+\semantic_macro{op-finite-sum}{\sum_{i=1}^{n}} \left(
+  \semantic_macro{op-infimum}{\inf}_{x \in \semantic_macro{obj-closed-interval}{[x_{i-1}, x_i]}}
+  \semantic_macro{obj-function}{f}(x)
 \right) \Delta x_i
 ```
 BFS видит: `obj-function`, `obj-partition`, `op-finite-sum`, `op-infimum`, `obj-closed-interval`
@@ -115,7 +115,7 @@ while Очередь не пуста:
         → выполнить Фазы 1–3 для eid (создать файл)
         → перечитать file
 
-    deps = извлечь ВСЕ \entityref{...} из file
+    deps = извлечь ВСЕ \semantic_macro{...} из file
     for dep in deps:
         if dep ∉ Посещённые:
             Очередь.add(dep)
@@ -167,7 +167,7 @@ op-darboux-integral
 **Решения:**
 1. **Экспоненциальная задержка (Exponential Backoff)**: Скрипт автоматически повторяет запросы к API с увеличивающейся задержкой (1с, 2с, 4с, 8с, 16с).
 2. **Mock LLM / Заглушка**: Если API недоступно, скрипт может использовать локальную заглушку (`MOCK_API`), которая возвращает предопределённые канонические ответы для конкретных `entity-id`, позволяя алгоритму рекурсивного обхода (BFS) продолжить свою работу и доказать целостность архитектуры.
-3. **Internal Compute Fallback**: В крайних случаях (когда и API, и моки недоступны), агент переключается на свои внутренние аналитические мощности для ручной генерации `.tex` файлов, строго соблюдая `\entityref` Coverage Rule.
+3. **Internal Compute Fallback**: В крайних случаях (когда и API, и моки недоступны), агент переключается на свои внутренние аналитические мощности для ручной генерации `.tex` файлов, строго соблюдая `\semantic_macro` Coverage Rule.
 
 ---
 
@@ -175,7 +175,7 @@ op-darboux-integral
 
 ```
 generate_answer.py --root thm-newton-leibniz (или любой другой корень)
-  → BFS по \entityref
+  → BFS по \semantic_macro
   → Сбор формул + метаданных + источников
   → Синтез NL-описаний (опционально)
   → result.tex → pdflatex → result.pdf
@@ -218,6 +218,6 @@ thm-newton-leibniz
 
 ### Когда создавать новый entity vs. ссылаться на существующий:
 
-- Если символ **уже определён** (файл `[entity-id].tex` существует) → `\entityref`
+- Если символ **уже определён** (файл `[entity-id].tex` существует) → `\semantic_macro`
 - Если символ **не определён** и является **аксиомой** → создать в `content/foundations/`
 - Если символ **не определён** и **определяем** → создать в `content/objects|operations|properties|theorems/`

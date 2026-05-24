@@ -22,7 +22,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from pipeline.config import PROVIDERS, resolve_module_config
 from pipeline.model_manager import ModelManager
 
-DB_PATH = PROJECT_ROOT / "mathesis_index.db"
+DB_PATH = PROJECT_ROOT / "db/mathesis_index.db"
 CONTENT_DIR = PROJECT_ROOT / "content"
 
 
@@ -161,7 +161,7 @@ NOTE: Local variables (like a, b, f, x) introduced in the current formula MUST N
 TYPING: Every formula MUST start with variable declarations via quantors:
 \forall f \colon \RealNumbers \to \RealNumbers
 
-PURE MATH RULE: For \begin{theorem}, \begin{object}, \begin{property}, and \begin{operation} blocks, NO NATURAL LANGUAGE IS ALLOWED AT ALL. NO English, NO Russian, NO plain text, NO "Note", NO "Remark", NO explanations. The content MUST be 100% formal math symbols and macros. ALL formulas MUST be wrapped in display math blocks \[ ... \]. Inline math $...$ is FORBIDDEN.
+PURE MATH RULE: For \begin{definition} and \begin{proposition} blocks, NO NATURAL LANGUAGE IS ALLOWED AT ALL. NO English, NO Russian, NO plain text, NO "Note", NO "Remark", NO explanations. The content MUST be 100% formal math symbols and macros. ALL formulas MUST be wrapped in display math blocks \[ ... \]. Inline math $...$ is FORBIDDEN.
 Natural language and explanatory notes are ONLY permitted inside \begin{proof} blocks. ALL math objects/variables in proofs MUST be correctly wrapped with math macros.
 """
 
@@ -174,7 +174,7 @@ Natural language and explanatory notes are ONLY permitted inside \begin{proof} b
     example = r"""EXAMPLE:
 % entity-id: prop-weierstrass-extreme
 % entity-type: prop
-\begin{theorem}[Weierstrass Extreme Value]
+\begin{proposition}[Weierstrass Extreme Value]
 \forall f \colon \ClosedInterval{[a,b]} \to \RealNumbers \;\; \Continuous{f}
 \implies \exists c \in \ClosedInterval{[a,b]} \;\;
 \forall x \in \ClosedInterval{[a,b]} \quad f(x) \leq f(c)
@@ -187,7 +187,7 @@ Natural language and explanatory notes are ONLY permitted inside \begin{proof} b
 
 {rules}
 {example}
-Generate \begin{{theorem}}[Name] ... \end{{theorem}}.
+Generate \begin{{proposition}}[Name] ... \end{{proposition}}.
 Then generate TWO proofs in parallel: one in Russian and one in English.
 Format:
 \begin{{proof}}[RU]
@@ -216,7 +216,7 @@ BAD EXAMPLE:
 GOOD EXAMPLE:
 \mathrm{{IsDerivative}}(f, x, L) \coloneqq \left( L = \lim_{{h \to 0}} \frac{{f(x + h) - f(x)}}{{h}} \right)
 
-Generate \begin{{object}}[Name] ... \end{{object}} (or property/operation).
+Generate \begin{{definition}}[Name] ... \end{{definition}}.
 CRITICAL: DO NOT add any notes, remarks, text, or English words outside or inside the block. ONLY the formal mathematical formula."""
     return prompt
 
@@ -258,7 +258,7 @@ def check_forbidden_macros(latex: str, entity_type: str) -> list:
         errors.append("ОШИБКА: Использование \\iff в определениях/операциях строго запрещено. Используйте предикат и макрос \\coloneqq.")
     return errors
 
-def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=False, model="qwen3:8b", skip_validation=False, canonical_term=""):
+def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=False, model="qwen3:8b", skip_validation=False, canonical_term="", processed_entities=None):
     import time
     print(f"\n{'='*60}", flush=True)
     print(f"[synthesizer] Cluster: {cluster_id}", flush=True)
@@ -374,6 +374,12 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
         match_type_temp = re.search(r'% entity-type:\s*([a-zA-Z]+)', latex_content)
         temp_eid = match_id_temp.group(1).strip() if match_id_temp else "temp_entity"
         temp_etype = match_type_temp.group(1).strip() if match_type_temp else "axiom"
+
+        # Fast-fail for redundant entities to save LLM tokens and time
+        if processed_entities and temp_eid in processed_entities:
+            print(f"  [synthesizer] [SKIP] Entity '{temp_eid}' already synthesized. Skipping Lean formalization.")
+            valid_lean_code = ""
+            break
 
         # Mathlib discovery
         import string
@@ -686,7 +692,8 @@ def main():
         synthesized_tex, valid_lean_code, semantic_map = synthesize_cluster(
             cid, data['texts'], data['sources'], data['page_refs'], 
             has_proof=data['has_proof'], model=args.model, 
-            skip_validation=args.no_validate, canonical_term=args.canonical_term
+            skip_validation=args.no_validate, canonical_term=args.canonical_term,
+            processed_entities=processed_entities
         )
         if not synthesized_tex:
             continue
@@ -707,7 +714,9 @@ def main():
             continue
             
         entity_type = match_type.group(1).strip()
-        title = entity_id.replace('-', ' ').title()
+        # Remove standard architectural prefixes before generating human-readable title
+        clean_id = re.sub(r'^(def|prop)-', '', entity_id)
+        title = clean_id.replace('-', ' ').title()
         print(f"[synthesizer] Parsed: entity_id={entity_id}, type={entity_type}, title={title}")
         processed_entities.add(entity_id)
 
