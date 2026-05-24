@@ -168,37 +168,11 @@ def translate_to_lean_via_llm(entity_id, entity_type, tex_content, model="goedel
 
     # Decryption guide of custom LaTeX macros used in the project
     latex_decryption_guide = """=== LaTeX Project Macro Translation Guide ===
-Our LaTeX formulas use custom macro abbreviations that must be translated to standard Lean 4 syntax:
-* \\mForall{x \\in X} or \\mForall{x \\colon X} -> universal quantifier (∀ x ∈ X, ...) or (∀ x : X, ...)
-* \\mExists{x \\in X} or \\mExists{x \\colon X} -> existential quantifier (∃ x ∈ X, ...) or (∃ x : X, ...)
-* \\mIff -> logical equivalence / iff (↔)
-* \\mImplies -> logical implication (→)
-* \\entityref{entity-id}{text} -> represents a reference to a core mathematical object/type. Translate to appropriate Lean types:
-  - \\entityref{obj-real-numbers}{\\mathbb{R}} -> Real numbers (ℝ)
-  - \\entityref{obj-natural-numbers}{\\mathbb{N}} -> Natural numbers (ℕ)
-  - \\entityref{obj-rational-numbers}{\\mathbb{Q}} -> Rational numbers (Rat)
-  - \\entityref{op-abs-abstract}{\\mathrm{abs}}(x) -> Absolute value function (|x| or Real.abs x)
-* \\left( and \\right) -> standard parentheses ( and )"""
+Our LaTeX formulas use semantic macros to represent standard mathematical concepts (e.g. \\RealNumbers, \\Continuous, \\Supremum, \\TermConjunction, \\TerForall). You should interpret them by their standard mathematical meaning and translate them into their exact Lean 4 Mathlib equivalents."""
 
     # Declaration rules based on Entity Type
     declaration_rules = f"""=== Lean 4 Declaration Mapping Rules ===
-The target entity has type: '{entity_type}'. You MUST follow these strict mapping rules based on this type:
-1. If the type is 'operation', 'definition', 'object' or 'property':
-   - Declare EXACTLY ONE `def`. 
-   - EXAMPLE OF EXPECTED OUTPUT:
-     ```lean4
-     def {lean_name} (f : ℝ → ℝ) (x L : ℝ) : Prop := ...
-     ```
-   - CRITICAL: DO NOT create any additional `theorem` or `lemma` blocks! Stop generation right after the `def`.
-   - CRITICAL: DO NOT attempt to prove equivalence to Mathlib concepts (like Filter.Tendsto).
-   - If the LaTeX contains \\mIff or \\mDefinedAs, extract the right-hand side and use it as the body of your `def`.
-   - DO NOT use sorry under any circumstances!
-   - ANTI-SHADOWING RULE: Never use the same variable name for a collection and its element (e.g., instead of `∃ B ∈ B`, you MUST use `∃ B' ∈ B` or `∃ U ∈ B`).
-2. If the type is 'theorem':
-   - Declare it as a `theorem`. Format: `theorem {lean_name} ... : ... := by sorry`
-   - `sorry` is ALLOWED for theorem proofs.
-3. If the type is 'axiom' or 'foundation':
-   - Declare it as an `axiom`. Format: `axiom {lean_name} ... : ...`"""
+The target entity has type: '{entity_type}'."""
 
     # Detect if we are using the Goedel-Formalizer model
     is_goedel = "goedel" in target_model.lower()
@@ -213,13 +187,13 @@ The target entity has type: '{entity_type}'. You MUST follow these strict mappin
         informal_statement_content += f"\n{declaration_rules}\n\n{latex_decryption_guide}\n"
         system_prompt = None
 
-        # Смена фрейма и Prefix Forcing для определений
-        if entity_type in ["object", "operation", "definition", "property"]:
+        # Смена фрейма и Prefix Forcing
+        if entity_type == "def":
             system_intro = f"Please formalize the following mathematical definition in Lean 4 as a pure `def`. Use the following definition name: {problem_name}"
             prefix_hint = f"\n\nCRITICAL: Output ONLY the Lean code. You MUST start your code exactly like this:\n```lean4\ndef {lean_name}"
         else:
             system_intro = f"Please autoformalize the following natural language problem statement in Lean 4. Use the following theorem name: {problem_name}"
-            prefix_hint = ""
+            prefix_hint = f"\n\nCRITICAL: Output ONLY the Lean code. You MUST start your code exactly like this:\n```lean4\ntheorem {lean_name}"
 
         if error_feedback and previous_code:
             user_prompt = f"""{system_intro}
@@ -352,7 +326,7 @@ Lean 4 Code:"""
     log_to_file("synthesis/lean", synth_log, entity_id=entity_id, attempt=attempt)
     
     # Extract Lean code blocks robustly
-    prompt_ends_in_code_block = is_goedel and entity_type in ["object", "operation", "definition", "property"]
+    prompt_ends_in_code_block = is_goedel and entity_type == "def"
     
     parts = re.split(r'```(?:lean|lean4)?\s*', response, flags=re.IGNORECASE)
     blocks = []
@@ -395,7 +369,7 @@ Lean 4 Code:"""
     response = "\n".join(lines).strip()
     
     # Auto-heal cheat patterns where reasoning models define helper defs and theorem equivalents
-    if entity_type in ["object", "property", "operation"]:
+    if entity_type == "def":
         helper_matches = re.findall(r'\bdef\s+([A-Za-z0-9_]+)\b', response)
         helpers = [h for h in helper_matches if h != lean_name]
         
@@ -497,14 +471,10 @@ def translate_to_lean_regex(entity_id, entity_type, tex_content):
     lean_math = re.sub(r'\s+', ' ', lean_math).strip()
 
     # Format by type
-    if entity_type == "axiom":
-        return f"axiom {lean_name} : {lean_math}"
-    elif entity_type == "object":
-        return f"axiom {lean_name} : Type"
-    elif entity_type == "property":
-        return f"def {lean_name} : Prop := sorry"
-    elif entity_type in ("theorem", "operation"):
-        return f"axiom {lean_name} : {lean_math}"
+    if entity_type == "def":
+        return f"def {lean_name} : {lean_math} := sorry"
+    elif entity_type == "prop":
+        return f"theorem {lean_name} : {lean_math} := by sorry"
 
     return f"-- Unrecognized type: {lean_name}"
 

@@ -1,0 +1,21 @@
+% entity-id: def-fol-generalization
+% entity-type: axiom
+% defined-in: zorich-1, p. 55
+% macro: \FolGeneralization
+% args: 1
+% notation: #1
+
+\section{Правило обобщения (Generalization Rule [axm-fol-generalization])}
+
+\hypertarget{axm-fol-generalization}{}
+\begin{axiom}[axm-fol-generalization]
+\label{entity:axm-fol-generalization}
+% 1. ОБЪЯВЛЕНИЕ ТИПОВ
+$\Predicate{\mathcal{A}}$ --- формула логики первого порядка,
+$x$ --- переменная ($\Predicate{x} \in \mathcal{V}$)
+
+% 2. ТЕЛО ОПРЕДЕЛЕНИЯ
+\[
+\frac{\Predicate{\mathcal{A}}}{\TerForall x \Predicate{\mathcal{A}}}
+\]
+\end{axiom}

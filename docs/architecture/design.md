@@ -254,7 +254,7 @@ Human Name [id].tex
 ### 4.2 Rules
 
 1. **Human Name** — English, Title Case, spaces allowed
-2. **`[id]`** — lowercase, hyphenated, prefixed by type: `obj-`, `prop-`, `op-`, `thm-`, `lemma-`, `axm-`
+2. **`[id]`** — lowercase, alphanumeric, hyphenated, prefixed by type: `obj-`, `prop-`, `op-`, `thm-`, `lemma-`, `axm-`. Digits are allowed to prevent collisions of similarly named objects (e.g., `obj-sequence-1`, `prop-bounded-2`).
 3. No nested folders inside entity directories (flat)
 
 ### 4.3 Parsing Rule
@@ -263,7 +263,7 @@ Human Name [id].tex
 import re
 
 def parse_filename(filename: str):
-    match = re.match(r'^(.+?) \[([a-z\-]+)\]\.tex$', filename)
+    match = re.match(r'^(.+?) \[([a-z0-9\-]+)\]\.tex$', filename)
     if match:
         return {"name": match.group(1), "id": match.group(2)}
 ```

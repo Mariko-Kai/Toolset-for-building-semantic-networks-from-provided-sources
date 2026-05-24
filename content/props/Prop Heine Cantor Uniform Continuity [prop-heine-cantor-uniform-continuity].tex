@@ -1,0 +1,21 @@
+% defined-in: spivak (page 164)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f : \RealNumbers \to \RealNumbers, a \colon \RealNumbers, b \colon \RealNumbers, \varepsilon \colon \RealNumbers, \delta \colon \RealNumbers, x, y, z \in [a, b]]
+% 2. Data Structures: [The set A is defined as a subset of the closed interval [a, b] using set-builder notation.]
+% 3. Implicit Bounds: [The existence of the supremum of A is guaranteed by the Completeness Axiom of \RealNumbers.]
+% ========================
+
+% entity-id: prop-heine-cantor-uniform-continuity
+% entity-type: prop
+
+\begin{theorem}[Heine-Cantor]
+\forall a, b \colon \RealNumbers \quad \forall f \colon \ClosedInterval{a, b} \to \RealNumbers \quad (a \leq b \land \Continuous{f}) \implies \UniformlyContinuous{f}{\ClosedInterval{a, b}}
+\end{theorem}
+
+\begin{proof}[RU]
+Пусть \varepsilon > 0. Определим множество A = \{x \in \ClosedInterval{a, b} : f \text{ является } \varepsilon\text{-хорошей на } \ClosedInterval{a, x}\}. Так как f \text{ непрерывна в } a, \text{ то } a \in A. Пусть s = \Supremum{A}. В силу непрерывности f в точке s, существует \delta > 0, такое что для всех y \in \ClosedInterval{a, b}, если \RealAbsoluteValue{y - s} < \delta, то \RealAbsoluteValue{f(y) - f(s)} < \varepsilon / 2. Так как s = \Supremum{A}, существует x_0 \in A, такой что s - \delta < x_0 \leq s. Поскольку x_0 \in A, f \text{ является } \varepsilon\text{-хорошей на } \ClosedInterval{a, x_0}. Объединяя эти свойства, получаем, что f \text{ является } \varepsilon\text{-хорошей на } \ClosedInterval{a, s + \delta/2}, что влечет s = b.
+\end{proof}
+
+\begin{proof}[EN]
+Let \varepsilon > 0. Define the set A = \{x \in \ClosedInterval{a, b} : f \text{ is } \varepsilon\text{-good on } \ClosedInterval{a, x}\}. Since f \text{ is continuous at } a, \text{ we have } a \in A. Let s = \Supremum{A}. By the continuity of f at s, there exists \delta > 0 such that for all y \in \ClosedInterval{a, b}, \RealAbsoluteValue{y - s} < \delta \implies \RealAbsoluteValue{f(y) - f(s)} < \varepsilon / 2. Since s = \Supremum{A}, there exists x_0 \in A such that s - \delta < x_0 \leq s. Because x_0 \in A, f \text{ is } \varepsilon\text{-good on } \ClosedInterval{a, x_0}. Combining these properties, f \text{ is } \varepsilon\text{-good on } \ClosedInterval{a, s + \delta/2}, which implies s = b.
+\end{proof}

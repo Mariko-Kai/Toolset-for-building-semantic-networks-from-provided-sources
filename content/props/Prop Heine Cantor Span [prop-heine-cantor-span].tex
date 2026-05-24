@@ -1,0 +1,32 @@
+% defined-in: apostol (page 175)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - f : \RealNumbers \to \RealNumbers (Function)
+%    - a, b : \RealNumbers (Bounds)
+%    - \varepsilon : \RealNumbers (Positive threshold)
+%    - n : \mathbb{N} (Index)
+%    - \alpha : \RealNumbers (Limit point)
+%    - \delta : \RealNumbers (Neighborhood radius)
+% 2. Data Structures: 
+%    - Partition: A finite set of points \{x_0, x_1, \dots, x_n\} such that a = x_0 < x_1 < \dots < x_n = b.
+%    - Span: \sup \{|f(x) - f(y)| : x, y \in [x_i, x_{i+1}] \}.
+%    - Sequence of intervals: A function \sigma : \mathbb{N} \to \mathcal{P}(\RealNumbers) where \sigma(n) = [a_n, b_n].
+% 3. Implicit Bounds: 
+%    - The partition index n is a natural number \mathbb{N}.
+%    - The bisection process is indexed by n \in \mathbb{N}.
+% ========================
+
+% entity-id: prop-heine-cantor-span
+% entity-type: prop
+
+\begin{theorem}[Heine-Cantor Span Theorem]
+\forall f \colon \RealNumbers \to \RealNumbers, \forall a, b \colon \RealNumbers, (a < b \land \ContinuousOn{f}{\ClosedInterval{a}{b}}) \implies \forall \varepsilon \in \RealNumbers_{>0}, \exists n \in \mathbb{N}, \exists \{x_i\}_{i=0}^{n} \subset \ClosedInterval{a}{b} \left( (x_0 = a \land x_n = b \land \forall i \in \{0, \dots, n-1\}, x_i < x_{i+1}) \land \forall i \in \{0, \dots, n-1\}, \Span{f}{\ClosedInterval{x_i}{x_{i+1}}} < \varepsilon \right)
+\end{theorem}
+
+\begin{proof}[RU]
+Предположим от противного, что существует такое \varepsilon_0 > 0, что для любого разбиения интервала \ClosedInterval{a}{b} найдется подынтервал, где \Span{f}{\ClosedInterval{x_i}{x_{i+1}}} \geq \varepsilon_0. Используем метод последовательного деления пополам. Пусть \ClosedInterval{a_0}{b_0} = \ClosedInterval{a}{b}. Если \ClosedInterval{a_n}{b_n} уже определен, делим его пополам точкой c_n = (a_n + b_n)/2. Выбираем ту половину, где утверждение ложно. Получаем вложенную последовательность интервалов \ClosedInterval{a_n}{b_n}, длины которых стремятся к 0. По теореме о вложенных отрезках, существует \alpha \in \bigcap_{n=0}^{\infty} \ClosedInterval{a_n}{b_n}. В силу непрерывности f в точке \alpha, существует \delta > 0, такое что для всех x \in (\alpha - \delta, \alpha + \delta) \cap \ClosedInterval{a}{b}, \RealAbsoluteValue{f(x) - f(\alpha)} < \varepsilon_0 / 2. Тогда для достаточно больших n, \ClosedInterval{a_n}{b_n} \subset (\alpha - \delta, \alpha + \delta), откуда \Span{f}{\ClosedInterval{a_n}{b_n}} \leq \varepsilon_0, что противоречит предположению.
+\end{proof}
+
+\begin{proof}[EN]
+Assume for contradiction that there exists \varepsilon_0 > 0 such that no finite partition of \ClosedInterval{a}{b} satisfies the condition. We employ the method of successive bisections. Let \ClosedInterval{a_0}{b_0} = \ClosedInterval{a}{b}. Given \ClosedInterval{a_n}{b_n}, let c_n = (a_n + b_n)/2. At least one of \ClosedInterval{a_n}{c_n} or \ClosedInterval{c_n}{b_n} must fail the condition; choose it as \ClosedInterval{a_{n+1}}{b_{n+1}}. This yields a nested sequence of intervals with length (b-a)/2^n \to 0. By the Nested Interval Theorem, there exists \alpha \in \bigcap_{n=0}^{\infty} \ClosedInterval{a_n}{b_n}. Since f is \ContinuousOn{f}{\ClosedInterval{a}{b}}, there exists \delta > 0 such that for all x \in (\alpha - \delta, \alpha + \delta) \cap \ClosedInterval{a}{b}, \RealAbsoluteValue{f(x) - f(\alpha)} < \varepsilon_0 / 2. For sufficiently large n, \ClosedInterval{a_n}{b_n} \subset (\alpha - \delta, \alpha + \delta), implying \Span{f}{\ClosedInterval{a_n}{b_n}} < \varepsilon_0, which contradicts the construction.
+\end{proof}

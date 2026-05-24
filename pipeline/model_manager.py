@@ -135,7 +135,20 @@ class OllamaStrategy(ModelStrategy):
 
 
 class GeminiStrategy(ModelStrategy):
+    _last_request_time = 0.0
+    _min_interval = 5.0  # Strict interval (max 12 RPM) to stay safely below 15 RPM
+
+    def _enforce_rate_limit(self):
+        current_time = time.time()
+        elapsed = current_time - GeminiStrategy._last_request_time
+        if elapsed < GeminiStrategy._min_interval:
+            sleep_time = GeminiStrategy._min_interval - elapsed
+            print(f"[GeminiStrategy] Rate limiting: sleeping for {sleep_time:.2f} seconds...")
+            time.sleep(sleep_time)
+        GeminiStrategy._last_request_time = time.time()
+
     def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False) -> str:
+        self._enforce_rate_limit()
         if not GEMINI_AVAILABLE:
             print("[GeminiStrategy] google-genai is not installed.")
             return ""
@@ -167,6 +180,7 @@ class GeminiStrategy(ModelStrategy):
             return ""
             
     def get_embedding(self, text: str) -> Optional[List[float]]:
+        self._enforce_rate_limit()
         if not GEMINI_AVAILABLE:
             return None
         api_key = self.api_key or os.environ.get("GEMINI_API_KEY")

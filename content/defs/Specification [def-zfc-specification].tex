@@ -1,0 +1,17 @@
+% entity-id: def-zfc-specification
+% entity-type: axiom
+% defined-in: vereshchagin-shen
+% macro: \ZfcSpecification
+% args: 1
+% notation: #1
+
+\hypertarget{axm-zfc-specification}{}
+\begin{axiom}[axm-zfc-specification] % Аксиома выделения (Axiom of Specification)
+
+
+
+\[
+\TerForall X
+\TermExists Y \TerForall z \left( z \in Y \TermEquivalence (z \in X \TermConjunction{\land} \phi(z)) \right)
+\]
+\end{axiom}

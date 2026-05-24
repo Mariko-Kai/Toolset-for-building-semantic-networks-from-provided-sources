@@ -1,0 +1,61 @@
+% defined-in: zorich (page 162), zorich (page 162)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types:
+%     *   $a, b$: Variables of type $\RealNumbers$.
+%     *   $f$: Variable of type $\ClosedInterval{[a,b]} \to \RealNumbers$.
+%     *   $x, x', x''$: Variables of type $\ClosedInterval{[a,b]}$.
+%     *   $\epsilon, \delta$: Variables of type $\RealNumbers$ (positive).
+%     *   $n$: Variable of type $\mathbb{N}$ (Natural Numbers).
+% 2. Data Structures:
+%     *   $\ClosedInterval{[a,b]}$: Represents the closed interval $[a, b] \subset \RealNumbers$.
+%     *   $\mathcal{C} = \{V(x_1), \dots, V(x_n)\}$: Represents a finite collection (set) of open intervals covering the domain.
+% 3. Implicit Bounds:
+%     *   $a \leq b$: The implicit ordering constraint on the interval endpoints.
+%     *   $n \colon \mathbb{N}$: The natural number representing the finite size of the subcover.
+% ========================
+
+% entity-id: prop-heinecantor-uniform
+% entity-type: prop
+\begin{theorem}[Heine-Cantor Theorem]
+\forall a, b \colon \RealNumbers \;\; (a \leq b) \implies \forall f \colon \ClosedInterval{[a,b]} \to \RealNumbers \;\; \left( \Continuous{f} \implies \UniformlyContinuous{f} \right)
+\end{theorem}
+
+\begin{proof}[RU]
+Пусть $f \colon \ClosedInterval{[a,b]} \to \RealNumbers$ — функция, непрерывная на отрезке $[a, b]$. Нам нужно показать, что $f$ равномерно непрерывна.
+Пусть $\epsilon > 0$ — произвольное число.
+Поскольку $f$ непрерывна в каждой точке $x \in [a, b]$, то для данного $\epsilon$ существует $\delta(x) > 0$ такое, что для любых $x', x'' \in [a, b]$:
+\[ \RealAbsoluteValue{x' - x''} < \delta(x) \implies \RealAbsoluteValue{f(x') - f(x'')} < \epsilon \]
+Для каждой точки $x \in [a, b]$ построим окрестность $U_\delta(x) = (x - \delta(x), x + \delta(x))$. Эти интервалы образуют покрытие $\mathcal{U} = \{U_\delta(x) \mid x \in [a, b]\}$ отрезка $[a, b]$.
+По лемме о конечном покрытии (или теореме о компактности), существует конечное подпокрытие $\mathcal{V} = \{V(x_1), \dots, V(x_n)\}$, где $V(x_i) = U_\delta(x_i)/2$, такое, что $\mathcal{V}$ покрывает $[a, b]$.
+Определим $\delta_{global} = \min \left\{ \frac{1}{2}\delta(x_1), \dots, \frac{1}{2}\delta(x_n) \right\}$.
+Пусть $x', x'' \in [a, b]$ такие, что $\RealAbsoluteValue{x' - x''} < \delta_{global}$.
+Поскольку $\mathcal{V}$ покрывает $[a, b]$, существует индекс $i \in \{1, \dots, n\}$ такой, что $x' \in V(x_i)$.
+Тогда $\RealAbsoluteValue{x' - x_i} < \frac{1}{2}\delta(x_i)$.
+Используя неравенство треугольника:
+\[ \RealAbsoluteValue{x'' - x_i} \leq \RealAbsoluteValue{x'' - x'} + \RealAbsoluteValue{x' - x_i} < \delta_{global} + \frac{1}{2}\delta(x_i) \]
+По определению $\delta_{global}$, мы имеем $\delta_{global} \leq \frac{1}{2}\delta(x_i)$. Следовательно:
+\[ \RealAbsoluteValue{x'' - x_i} < \delta_{global} + \frac{1}{2}\delta(x_i) \leq \frac{1}{2}\delta(x_i) + \frac{1}{2}\delta(x_i) = \delta(x_i) \]
+Таким образом, $x', x'' \in U_\delta(x_i)$.
+По определению $\delta(x_i)$, следует, что $\RealAbsoluteValue{f(x') - f(x'')} < \epsilon$.
+Поскольку $\epsilon > 0$ было произвольным, $f$ равномерно непрерывна на $[a, b]$.
+\end{proof}
+
+\begin{proof}[EN]
+Let $f \colon \ClosedInterval{[a,b]} \to \RealNumbers$ be a function continuous on the interval $[a, b]$. We aim to show that $f$ is uniformly continuous.
+Let $\epsilon > 0$ be an arbitrary positive real number.
+Since $f$ is continuous at every point $x \in [a, b]$, for this given $\epsilon$, there exists $\delta(x) > 0$ such that for any $x', x'' \in [a, b]$:
+\[ \RealAbsoluteValue{x' - x''} < \delta(x) \implies \RealAbsoluteValue{f(x') - f(x'')} < \epsilon \]
+For each point $x \in [a, b]$, we construct the open neighborhood $U_\delta(x) = (x - \delta(x), x + \delta(x))$. The collection $\mathcal{U} = \{U_\delta(x) \mid x \in [a, b]\}$ forms an open cover of the interval $[a, b]$.
+By the Heine-Borel theorem (or the compactness property), there exists a finite subcover $\mathcal{V} = \{V(x_1), \dots, V(x_n)\}$, where $V(x_i) = U_\delta(x_i)/2$, such that $\mathcal{V}$ covers $[a, b]$.
+We define $\delta_{global} = \min \left\{ \frac{1}{2}\delta(x_1), \dots, \frac{1}{2}\delta(x_n) \right\}$.
+Now, let $x', x'' \in [a, b]$ such that $\RealAbsoluteValue{x' - x''} < \delta_{global}$.
+Since $\mathcal{V}$ covers $[a, b]$, there must exist an index $i \in \{1, \dots, n\}$ such that $x' \in V(x_i)$.
+This implies $\RealAbsoluteValue{x' - x_i} < \frac{1}{2}\delta(x_i)$.
+Using the triangle inequality:
+\[ \RealAbsoluteValue{x'' - x_i} \leq \RealAbsoluteValue{x'' - x'} + \RealAbsoluteValue{x' - x_i} < \delta_{global} + \frac{1}{2}\delta(x_i) \]
+By the definition of $\delta_{global}$, we have $\delta_{global} \leq \frac{1}{2}\delta(x_i)$. Therefore:
+\[ \RealAbsoluteValue{x'' - x_i} < \delta_{global} + \frac{1}{2}\delta(x_i) \leq \frac{1}{2}\delta(x_i) + \frac{1}{2}\delta(x_i) = \delta(x_i) \]
+Thus, $x', x'' \in U_\delta(x_i)$.
+By the definition of $\delta(x_i)$, we conclude that $\RealAbsoluteValue{f(x') - f(x'')} < \epsilon$.
+Since $\epsilon > 0$ was arbitrary, $f$ is uniformly continuous on $[a, b]$.
+\end{proof}

@@ -133,15 +133,16 @@ def extract_keyword(query):
     
     # Clean up punctuation and extra spaces
     import string
-    clean = clean.translate(str.maketrans('', '', string.punctuation))
+    punct_to_remove = string.punctuation.replace('-', '')
+    clean = clean.translate(str.maketrans('', '', punct_to_remove))
     clean = " ".join(clean.split())
     
     # Translate clean term to both RU and EN
     canonical_ru, canonical_en = extract_term_ru_en(clean)
     
     # Clean them up just in case
-    ru_term = canonical_ru.translate(str.maketrans('', '', string.punctuation)).lower().strip()
-    en_term = canonical_en.translate(str.maketrans('', '', string.punctuation)).lower().strip()
+    ru_term = canonical_ru.translate(str.maketrans('', '', punct_to_remove)).lower().strip()
+    en_term = canonical_en.translate(str.maketrans('', '', punct_to_remove)).lower().strip()
     
     print(f"[*] Целевой термин (RU): '{ru_term}'")
     print(f"[*] Целевой термин (EN): '{en_term}'")
@@ -155,7 +156,7 @@ def normalize_math_term(term):
     import re
     t = term.lower()
     t = re.sub(r'\b(theorem|thm|prop|proposition|def|definition|lemma|axm|axiom)\b', '', t)
-    t = re.sub(r'[^\w\s]', '', t)
+    t = re.sub(r'[^\w\s\-]', '', t)
     words = []
     for w in t.split():
         if len(w) > 4:
@@ -617,12 +618,7 @@ def main():
                     continue
                 
                 tex_content = tex_files[0].read_text(encoding='utf-8')
-                entity_type = "unknown"
-                if "def" in eid: entity_type = "definition"
-                elif "prop" in eid: entity_type = "property"
-                elif "axm" in eid: entity_type = "axiom"
-                elif "op" in eid: entity_type = "operation"
-                elif "thm" in eid: entity_type = "theorem"
+                entity_type = "def" if "def-" in eid else "prop"
                 
                 lean_strategy = mgr.strategies.get('lean')
                 lean_model = getattr(lean_strategy, 'model_name', 'goedel:latest') if lean_strategy else 'goedel:latest'

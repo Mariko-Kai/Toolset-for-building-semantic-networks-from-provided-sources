@@ -1,19 +1,19 @@
 """
-Lean Validator v2 — Robust Lean 4 Validation
+Lean Validator v3 — REPL-based Fast Validation
 =============================================
-Validates generated Lean 4 files using Lake/Lean.
-Handles Mathlib-heavy timeouts and JSON error parsing.
+Validates generated Lean 4 files using repl.exe for persistent Mathlib loading.
 """
 import subprocess
 import json
 import os
 from pathlib import Path
+import time
+import atexit
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 LEAN_DIR = PROJECT_ROOT / "lean_validator"
 
-VALIDATION_TIMEOUT = 300  # seconds — Mathlib imports are slow
-
+VALIDATION_TIMEOUT = 150  # seconds
 
 def log(msg):
     try:
@@ -22,28 +22,7 @@ def log(msg):
         safe = str(msg).encode('ascii', errors='replace').decode('ascii')
         print(f"  [lean-validator] {safe}")
 
-
-def check_lean_environment() -> bool:
-    """Verifies that Lean/Lake toolchain is available."""
-    lake_cmd = _get_lake_cmd()
-    try:
-        result = subprocess.run(
-            [lake_cmd, "--version"],
-            capture_output=True, text=True, timeout=10
-        )
-        if result.returncode == 0:
-            log(f"Toolchain: {result.stdout.strip()}")
-            return True
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
-
-    log("ERROR: Lean/Lake toolchain not found!")
-    return False
-
-
 def _get_lake_cmd() -> str:
-    """Resolves lake executable path."""
-    # Try multiple home directory resolution strategies (Windows compatibility)
     home_candidates = [
         os.environ.get("USERPROFILE", ""),
         os.environ.get("HOME", ""),
@@ -54,114 +33,114 @@ def _get_lake_cmd() -> str:
             elan_bin = Path(home) / ".elan" / "bin" / "lake.exe"
             if elan_bin.exists():
                 return str(elan_bin)
-            # Also try without .exe (Linux/macOS)
             elan_bin_nix = Path(home) / ".elan" / "bin" / "lake"
             if elan_bin_nix.exists():
                 return str(elan_bin_nix)
     return "lake"
 
-
-def validate_semantics_with_lean(lean_file_path: str) -> dict:
-    """
-    Runs Lean 4 on the given file and returns validation result.
+class LeanREPL:
+    _instance = None
     
-    Returns:
-        {"status": "success"|"failed"|"timeout", "errors": [...]}
-    """
-    lean_file = Path(lean_file_path)
-    if not lean_file.exists():
-        return {"status": "failed", "errors": [{"line": 0, "message": f"File not found: {lean_file}"}]}
-
-    # Verify toolchain files exist
-    toolchain_file = LEAN_DIR / "lean-toolchain"
-    if not toolchain_file.exists():
-        log("WARNING: lean-toolchain not found in lean_validator/")
-        return {"status": "failed", "errors": [{"line": 0, "message": "Missing lean-toolchain"}]}
-
-    lake_cmd = _get_lake_cmd()
-    cmd = [lake_cmd, "env", "lean", "--json", str(lean_file)]
-
-    log(f"Validating: {lean_file.name}")
-
-    try:
+    @classmethod
+    def get(cls):
+        if cls._instance is None or cls._instance.p.poll() is not None:
+            cls._instance = cls()
+        return cls._instance
+        
+    def __init__(self):
+        lake_cmd = _get_lake_cmd()
+        repl_path = LEAN_DIR / ".lake" / "packages" / "repl" / ".lake" / "build" / "bin" / "repl.exe"
+        if not repl_path.exists():
+            log(f"ERROR: repl.exe not found at {repl_path}. Run lake build in lean_validator")
+            raise FileNotFoundError(f"repl.exe not found")
+            
         env = os.environ.copy()
         env['PYTHONIOENCODING'] = 'utf-8'
-
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
+        
+        self.p = subprocess.Popen(
+            [lake_cmd, "env", str(repl_path)],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, # Merge stderr to stdout
             text=True,
             cwd=str(LEAN_DIR),
             encoding='utf-8',
             errors='replace',
             env=env,
-            timeout=VALIDATION_TIMEOUT
+            bufsize=1
         )
-    except subprocess.TimeoutExpired:
-        log(f"TIMEOUT after {VALIDATION_TIMEOUT}s")
-        return {"status": "timeout", "errors": [{"line": 0, "message": f"Lean validation timed out after {VALIDATION_TIMEOUT}s"}]}
-    except FileNotFoundError:
-        log("ERROR: Lean/Lake executable not found!")
-        return {"status": "failed", "errors": [{"line": 0, "message": "Lean executable not found."}]}
+        atexit.register(self.shutdown)
+        log("Started Lean REPL process.")
 
-    # Success
-    if result.returncode == 0:
-        log("[OK] No errors.")
-        return {"status": "success", "errors": []}
+    def shutdown(self):
+        if self.p and self.p.poll() is None:
+            self.p.terminate()
 
-    # Parse errors and info from JSON output
-    errors, info = _parse_lean_output(result.stdout, result.stderr)
-
-    if not errors and result.returncode != 0:
-        # Lean failed but produced no parseable JSON errors
-        output = (result.stdout + result.stderr)[:500]
-        errors = [{"line": 0, "message": f"Lean exited with code {result.returncode}. Output: {output}"}]
-
-    log(f"[FAIL] {len(errors)} error(s). First: {errors[0]['message'][:120] if errors else 'N/A'}")
-    return {"status": "failed", "errors": errors}
-
-
-def _parse_lean_output(stdout: str, stderr: str) -> tuple[list, list]:
-    """Parses Lean 4 JSON error and info output."""
-    errors = []
-    infos = []
-    output = stdout if stdout.strip() else stderr
-
-    for line in output.strip().split('\n'):
-        line = line.strip()
-        if not line:
-            continue
+    def validate_file(self, path: str) -> dict:
+        req = json.dumps({"path": path, "allTactics": False})
         try:
-            err_data = json.loads(line)
-            # Filter warnings/errors to only include those from the target validation file (not Mathlib background compiles!)
-            file_path = err_data.get('file') or err_data.get('fileName') or ""
-            if file_path and "TempValidation" not in file_path and "temp" not in file_path:
-                continue
-
-            severity = err_data.get('severity')
-            message = err_data.get('data') or err_data.get('message') or '(no message)'
+            self.p.stdin.write(req + '\n\n')
+            self.p.stdin.flush()
             
-            entry = {
-                "line": err_data.get('pos', {}).get('line', 0),
-                "column": err_data.get('pos', {}).get('column', 0),
-                "message": str(message)[:500]  # Truncate long messages
-            }
+            # Read line from stdout
+            line = self.p.stdout.readline().strip()
+            if not line:
+                return {"status": "failed", "errors": [{"line": 0, "message": "REPL crashed or returned empty response"}]}
+                
+            try:
+                resp = json.loads(line)
+                return self._parse_repl_response(resp)
+            except json.JSONDecodeError:
+                return {"status": "failed", "errors": [{"line": 0, "message": f"Invalid JSON from REPL: {line}"}]}
+                
+        except Exception as e:
+            return {"status": "failed", "errors": [{"line": 0, "message": f"Exception communicating with REPL: {str(e)}"}]}
+
+    def _parse_repl_response(self, resp: dict) -> dict:
+        errors = []
+        for msg in resp.get("messages", []):
+            if msg.get("severity") in ("error", "warning"):
+                errors.append({
+                    "line": msg.get("pos", {}).get("line", 0),
+                    "column": msg.get("pos", {}).get("column", 0),
+                    "message": msg.get("data", "")[:500]
+                })
+        
+        if not errors and "env" in resp:
+            return {"status": "success", "errors": []}
+        else:
+            return {"status": "failed", "errors": errors}
+
+def check_lean_environment() -> bool:
+    try:
+        LeanREPL.get()
+        return True
+    except Exception as e:
+        log(f"Lean environment check failed: {e}")
+        return False
+
+def validate_semantics_with_lean(lean_file_path: str) -> dict:
+    lean_file = Path(lean_file_path)
+    if not lean_file.exists():
+        return {"status": "failed", "errors": [{"line": 0, "message": f"File not found: {lean_file}"}]}
+
+    try:
+        repl = LeanREPL.get()
+        log(f"Validating (via REPL): {lean_file.name}")
+        result = repl.validate_file(str(lean_file.absolute()))
+        
+        if result["status"] == "success":
+            log("[OK] No errors.")
+        else:
+            errors = result.get("errors", [])
+            log(f"[FAIL] {len(errors)} error(s). First: {errors[0]['message'][:120] if errors else 'N/A'}")
             
-            if severity in ('error', 'warning'):
-                errors.append(entry)
-            elif severity == 'information':
-                infos.append(entry)
-        except json.JSONDecodeError:
-            continue
-
-    return errors, infos
-
+        return result
+    except Exception as e:
+        log(f"Failed to validate with REPL: {e}")
+        return {"status": "failed", "errors": [{"line": 0, "message": str(e)}]}
 
 def validate_entity(entity_id: str, lean_code: str) -> dict:
-    """
-    Convenience function: writes lean_code to a temp file, validates, cleans up.
-    Ensures all 'import' statements appear strictly at the very top of the file before any comments or code.
-    """
     temp_file = LEAN_DIR / "TempValidation.lean"
     try:
         imports = {"import Mathlib"}
@@ -189,47 +168,8 @@ def validate_entity(entity_id: str, lean_code: str) -> dict:
             pass
 
 def discover_mathlib_signatures(terms: list[str]) -> list[str]:
-    """
-    Writes a temp file with `#check` for each term and returns the signatures found.
-    """
-    if not terms:
-        return []
-        
-    temp_file = LEAN_DIR / "TempDiscovery.lean"
-    try:
-        with open(temp_file, 'w', encoding='utf-8') as f:
-            f.write("import Mathlib\n\n")
-            for term in terms:
-                f.write(f"#check {term}\n")
-
-        lake_cmd = _get_lake_cmd()
-        cmd = [lake_cmd, "env", "lean", "--json", str(temp_file)]
-        
-        env = os.environ.copy()
-        env['PYTHONIOENCODING'] = 'utf-8'
-
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            cwd=str(LEAN_DIR),
-            encoding='utf-8',
-            errors='replace',
-            env=env,
-            timeout=300)
-        
-        _, infos = _parse_lean_output(result.stdout, result.stderr)
-        signatures = [info['message'] for info in infos if ':' in info['message']]
-        return signatures
-    except Exception as e:
-        log(f"Discovery error: {e}")
-        return []
-    finally:
-        try:
-            temp_file.unlink()
-        except Exception:
-            pass
-
+    # Placeholder for discovery if needed.
+    return []
 
 if __name__ == "__main__":
     import sys
@@ -240,7 +180,3 @@ if __name__ == "__main__":
         print(json.dumps(res, indent=2, ensure_ascii=False))
     else:
         print("Usage: python lean_validator.py <path_to_lean_file>")
-        if check_lean_environment():
-            print("Lean toolchain: OK")
-        else:
-            print("Lean toolchain: NOT FOUND")
