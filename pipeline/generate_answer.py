@@ -188,71 +188,40 @@ INSTRUCTIONS:
    - Do NOT include headers like "Формулировка на русском языке" or "Математическая формулировка" inside the description fields.
    - Make sure absolutely NO internal IDs or reference codes appear in either description.
 
-CRITICAL ESCAPING RULE: NEVER escape or drop backslashes in LaTeX macros! Ensure all math macros like \AbsAbstract, \RealNumbers, etc., retain their backslashes. Since you are outputting JSON, you MUST double-escape backslashes in your JSON strings (e.g. write "\\AbsAbstract" instead of "\AbsAbstract", "\\mathbb{{R}}" instead of "\mathbb{{R}}").
+CRITICAL ESCAPING RULE: NEVER escape or drop backslashes in LaTeX macros! Ensure all math macros like \AbsAbstract, \RealNumbers, etc., retain their single backslashes (e.g. \mathbb{{R}}). DO NOT double-escape.
 
-Return ONLY a valid JSON object with the following schema:
-{{
-    "name_ru": "...",
-    "name_en": "...",
-    "desc_ru": "...",
-    "desc_en": "..."
-}}
+Return ONLY the following XML-like blocks:
+<name_ru>...</name_ru>
+<name_en>...</name_en>
+<desc_ru>...</desc_ru>
+<desc_en>...</desc_en>
 """
 
     try:
         from pipeline.model_manager import ModelManager
-        response = ModelManager.get_instance().query_llm(prompt, json_mode=True, role="generate")
+        response = ModelManager.get_instance().query_llm(prompt, role="generate")
         
-        response = re.sub(r'^```json\s*', '', response.strip(), flags=re.MULTILINE)
-        response = re.sub(r'^```\s*$', '', response.strip(), flags=re.MULTILINE).strip()
-        
-        match = re.search(r'(\{.*\})', response, re.DOTALL)
-        if match:
-            response = match.group(1)
-        
-        # Fix unescaped backslashes from LaTeX in JSON strings (e.g. \mathbb, \in, \forall).
-        # Valid JSON escape chars are: " \\ / b f n r t u. Anything else is invalid.
-        try:
-            # First attempt: try to parse as-is
-            res = json.loads(response)
-        except Exception as parse_err:
-            # Log the raw problematic response for debugging
-            try:
-                from pipeline.export_to_lean import log_to_file
-                log_to_file("synthesis/json-fail", f"RAW RESPONSE:\n{response}", entity_id=data['id'])
-            except Exception:
-                pass
-            # Second attempt: aggressively escape all backslashes (safe fallback)
-            safe_resp = response.replace('\\', '\\\\')
-            try:
-                res = json.loads(safe_resp)
-            except Exception as parse_err2:
-                # As a last resort, try to extract a JSON object substring and parse that
-                m = re.search(r'(\{.*\})', response, re.DOTALL)
-                if m:
-                    try:
-                        res = json.loads(m.group(1))
-                    except Exception:
-                        raise parse_err2
-                else:
-                    raise parse_err2
-        
-        
-        synth_ru_name = res.get("name_ru", "").strip()
-        synth_en_name = res.get("name_en", "").strip()
-        synth_desc_ru = res.get("desc_ru", "").strip()
-        synth_desc_en = res.get("desc_en", "").strip()
+        def extract_tag(tag, text):
+            m = re.search(f"<{tag}>(.*?)</{tag}>", text, re.DOTALL)
+            return m.group(1).strip() if m else ""
+
+        synth_ru_name = extract_tag("name_ru", response)
+        synth_en_name = extract_tag("name_en", response)
+        synth_desc_ru = extract_tag("desc_ru", response)
+        synth_desc_en = extract_tag("desc_en", response)
         
         if is_id_or_placeholder(synth_ru_name):
             synth_ru_name = ru_name or humanize_id(data["id"])
         if is_id_or_placeholder(synth_en_name):
             synth_en_name = en_name or humanize_id(data["id"])
             
-        synth_ru_name = re.sub(r"\s*\[[^\]]+\]", "", synth_ru_name).strip()
-        synth_en_name = re.sub(r"\s*\[[^\]]+\]", "", synth_en_name).strip()
-        synth_desc_ru = re.sub(r"\s*\[[^\]]+\]", "", synth_desc_ru).strip()
+        synth_ru_name = re.sub(r"\s*\[[a-z0-9\-]+\]", "", synth_ru_name).strip()
+        synth_en_name = re.sub(r"\s*\[[a-z0-9\-]+\]", "", synth_en_name).strip()
         
-        synth_desc_en = re.sub(r"\s*\[[^\]]+\]", "", synth_desc_en).strip()
+        # We do NOT run the bracket-stripping regex on desc_ru and desc_en 
+        # because it destroys mathematical closed intervals like [a, b]!
+        synth_desc_ru = synth_desc_ru.strip()
+        synth_desc_en = synth_desc_en.strip()
         
         # Save to cache
         nl_cache[data["id"]] = {
@@ -715,15 +684,8 @@ def main():
         clean_body = data.get("full_body", "")
         clean_body = re.sub(r'\\begin\{(definition|proposition)\}\[[^\]]+\]', r'\\begin{\1}', clean_body)
         
-        # LaTeX throws an error if there are empty lines inside display math \[ ... \]
-        def remove_empty_lines(match):
-            s = match.group(0)
-            while re.search(r'\n\s*\n', s):
-                s = re.sub(r'\n\s*\n', '\n', s)
-            return s
-            
-        clean_body = re.sub(r'\\\[.*?\\\]', remove_empty_lines, clean_body, flags=re.DOTALL)
-        
+        # The user requested to NOT use breqn and wrap formulas manually in the source.
+        # We just output the clean_body as is, keeping the original \[ ... \]
         block += f"{clean_body}\n\n"
         
         content += block

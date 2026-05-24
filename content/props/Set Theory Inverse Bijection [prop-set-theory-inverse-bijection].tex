@@ -1,0 +1,39 @@
+% defined-in: zorich (page 14), zorich (page 29)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [X, Y : \Type; f : X \TermTo Y; g : Y \TermTo X; e_X : X \TermTo X; e_Y : Y \TermTo Y]
+% 2. Data Structures: [Function composition \Composition; Identity mapping \Identity]
+% 3. Implicit Bounds: [None]
+% ========================
+
+% entity-id: prop-set-theory-inverse-bijection
+% entity-type: prop
+% macro: \InverseBijection
+% args: 3
+% notation: f \InverseBijection g
+
+\begin{proposition}[Inverse Bijection]
+\[
+\TerForall X \TerForall Y \TerForall f \colon X \TermTo Y \TerForall g \colon Y \TermTo X
+\left(
+(g \Composition f = \Identity_X) \land (f \Composition g = \Identity_Y)
+\iff
+(\IsBijection f \land \IsBijection g \land g = f^{-1})
+\right)
+\]
+\end{proposition}
+
+\begin{proof}[RU]
+Пусть $f \colon X \to Y$ и $g \colon Y \to X$ удовлетворяют условиям $g \circ f = e_X$ и $f \circ g = e_Y$. 
+Из условия $g \circ f = e_X$ следует, что $f$ инъективно, а $g$ сюръективно. 
+Из условия $f \circ g = e_Y$ следует, что $f$ сюръективно, а $g$ инъективно. 
+Следовательно, $f$ и $g$ являются биекциями. 
+Условие $y = f(x)$ эквивалентно $g(y) = g(f(x)) = (g \circ f)(x) = e_X(x) = x$, что доказывает $g = f^{-1}$.
+\end{proof}
+
+\begin{proof}[EN]
+Let $f \colon X \to Y$ and $g \colon Y \to X$ satisfy the conditions $g \circ f = e_X$ and $f \circ g = e_Y$. 
+The condition $g \circ f = e_X$ implies that $f$ is injective and $g$ is surjective. 
+The condition $f \circ g = e_Y$ implies that $f$ is surjective and $g$ is injective. 
+Thus, $f$ and $g$ are bijections. 
+The condition $y = f(x)$ is equivalent to $g(y) = g(f(x)) = (g \circ f)(x) = e_X(x) = x$, which proves $g = f^{-1}$.
+\end{proof}

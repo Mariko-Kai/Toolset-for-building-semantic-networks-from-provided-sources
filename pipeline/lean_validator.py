@@ -165,6 +165,9 @@ def validate_entity(entity_id: str, lean_code: str) -> dict:
             trimmed = line.strip()
             if trimmed.startswith("import "):
                 imports.add(trimmed)
+            elif "set_option maxHeartbeats" in trimmed:
+                # STRIP maxHeartbeats to prevent infinite loops causing OOM
+                continue
             else:
                 body_lines.append(line)
                 
@@ -201,6 +204,8 @@ def validate_tree(entities: list[dict]) -> dict:
                 trimmed = line.strip()
                 if trimmed.startswith("import "):
                     imports.add(trimmed)
+                elif "set_option maxHeartbeats" in trimmed:
+                    continue
                 else:
                     body_lines.append(line)
                     

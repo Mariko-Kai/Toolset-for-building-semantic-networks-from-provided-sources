@@ -44,27 +44,35 @@ def detect_entity_type_from_text(raw_texts, has_proof=False):
     return "def"
 
 def prepare_macros_from_deps(deps, mgr):
-    """Strict Dependency Resolution & Macro Injection."""
-    if not deps:
-        return ""
     
+    if not deps:
+        deps = []
+        
     unique_deps = list({d.strip() for d in deps if d and isinstance(d, str)})
     
     from pipeline.ollama_wrapper import resolve_entities
+    from pipeline.latex_utils import get_macro_metadata
     import re
     import json
     import sqlite3
     
-    macros_map = {}
+    meta = get_macro_metadata()
+    macros_map = {eid: data['macro'] for eid, data in meta.items()}
+    
     macro_file = PROJECT_ROOT / "content" / "mathesis_macros.sty"
-    if macro_file.exists():
-        m_content = macro_file.read_text(encoding="utf-8")
-        for match in re.finditer(r'\\newcommand\{\\([a-zA-Z0-9_]+)\}(?:\[\d+\])?\{.*?\\hyperlink\{([a-zA-Z0-9_\-]+)\}', m_content):
-            macros_map[match.group(2)] = "\\" + match.group(1)
 
     available_macros = []
     resolved_eids = []
     
+    # ALWAYS ADD ALL EXISTING MACROS to available_macros, formatted with notation
+    for eid, data in meta.items():
+        macro_name = data['macro']
+        notation = data['notation']
+        if notation:
+            available_macros.append(f"{macro_name} : Use instead of standard notation \"{notation}\"")
+        else:
+            available_macros.append(f"{macro_name} : Use for the concept of '{eid}'")
+        
     conn = sqlite3.connect(DB_PATH, timeout=10.0)
     cursor = conn.cursor()
 
@@ -73,14 +81,16 @@ def prepare_macros_from_deps(deps, mgr):
         if resolved:
             eid = resolved[0]["entity_id"]
             resolved_eids.append(eid)
-            if eid in macros_map:
-                available_macros.append(f"{macros_map[eid]} (from {eid})")
-            else:
-                # Stub it if not in .sty
+            # If it was already added from meta, we don't need to add it again
+            # But let's check if it's missing from meta (e.g. recent stub)
+            if eid not in meta:
                 pascal_name = "".join(w.title() for w in re.sub(r'[^\w\s]', '', dep).strip().split())
                 if not pascal_name: continue
                 new_macro = f"\\{pascal_name}"
-                available_macros.append(f"{new_macro} (from {eid})")
+                macro_entry = f"{new_macro} : Use instead of standard notation \"{pascal_name}\""
+                if macro_entry not in available_macros:
+                    available_macros.append(macro_entry)
+                    macros_map[eid] = new_macro
                 if macro_file.exists():
                     macro_def = f"\\newcommand{{{new_macro}}}{{\\hyperlink{{{eid}}}{{\\text{{{pascal_name}}}}}}}"
                     with open(macro_file, "a", encoding="utf-8") as f:
@@ -120,7 +130,9 @@ def prepare_macros_from_deps(deps, mgr):
                 with open(macro_file, "a", encoding="utf-8") as f:
                     f.write(f"\n% Auto-generated stub for {dep}\n{macro_def}\n")
                     
-            available_macros.append(f"{new_macro} (from {new_eid})")
+            macro_entry = f"{new_macro} : Use instead of standard notation \"{notation}\""
+            if macro_entry not in available_macros:
+                available_macros.append(macro_entry)
             resolved_eids.append(new_eid)
 
     conn.close()
@@ -128,7 +140,16 @@ def prepare_macros_from_deps(deps, mgr):
     if not available_macros:
         return "", resolved_eids
         
-    return "\nAVAILABLE MACROS (CRITICAL: You MUST use these instead of standard LaTeX for concepts/types. DO NOT invent standard commands if they are in this list. Example: use \\RealNumbers instead of \\mathbb{R}):\n" + "\n".join([f"- {m}" for m in available_macros]) + "\n", resolved_eids
+    # Deduplicate while preserving order
+    seen = set()
+    deduped_macros = []
+    for m in available_macros:
+        if m not in seen:
+            seen.add(m)
+            deduped_macros.append(f"- {m}")
+            
+    header = "\nAVAILABLE MACROS (CRITICAL: You MUST use these instead of standard LaTeX for concepts/types. Example: use \\RealNumbers instead of \\mathbb{R}):\n"
+    return header + "\n".join(deduped_macros) + "\n", resolved_eids
 
 def build_synthesis_prompt(cluster_id, formulations, sources, entity_type, implicit_assumptions="", canonical_term="", relevant_macros_str=""):
     """Строит компактный промпт для синтеза. Оптимизирован для скорости на GTX 1650."""
@@ -149,9 +170,12 @@ Before writing the final LaTeX code, you MUST output a `<semantic_mapping>` bloc
 
 [Your final canonical LaTeX output follows here...]
 
-OUTPUT: Only LaTeX. No ```latex blocks. Include:
+OUTPUT: Only LaTeX. No ```latex blocks. Include the following metadata at the top:
 % entity-id: <prefix-short-id>
-% entity-type: <def|prop>"""
+% entity-type: <def|prop>
+% macro: \<PascalCaseNameOfEntity>
+% args: <number-of-arguments>
+% notation: <notation-if-any-or-leave-blank>"""
     
     if target_requirement:
         rules += target_requirement
@@ -161,8 +185,8 @@ OUTPUT: Only LaTeX. No ```latex blocks. Include:
 CRITICAL HEURISTICS & ANTI-PATTERNS TO AVOID:
 1. Types vs. Sets (The \colon vs \in rule): 
    Never confuse belonging to a fundamental type with belonging to a subset. 
-   - BAD: "x \in \mathbb{R}" when declaring a variable. 
-   - GOOD: "x \colon \mathbb{R}" (in LaTeX) or "(x : ℝ)" (in Lean). Use "\in" ONLY for subsets, e.g., "x \in [a, b]".
+   - BAD: "x \TermIn \RealNumbers" when declaring a variable. 
+   - GOOD: "x \colon \RealNumbers" (in LaTeX) or "(x : ℝ)" (in Lean). Use "\TermIn" ONLY for subsets, e.g., "x \TermIn \ClosedInterval{a, b}".
 
 2. Analytical vs. Computational Structures (The List rule):
    Never use computational data structures like `List` or `Array` to represent continuous mathematical concepts (partitions, sequences, covers).
@@ -184,17 +208,17 @@ CRITICAL NAMING RULE: The entity-id MUST follow the Mathesis architecture standa
 
 CRITICAL: Generate EXACTLY ONE mathematical entity. DO NOT repeat the output. DO NOT provide multiple versions. One % entity-id, one % entity-type, and the LaTeX block(s).
 
-TERMINALS: \emptyset = < > \leq \geq 0 1 \infty \varepsilon \delta \mathrm
-
-CRITICAL WRAPPING RULE: ALL mathematical entities/concepts/operators in your formulas MUST be written using dynamic semantic macros (e.g. \RealNumbers, \Continuous, \AbsAbstract). DO NOT use hardcoded LaTeX like \mathbb{R}, \sup, \in if a macro exists!
+CRITICAL WRAPPING RULE: ALL mathematical entities/concepts/operators in your formulas MUST be written using dynamic semantic macros (e.g. \RealNumbers, \Continuous, \AbsAbstract). DO NOT use hardcoded LaTeX like \mathbb{R}, \sup, \in, \forall if a macro exists in your AVAILABLE MACROS list!
 NOTE: Local variables (like a, b, f, x) introduced in the current formula MUST NOT be wrapped in semantic macros. Only wrap the types, spaces, and operators.
 
 TYPING: Every formula MUST start with variable declarations via quantors:
-\forall f \colon \RealNumbers \to \RealNumbers
+\TerForall f \colon \RealNumbers \TermTo \RealNumbers
 
 PURE MATH RULE: For \begin{definition} and \begin{proposition} blocks, NO NATURAL LANGUAGE IS ALLOWED AT ALL. NO English, NO Russian, NO plain text, NO "Note", NO "Remark", NO explanations. The content MUST be 100% formal math symbols and macros. ALL formulas MUST be wrapped in display math blocks \[ ... \]. Inline math $...$ is FORBIDDEN.
+For long formulas, you MUST use \begin{aligned} ... \end{aligned} inside \[ ... \] and break lines at major relations (=, \implies) or operators using \\ so they do not overflow the page margins.
+
 Natural language and explanatory notes are ONLY permitted inside \begin{proof} blocks. ALL math objects/variables/operators in proofs MUST be wrapped in inline math mode `$ ... $`. For example, write $\ClosedInterval{a, b}$ and $f(x)$ instead of \ClosedInterval{a, b} and f(x). Leaving mathematical text/variables naked without `$` is STRICTLY FORBIDDEN!
-"""
+CRITICAL INLINE MATH RULE: Every opening `$` MUST have a corresponding closing `$`. Do not forget the closing symbol (выходной символ) or the rest of the text will disappear and the compiler will crash!"""
 
     if relevant_macros_str:
         rules += relevant_macros_str
@@ -202,22 +226,11 @@ Natural language and explanatory notes are ONLY permitted inside \begin{proof} b
     if implicit_assumptions:
         rules += f"\nIMPLICIT ASSUMPTIONS DETECTED IN TEXTBOOK (Apply these to your variable declarations!):\n{implicit_assumptions}\n"
 
-    example = r"""EXAMPLE:
-% entity-id: prop-weierstrass-extreme
-% entity-type: prop
-\begin{proposition}[Weierstrass Extreme Value]
-\forall f \colon \ClosedInterval{[a,b]} \to \RealNumbers \;\; \Continuous{f}
-\implies \exists c \in \ClosedInterval{[a,b]} \;\;
-\forall x \in \ClosedInterval{[a,b]} \quad f(x) \leq f(c)
-\end{theorem}
-"""
-
     if entity_type == "prop":
         prompt = rf"""Synthesize a strict formal THEOREM + PROOFS from these sources:
 {text_input}
 
 {rules}
-{example}
 Generate \begin{{proposition}}[Name] ... \end{{proposition}}.
 Then generate TWO proofs in parallel: one in Russian and one in English.
 Format:
@@ -406,7 +419,30 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
         temp_etype = match_type_temp.group(1).strip() if match_type_temp else "axiom"
 
         # Fast-fail for redundant entities to save LLM tokens and time
+        skip_entity = False
         if processed_entities and temp_eid in processed_entities:
+            skip_entity = True
+        elif processed_entities:
+            # Semantic deduplication
+            from pipeline.ollama_wrapper import normalize_math_term
+            temp_title = temp_eid.replace('def-', '').replace('thm-', '').replace('axm-', '').replace('prop-', '').replace('-', ' ')
+            norm_temp = normalize_math_term(temp_title)
+            
+            for pid in processed_entities:
+                p_title = pid.replace('def-', '').replace('thm-', '').replace('axm-', '').replace('prop-', '').replace('-', ' ')
+                norm_p = normalize_math_term(p_title)
+                
+                temp_words = set(norm_temp.split())
+                p_words = set(norm_p.split())
+                
+                if norm_temp == norm_p or (len(p_words) >= 2 and p_words.issubset(temp_words)) or (len(temp_words) >= 2 and temp_words.issubset(p_words)):
+                    print(f"  [synthesizer] [SEMAN-SKIP] Entity '{temp_eid}' semantically matches '{pid}'. Forcing ID to '{pid}'.")
+                    temp_eid = pid
+                    latex_content = re.sub(r'(% entity-id:\s*).+$', rf'\g<1>{pid}', latex_content, flags=re.MULTILINE)
+                    skip_entity = True
+                    break
+
+        if skip_entity:
             print(f"  [synthesizer] [SKIP] Entity '{temp_eid}' already synthesized. Skipping Lean formalization.")
             valid_lean_code = ""
             break

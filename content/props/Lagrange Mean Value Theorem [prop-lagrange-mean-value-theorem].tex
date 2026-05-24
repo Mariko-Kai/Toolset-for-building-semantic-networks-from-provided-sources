@@ -1,0 +1,32 @@
+% defined-in: apostol (page 208), apostol (page 210), apostol (page 208), apostol (page 208), spivak (page 223), spivak (page 213)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f : \RealNumbers \TermTo \RealNumbers, a : \RealNumbers, b : \RealNumbers, c : \RealNumbers]
+% 2. Data Structures: [The interval \ClosedInterval{a, b} is a subset of \RealNumbers defined by \Set{x \TermIn \RealNumbers \TermMid a \leq x \leq b}]
+% 3. Implicit Bounds: [a < b]
+% ========================
+
+% entity-id: prop-lagrange-mean-value-theorem
+% entity-type: prop
+% macro: \LagrangeMeanValueTheorem
+% args: 0
+% notation: 
+
+\begin{proposition}[Lagrange Mean Value Theorem]
+\[
+\TerForall f \colon \RealNumbers \TermTo \RealNumbers \TerForall a \colon \RealNumbers \TerForall b \colon \RealNumbers 
+\left( 
+\begin{aligned}
+& (a < b) \TermConjunction \Continuous{f \mid_{\ClosedInterval{a, b}}} \TermConjunction (\TerForall x \TermIn \OpenInterval{a, b} \colon \DerivativeAtPoint{f(x)} \text{ exists}) \\
+& \TermImplication \TermExists c \TermIn \OpenInterval{a, b} \colon f(b) - f(a) = f'(c) \cdot (b - a)
+\end{aligned}
+\right)
+\]
+\end{proposition}
+
+\begin{proof}[RU]
+Для доказательства определим вспомогательную функцию $h \colon \ClosedInterval{a, b} \TermTo \RealNumbers$ следующим образом: $h(x) \TermDefinedAs f(x) - \frac{f(b) - f(a)}{b - a} \cdot (x - a)$. Заметим, что $h(a) = f(a)$ и $h(b) = f(b) - (f(b) - f(a)) = f(a)$, следовательно $h(a) = h(b)$. Так как $f$ непрерывна на $\ClosedInterval{a, b}$ и дифференцируема на $\OpenInterval{a, b}$, функция $h$ также обладает этими свойствами. Согласно теореме Ролля, существует точка $c \TermIn \OpenInterval{a, b}$, такая что $h'(c) = 0$. Вычисляя производную, получаем $h'(x) = f'(x) - \frac{f(b) - f(a)}{b - a}$. Условие $h'(c) = 0$ влечет $f'(c) = \frac{f(b) - f(a)}{b - a}$, что эквивалентно $f(b) - f(a) = f'(c) \cdot (b - a)$.
+\end{proof}
+
+\begin{proof}[EN]
+To prove the theorem, we define an auxiliary function $h \colon \ClosedInterval{a, b} \TermTo \RealNumbers$ by $h(x) \TermDefinedAs f(x) - \frac{f(b) - f(a)}{b - a} \cdot (x - a)$. Note that $h(a) = f(a)$ and $h(b) = f(b) - (f(b) - f(a)) = f(a)$, hence $h(a) = h(b)$. Since $f$ is continuous on $\ClosedInterval{a, b}$ and differentiable on $\OpenInterval{a, b}$, the function $h$ satisfies the same properties. By Rolle's Theorem, there exists a point $c \TermIn \OpenInterval{a, b}$ such that $h'(c) = 0$. Computing the derivative, we have $h'(x) = f'(x) - \frac{f(b) - f(a)}{b - a}$. The condition $h'(c) = 0$ implies $f'(c) = \frac{f(b) - f(a)}{b - a}$, which is equivalent to $f(b) - f(a) = f'(c) \cdot (b - a)$.
+\end{proof}

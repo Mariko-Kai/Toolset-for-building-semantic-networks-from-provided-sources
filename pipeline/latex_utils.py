@@ -6,6 +6,42 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MACROS_FILE = PROJECT_ROOT / "content" / "mathesis_macros.sty"
 
 _MACRO_MAP = None
+_MACRO_METADATA = None
+
+def get_macro_metadata() -> dict:
+    """Reads all .tex files in content/ and returns a dict mapping entity_id to its macro metadata."""
+    global _MACRO_METADATA
+    if _MACRO_METADATA is not None:
+        return _MACRO_METADATA
+
+    _MACRO_METADATA = {}
+    content_dir = PROJECT_ROOT / "content"
+    if not content_dir.exists():
+        return _MACRO_METADATA
+
+    pattern = re.compile(r'^%\s*(macro|notation|args|entity-id):\s*(.+)$', re.MULTILINE)
+
+    for root, _, files in os.walk(content_dir):
+        for f in files:
+            if f.endswith('.tex'):
+                file_path = os.path.join(root, f)
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    content = file.read(2048) # Header is always at the top
+                    
+                    meta_dict = {}
+                    for match in pattern.finditer(content):
+                        key = match.group(1).strip()
+                        val = match.group(2).strip()
+                        meta_dict[key] = val
+                        
+                    if 'entity-id' in meta_dict and 'macro' in meta_dict:
+                        eid = meta_dict['entity-id']
+                        _MACRO_METADATA[eid] = {
+                            'macro': meta_dict['macro'],
+                            'notation': meta_dict.get('notation', ''),
+                            'args': meta_dict.get('args', '0')
+                        }
+    return _MACRO_METADATA
 
 def get_macro_to_id_mapping():
     """Reads mathesis_macros.sty and returns a dict mapping \\MacroName -> entity_id."""
@@ -23,7 +59,7 @@ def get_macro_to_id_mapping():
     # Match: \newcommand{\MacroName}[args]{\hyperlink{entity-id}
     # OR \newcommand{\MacroName}{\hyperlink{entity-id}
     # Including optional \mathopen{} wrapper: \newcommand{\MacroName}{\mathopen{\hyperlink{entity-id}
-    pattern = r'\\newcommand\{\\([a-zA-Z0-9_]+)\}(?:\[\d+\])?\{(?:\\mathopen\{)?\\hyperlink\{([a-zA-Z0-9_-]+)\}'
+    pattern = r'\\newcommand\{\\([a-zA-Z0-9_]+)\}(?:\[\d+\])?\{.*?\\hyperlink\{([a-zA-Z0-9_-]+)\}'
     
     for match in re.finditer(pattern, content):
         macro_name = match.group(1)

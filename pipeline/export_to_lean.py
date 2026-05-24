@@ -44,7 +44,7 @@ import datetime
 from pipeline.lean_validator import validate_entity
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-def log_to_file(category: str, content: str, entity_id: str = None, attempt: int = None):
+def log_to_file(category: str, content: str, entity_id: str = None, attempt: int = None, skip_realtime: bool = False):
     """
     Saves content into a log file in logs/<category>/...
     And also appends to logs/pipeline_realtime.log in real-time with immediate disk flush.
@@ -76,18 +76,19 @@ def log_to_file(category: str, content: str, entity_id: str = None, attempt: int
             except OSError:
                 pass
                 
-        # 2. Append to the real-time unified streaming log file
-        realtime_log = PROJECT_ROOT / "logs" / "pipeline_realtime.log"
-        header = f"\n=== [{datetime.datetime.now().isoformat()}] CATEGORY: {category.upper()} | ENTITY: {entity_id} | ATTEMPT: {attempt} ===\n"
-        with open(realtime_log, "a", encoding="utf-8") as f:
-            f.write(header)
-            f.write(content)
-            f.write("\n" + "="*80 + "\n")
-            f.flush()
-            try:
-                os.fsync(f.fileno())
-            except OSError:
-                pass
+        if not skip_realtime:
+            # 2. Append to the real-time unified streaming log file
+            realtime_log = PROJECT_ROOT / "logs" / "pipeline_realtime.log"
+            header = f"\n=== [{datetime.datetime.now().isoformat()}] CATEGORY: {category.upper()} | ENTITY: {entity_id} | ATTEMPT: {attempt} ===\n"
+            with open(realtime_log, "a", encoding="utf-8") as f:
+                f.write(header)
+                f.write(content)
+                f.write("\n" + "="*80 + "\n")
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except OSError:
+                    pass
                 
         # 3. Flush standard output buffers for instant console response
         sys.stdout.flush()
@@ -195,21 +196,24 @@ ADDITIONAL CONSTRAINTS:
         problem_name = lean_name
         informal_statement_content = f"We define a mathematical {entity_type}.\n"
         informal_statement_content += f"Formal definition/theorem in LaTeX:\n${tex_clean}$\n"
-        if informal_proof:
-            informal_statement_content += f"\nInformal proof from textbook:\n{informal_proof}\n"
+        # Do NOT include the informal proof during the formulation synthesis phase.
+        # This prevents the model from attempting to write the full proof and failing compilation.
+        # if informal_proof:
+        #     informal_statement_content += f"\nInformal proof from textbook:\n{informal_proof}\n"
         if mathlib_hints:
             informal_statement_content += f"\nRelevant Mathlib signatures:\n{mathlib_hints}\n"
             
         informal_statement_content += f"\n{declaration_rules}\n{local_lemmas_str}\n{latex_decryption_guide}\n"
         system_prompt = None
 
+        # Смена фрейма и Prefix Forcing (Убрано жесткое требование начала ответа, чтобы не ломать <think> у DeepSeek-R1)
         # Смена фрейма и Prefix Forcing
         if entity_type == "def":
             system_intro = f"Please formalize the following mathematical definition in Lean 4 as a pure `def`. Use the following definition name: {problem_name}"
-            prefix_hint = f"\n\nCRITICAL: Output ONLY the Lean code. You MUST start your code exactly like this:\n```lean4\ndef {lean_name}"
+            prefix_hint = f"\n\nCRITICAL: Output the Lean code inside a ```lean4 block. Ensure your declaration is named exactly: {lean_name}"
         else:
-            system_intro = f"Please autoformalize the following natural language problem statement in Lean 4. Use the following theorem name: {problem_name}"
-            prefix_hint = f"\n\nCRITICAL: Output ONLY the Lean code. You MUST start your code exactly like this:\n```lean4\ntheorem {lean_name}"
+            system_intro = f"Please autoformalize the following natural language problem statement in Lean 4 as a `theorem` or `lemma` signature.\nDO NOT ATTEMPT TO WRITE THE PROOF. You MUST append `:= sorry` at the end of the theorem statement. Your ONLY job is to compile the signature correctly. Use the following theorem name: {problem_name}"
+            prefix_hint = f"\n\nCRITICAL: Output the Lean code inside a ```lean4 block. Ensure your declaration is named exactly: {lean_name}. DO NOT WRITE THE PROOF, JUST USE `sorry`."
 
         if error_feedback and previous_code:
             user_prompt = f"""{system_intro}
@@ -335,11 +339,50 @@ Mathlib Hints:
 
 Lean 4 Code:"""
 
-    response = mgr.query_llm(user_prompt, model=target_model, system_prompt=system_prompt, role="lean")
+    # Prepare the log prefix
+    synth_log_prefix = f"=== SYSTEM PROMPT ===\n{system_prompt}\n\n=== PROMPT ===\n{user_prompt}\n\n=== RESPONSE ===\n"
     
-    # Log synthesis prompt and response
-    synth_log = f"=== SYSTEM PROMPT ===\n{system_prompt}\n\n=== PROMPT ===\n{user_prompt}\n\n=== RESPONSE ===\n{response}\n"
-    log_to_file("synthesis/lean", synth_log, entity_id=entity_id, attempt=attempt)
+    # Write header and prompt to real-time log before streaming starts
+    import sys
+    realtime_log = PROJECT_ROOT / "logs" / "pipeline_realtime.log"
+    header = f"\n=== [{datetime.datetime.now().isoformat()}] CATEGORY: SYNTHESIS/LEAN | ENTITY: {entity_id} | ATTEMPT: {attempt} ===\n"
+    try:
+        with open(realtime_log, "a", encoding="utf-8") as f:
+            f.write(header)
+            f.write(synth_log_prefix)
+            f.flush()
+    except OSError:
+        pass
+        
+    print(f"  [lean-export] LLM ({target_model}) is reasoning (streaming)...")
+    
+    def stream_callback(chunk: str):
+        # Print chunk to console
+        sys.stdout.write(chunk)
+        sys.stdout.flush()
+        # Append chunk to real-time log
+        try:
+            with open(realtime_log, "a", encoding="utf-8") as f:
+                f.write(chunk)
+                f.flush()
+        except OSError:
+            pass
+
+    response = mgr.query_llm(user_prompt, model=target_model, system_prompt=system_prompt, role="lean", stream_callback=stream_callback)
+    
+    # After generation finishes, print a newline
+    sys.stdout.write("\n")
+    sys.stdout.flush()
+    try:
+        with open(realtime_log, "a", encoding="utf-8") as f:
+            f.write("\n" + "="*80 + "\n")
+            f.flush()
+    except OSError:
+        pass
+    
+    # Log to the individual file (skip realtime because we already appended it)
+    synth_log = synth_log_prefix + response + "\n"
+    log_to_file("synthesis/lean", synth_log, entity_id=entity_id, attempt=attempt, skip_realtime=True)
     
     # Strip DeepSeek reasoning blocks completely
     response = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL | re.IGNORECASE)

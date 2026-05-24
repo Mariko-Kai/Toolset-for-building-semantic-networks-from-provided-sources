@@ -41,7 +41,7 @@ class ModelStrategy(ABC):
         self.api_key = api_key
 
     @abstractmethod
-    def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False) -> str:
+    def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False, stream_callback=None) -> str:
         pass
         
     @abstractmethod
@@ -62,14 +62,14 @@ class OllamaStrategy(ModelStrategy):
             
         return "http://localhost:11434"
 
-    def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False) -> str:
+    def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False, stream_callback=None) -> str:
         model = self.model_name or "qwen2.5:14b"
         base_url = self._get_base_url()
         url = f"{base_url}/api/generate"
         payload = {
             "model": model,
             "prompt": prompt,
-            "stream": False,
+            "stream": stream_callback is not None,
             "options": {
                 "temperature": 0.0,
                 "top_p": 0.9,
@@ -85,8 +85,19 @@ class OllamaStrategy(ModelStrategy):
                                      headers={"Content-Type": "application/json"})
         try:
             with urllib.request.urlopen(req) as response:
-                result = json.loads(response.read().decode("utf-8"))
-                ans = result.get("response", "")
+                if stream_callback is not None:
+                    full_ans = []
+                    for line in response:
+                        if line:
+                            chunk_data = json.loads(line.decode("utf-8"))
+                            chunk = chunk_data.get("response", "")
+                            full_ans.append(chunk)
+                            stream_callback(chunk)
+                    ans = "".join(full_ans)
+                else:
+                    result = json.loads(response.read().decode("utf-8"))
+                    ans = result.get("response", "")
+                    
                 think_match = re.search(r'<think>(.*?)</think>', ans, re.DOTALL)
                 if think_match:
                     log_think(think_match.group(1).strip())
@@ -147,7 +158,7 @@ class GeminiStrategy(ModelStrategy):
             time.sleep(sleep_time)
         GeminiStrategy._last_request_time = time.time()
 
-    def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False) -> str:
+    def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False, stream_callback=None) -> str:
         self._enforce_rate_limit()
         if not GEMINI_AVAILABLE:
             print("[GeminiStrategy] google-genai is not installed.")
@@ -203,7 +214,7 @@ class GeminiStrategy(ModelStrategy):
 
 
 class OpenAIStrategy(ModelStrategy):
-    def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False) -> str:
+    def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False, stream_callback=None) -> str:
         if not OPENAI_AVAILABLE:
             print("[OpenAIStrategy] openai is not installed.")
             return ""
@@ -257,7 +268,7 @@ class OpenAIStrategy(ModelStrategy):
 
 
 class GroqStrategy(ModelStrategy):
-    def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False) -> str:
+    def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False, stream_callback=None) -> str:
         if not OPENAI_AVAILABLE:
             print("[GroqStrategy] openai package is required for Groq.")
             return ""
@@ -305,7 +316,7 @@ class LlamaCppStrategy(ModelStrategy):
         super().__init__(model_name, api_key)
         self._llm = None
 
-    def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False) -> str:
+    def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False, stream_callback=None) -> str:
         model = self.model_name
         if not model:
             print("[LlamaCppStrategy] Error: No model path provided.")
@@ -404,7 +415,7 @@ class ModelManager:
         strategy = ModelFactory.create_strategy(provider, model_name, api_key)
         self.strategies[role] = strategy
 
-    def query_llm(self, prompt: str, model: Optional[str] = None, json_mode: bool = False, provider: Optional[str] = None, system_prompt: Optional[str] = None, role: Optional[str] = None) -> str:
+    def query_llm(self, prompt: str, model: Optional[str] = None, json_mode: bool = False, provider: Optional[str] = None, system_prompt: Optional[str] = None, role: Optional[str] = None, stream_callback=None) -> str:
         # Determine the role dynamically or just use an ad-hoc strategy if provider is explicitly passed
         if role and role in self.strategies:
             strategy = self.strategies[role]
@@ -414,7 +425,7 @@ class ModelManager:
             strategy = self.strategies.get("main")
             if not strategy:
                 return ""
-        return strategy.generate_content(prompt, system_prompt, json_mode)
+        return strategy.generate_content(prompt, system_prompt, json_mode, stream_callback=stream_callback)
         
     def get_embedding(self, text: str, provider: Optional[str] = None, model: Optional[str] = None, role: Optional[str] = None) -> Optional[List[float]]:
         if role and role in self.strategies:

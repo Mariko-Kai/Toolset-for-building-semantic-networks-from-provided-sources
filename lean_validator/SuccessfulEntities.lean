@@ -292,3 +292,167 @@ theorem cantor_uniform_continuity (a b : ℝ) (hab : a ≤ b) :
     (∀ I ∈ P, I ⊆ Set.Icc a b ∧ ∃ x y, I = Set.Icc x y ∧ x ≤ y) ∧
     (∀ I ∈ P, ∀ x y, x ∈ I → y ∈ I → |f x - f y| < ε) := by sorry
 
+-- Entity: prop-cantor-uniform-continuity | Type: prop
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_cantor_uniform_continuity (a b : ℝ) (hab : a ≤ b) (f : ℝ → ℝ) 
+  (hf_cont : ContinuousOn f (Set.Icc a b)) :
+  ∀ ε > 0, ∃ P : Finset (Set ℝ), 
+    (∀ x ∈ Set.Icc a b, ∃ I ∈ P, x ∈ I) ∧
+    (∀ I J, I ∈ P → J ∈ P → I ≠ J → Disjoint I J) ∧
+    (∀ I ∈ P, I ⊆ Set.Icc a b) ∧
+    (∀ I ∈ P, ∀ x y, x ∈ I → y ∈ I → |f x - f y| < ε) := by sorry
+
+-- Entity: prop-cantor-uniform-continuity
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_cantor_uniform_continuity (a b : ℝ) (hab : a ≤ b) (f : ℝ → ℝ) 
+  (hf_cont : ContinuousOn f (Set.Icc a b)) :
+  ∀ ε > 0, ∃ P : Finset (Set ℝ), 
+    (∀ x ∈ Set.Icc a b, ∃ I ∈ P, x ∈ I) ∧
+    (∀ I J, I ∈ P → J ∈ P → I ≠ J → Disjoint I J) ∧
+    (∀ I ∈ P, I ⊆ Set.Icc a b) ∧
+    (∀ I ∈ P, ∀ x y, x ∈ I → y ∈ I → |f x - f y| < ε) := by sorry
+
+-- Entity: prop-cantor-uniform-continuity | Type: prop
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_cantor_uniform_continuity (a b : ℝ) (hab : a ≤ b) (f : ℝ → ℝ) 
+  (hf_cont : ContinuousOn f (Set.Icc a b)) (ε : ℝ) (hε : 0 < ε) :
+  ∃ (n : ℕ) (P : ℕ → ℝ), 
+    (∀ i j, i < n → j < n → i ≠ j → P i ≠ P j) ∧
+    (∀ i, i < n → P i ∈ Set.Icc a b) ∧
+    (∀ i, i < n → P i ≤ P (i + 1)) ∧
+    (∀ i, i < n → P i ≤ b) ∧
+    (∀ i, i < n → a ≤ P i) ∧
+    (∀ i, i < n → P (i + 1) - P i < ε) ∧
+    (∀ i, i < n → ∀ x y, x ∈ Set.Icc (P i) (P (i + 1)) → y ∈ Set.Icc (P i) (P (i + 1)) → 
+      |f x - f y| < ε) := by sorry
+
+-- Entity: prop-analysis-cantor-uniform-continuity | Type: prop
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_analysis_cantor_uniform_continuity : 
+  ∀ a b : ℝ, ∀ f : ℝ → ℝ, 
+  (a ≤ b ∧ ContinuousOn f (Set.Icc a b)) → UniformContinuousOn f (Set.Icc a b) := by sorry
+
+-- Entity: prop-cantor-uniform-continuity
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_cantor_uniform_continuity (a b : ℝ) (hab : a ≤ b) (f : ℝ → ℝ) 
+  (hf_cont : ContinuousOn f (Set.Icc a b)) (ε : ℝ) (hε : 0 < ε) :
+  ∃ (n : ℕ) (P : ℕ → ℝ), 
+    (∀ i j, i < n → j < n → i ≠ j → P i ≠ P j) ∧
+    (∀ i, i < n → P i ∈ Set.Icc a b) ∧
+    (∀ i, i < n → P i ≤ P (i + 1)) ∧
+    (∀ i, i < n → P i ≤ b) ∧
+    (∀ i, i < n → a ≤ P i) ∧
+    (∀ i, i < n → P (i + 1) - P i < ε) ∧
+    (∀ i, i < n → ∀ x y, x ∈ Set.Icc (P i) (P (i + 1)) → y ∈ Set.Icc (P i) (P (i + 1)) → 
+      |f x - f y| < ε) := by sorry
+
+-- Entity: prop-analysis-cantor-uniform-continuity
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_analysis_cantor_uniform_continuity : 
+  ∀ a b : ℝ, ∀ f : ℝ → ℝ, 
+  (a ≤ b ∧ ContinuousOn f (Set.Icc a b)) → UniformContinuousOn f (Set.Icc a b) := by sorry
+
+-- Entity: prop-cantor-uniform-continuity
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_cantor_uniform_continuity (a b : ℝ) (hab : a ≤ b) (f : ℝ → ℝ) 
+  (hf_cont : ContinuousOn f (Set.Icc a b)) (ε : ℝ) (hε : 0 < ε) :
+  ∃ (n : ℕ) (P : ℕ → ℝ), 
+    (∀ i j, i < n → j < n → i ≠ j → P i ≠ P j) ∧
+    (∀ i, i < n → P i ∈ Set.Icc a b) ∧
+    (∀ i, i < n → P i ≤ P (i + 1)) ∧
+    (∀ i, i < n → P i ≤ b) ∧
+    (∀ i, i < n → a ≤ P i) ∧
+    (∀ i, i < n → P (i + 1) - P i < ε) ∧
+    (∀ i, i < n → ∀ x y, x ∈ Set.Icc (P i) (P (i + 1)) → y ∈ Set.Icc (P i) (P (i + 1)) → 
+      |f x - f y| < ε) := by sorry
+
+-- Entity: prop-cantor-uniform-continuity
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_cantor_uniform_continuity (a b : ℝ) (hab : a ≤ b) (f : ℝ → ℝ) 
+  (hf_cont : ContinuousOn f (Set.Icc a b)) (ε : ℝ) (hε : 0 < ε) :
+  ∃ (n : ℕ) (P : ℕ → ℝ), 
+    (∀ i j, i < n → j < n → i ≠ j → P i ≠ P j) ∧
+    (∀ i, i < n → P i ∈ Set.Icc a b) ∧
+    (∀ i, i < n → P i ≤ P (i + 1)) ∧
+    (∀ i, i < n → P i ≤ b) ∧
+    (∀ i, i < n → a ≤ P i) ∧
+    (∀ i, i < n → P (i + 1) - P i < ε) ∧
+    (∀ i, i < n → ∀ x y, x ∈ Set.Icc (P i) (P (i + 1)) → y ∈ Set.Icc (P i) (P (i + 1)) → 
+      |f x - f y| < ε) := by sorry
+
+-- Entity: prop-lagrange-mean-value-theorem | Type: prop
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_lagrange_mean_value_thm (f : ℝ → ℝ) (a b : ℝ) 
+  (h_ab : a < b)
+  (h_cont : ContinuousOn f (Set.Icc a b))
+  (h_diff : DifferentiableOn ℝ f (Set.Ioo a b)) :
+  ∃ c ∈ Set.Ioo a b, f b - f a = (deriv f c) * (b - a) := by sorry
+
+-- Entity: prop-lagrange-mean-value-theorem
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_lagrange_mean_value_thm (f : ℝ → ℝ) (a b : ℝ) 
+  (h_ab : a < b)
+  (h_cont : ContinuousOn f (Set.Icc a b))
+  (h_diff : DifferentiableOn ℝ f (Set.Ioo a b)) :
+  ∃ c ∈ Set.Ioo a b, f b - f a = (deriv f c) * (b - a) := by sorry
+
