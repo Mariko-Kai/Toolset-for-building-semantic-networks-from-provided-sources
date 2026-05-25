@@ -1,0 +1,36 @@
+% defined-in: apostol (page 175)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - $f : \RealNumbers \TermTo \RealNumbers$
+%    - $a, b, \alpha, \delta, \epsilon_0 : \RealNumbers$
+%    - $n : \NaturalNumbers$
+%    - $P : \text{Partition of } \ClosedInterval{a, b}$ (represented as a finite set of points $\{x_0, \dots, x_n\}$)
+% 2. Data Structures: 
+%    - Partition: A finite sequence of points $x_0, \dots, x_n$ such that $a = x_0 < x_1 < \dots < x_n = b$.
+%    - Span: $\sup \{ \RealAbsoluteValue{f(x) - f(y)} \mid x, y \in \ClosedInterval{x_i, x_{i+1}} \}$.
+% 3. Implicit Bounds: 
+%    - The sequence of nested intervals $\ClosedInterval{a_n, b_n}$ is defined by recursion on $n : \NaturalNumbers$.
+% ========================
+
+% entity-id: prop-cantor-uniform-continuity
+% entity-type: prop
+% macro: \CantorUniformContinuity
+% args: 0
+% notation: 
+
+\begin{proposition}[Cantor's Theorem on Uniform Continuity]
+\[
+\TerForall f \colon \RealNumbers \TermTo \RealNumbers \TerForall a \TermIn \RealNumbers \TerForall b \TermIn \RealNumbers \left( 
+\RealFunctionContinuous{f} \TermConjunction (a < b) \TermImplication 
+\TerForall \epsilon \in \RealNumbers_{>0} \TermExists P \in \Partition{\ClosedInterval{a, b}} \TerForall I \TermIn P \left( \Supremum \{ \RealAbsoluteValue{f(x) - f(y)} \TermMid x, y \TermIn I \} < \epsilon \right)
+\right)
+\]
+\end{proposition}
+
+\begin{proof}[RU]
+Предположим от противного, что существует $\epsilon_0 > 0$, для которого не существует такого разбиения. Разделим интервал $\ClosedInterval{a, b}$ пополам точкой $c = \IntervalMidpoint{\ClosedInterval{a, b}}$. Тогда хотя бы в одной из половин $\ClosedInterval{a, c}$ или $\ClosedInterval{c, b}$ теорема не выполняется. Обозначим этот интервал $\ClosedInterval{a_1, b_1}$. Продолжая этот процесс, получим последовательность вложенных интервалов $\ClosedInterval{a_n, b_n}$, таких что длина $\ClosedInterval{a_n, b_n} = (b-a)/2^n$, и в каждом из них теорема не выполняется. Пусть $\alpha = \LeastUpperBound{\Set{a_n \mid n \in \NaturalNumbers}}$. В силу непрерывности $f$ в точке $\alpha$, существует $\delta > 0$, такое что для всех $x \in (\alpha - \delta, \alpha + \delta)$ выполняется $\RealAbsoluteValue{f(x) - f(\alpha)} < \epsilon_0 / 2$, откуда следует, что размах $f$ на любом интервале внутри $(\alpha - \delta, \alpha + \delta)$ меньше $\epsilon_0$. При достаточно большом $n$, $\ClosedInterval{a_n, b_n} \subset (\alpha - \delta, \alpha + \delta)$, что противоречит предположению о том, что размах $f$ на $\ClosedInterval{a_n, b_n}$ не меньше $\epsilon_0$.
+\end{proof}
+
+\begin{proof}[EN]
+Assume for the sake of contradiction that there exists $\epsilon_0 > 0$ such that no such partition exists. Bisect $\ClosedInterval{a, b}$ at $c = \IntervalMidpoint{\ClosedInterval{a, b}}$. The theorem must fail in at least one of the subintervals $\ClosedInterval{a, c}$ or $\ClosedInterval{c, b}$. Let $\ClosedInterval{a_1, b_1}$ be such an interval. By induction, we construct a sequence of nested intervals $\ClosedInterval{a_n, b_n}$ such that the length $\ClosedInterval{a_n, b_n} = (b-a)/2^n$ and the theorem fails for each. Let $\alpha = \LeastUpperBound{\Set{a_n \mid n \in \NaturalNumbers}}$. By the continuity of $f$ at $\alpha$, there exists $\delta > 0$ such that for all $x \in (\alpha - \delta, \alpha + \delta)$, $\RealAbsoluteValue{f(x) - f(\alpha)} < \epsilon_0 / 2$. This implies the span of $f$ on any subinterval contained in $(\alpha - \delta, \alpha + \delta)$ is less than $\epsilon_0$. For sufficiently large $n$, $\ClosedInterval{a_n, b_n} \subset (\alpha - \delta, \alpha + \delta)$, which contradicts the assumption that the span of $f$ on $\ClosedInterval{a_n, b_n}$ is at least $\epsilon_0$.
+\end{proof}

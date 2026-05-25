@@ -685,7 +685,10 @@ def main():
         clean_body = re.sub(r'\\begin\{(definition|proposition)\}\[[^\]]+\]', r'\\begin{\1}', clean_body)
         
         # The user requested to NOT use breqn and wrap formulas manually in the source.
-        # We just output the clean_body as is, keeping the original \[ ... \]
+        # We apply an automatic programmatic heuristic here to guarantee it looks beautiful.
+        from pipeline.latex_utils import format_long_formulas
+        clean_body = format_long_formulas(clean_body)
+        
         block += f"{clean_body}\n\n"
         
         content += block

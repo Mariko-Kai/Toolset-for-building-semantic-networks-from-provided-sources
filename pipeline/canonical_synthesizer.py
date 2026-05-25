@@ -175,7 +175,7 @@ OUTPUT: Only LaTeX. No ```latex blocks. Include the following metadata at the to
 % entity-type: <def|prop>
 % macro: \<PascalCaseNameOfEntity>
 % args: <number-of-arguments>
-% notation: <notation-if-any-or-leave-blank>"""
+% notation: <LaTeX-notation-if-any-using-#1-for-arguments>"""
     
     if target_requirement:
         rules += target_requirement

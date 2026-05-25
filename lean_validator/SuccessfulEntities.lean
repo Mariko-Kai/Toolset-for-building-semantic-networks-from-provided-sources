@@ -456,3 +456,35 @@ theorem prop_lagrange_mean_value_thm (f : ℝ → ℝ) (a b : ℝ)
   (h_diff : DifferentiableOn ℝ f (Set.Ioo a b)) :
   ∃ c ∈ Set.Ioo a b, f b - f a = (deriv f c) * (b - a) := by sorry
 
+-- Entity: prop-cantor-uniform-continuity | Type: prop
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_cantor_uniform_continuity : 
+  ∀ f : ℝ → ℝ, Continuous f → 
+  ∀ a b : ℝ, a < b → 
+  ∃ P : Set (Set ℝ), 
+    (∀ I ∈ P, I ⊆ Set.Icc a b ∧ IsPreconnected I) ∧
+    (∀ I J, I ∈ P → J ∈ P → I ≠ J → Disjoint I J) ∧
+    (∀ ε > 0, ∃ I ∈ P, ∀ x y, x ∈ I → y ∈ I → abs (f x - f y) < ε) := by sorry
+
+-- Entity: prop-cantor-uniform-continuity
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_cantor_uniform_continuity : 
+  ∀ f : ℝ → ℝ, Continuous f → 
+  ∀ a b : ℝ, a < b → 
+  ∃ P : Set (Set ℝ), 
+    (∀ I ∈ P, I ⊆ Set.Icc a b ∧ IsPreconnected I) ∧
+    (∀ I J, I ∈ P → J ∈ P → I ≠ J → Disjoint I J) ∧
+    (∀ ε > 0, ∃ I ∈ P, ∀ x y, x ∈ I → y ∈ I → abs (f x - f y) < ε) := by sorry
+
