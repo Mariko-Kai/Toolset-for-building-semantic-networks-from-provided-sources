@@ -209,7 +209,7 @@ CRITICAL NAMING RULE: The entity-id MUST follow the Mathesis architecture standa
 CRITICAL: Generate EXACTLY ONE mathematical entity. DO NOT repeat the output. DO NOT provide multiple versions. One % entity-id, one % entity-type, and the LaTeX block(s).
 
 CRITICAL WRAPPING RULE: ALL mathematical entities/concepts/operators in your formulas MUST be written using dynamic semantic macros (e.g. \RealNumbers, \Continuous, \AbsAbstract). DO NOT use hardcoded LaTeX like \mathbb{R}, \sup, \in, \forall if a macro exists in your AVAILABLE MACROS list!
-NOTE: Local variables (like a, b, f, x) introduced in the current formula MUST NOT be wrapped in semantic macros. Only wrap the types, spaces, and operators.
+NOTE: Local variables (like a, b, f, x) introduced in the current formula MUST NOT be wrapped in semantic macros UNLESS they are arguments to an operation, function, or paired delimiter macro (like absolute value, norm, inner product, etc.). For any macro that represents paired symbols or operations, you MUST pass the entire expression as its argument (e.g., \RealAbsoluteValue{x - y} or \Norm{x}), do NOT wrap just the operator name like \Norm{\mathrm{norm}}(x).
 
 TYPING: Every formula MUST start with variable declarations via quantors:
 \TerForall f \colon \RealNumbers \TermTo \RealNumbers
@@ -247,7 +247,6 @@ Proofs can contain natural language, but all math entities must be formally wrap
 {text_input}
 
 {rules}
-{example}
 
 CRITICAL DEFINITION RULES:
 1. NO EQUIVALENCE: You are STRICTLY FORBIDDEN from using `\iff` or `=` at the root level to connect the term to its definition.
@@ -491,20 +490,8 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
             break
 
         if lean_code:
-            # Check if def is missing for non-theorems/non-axioms (objects, properties, operations)
-            if temp_etype in ["object", "property", "operation"] and not re.search(r'\bdef\b', lean_code):
-                print(f"  [FAIL] Missing required 'def' keyword for entity type '{temp_etype}'. Rejected.")
-                result = {
-                    "status": "failed",
-                    "errors": [{
-                        "line": 1,
-                        "column": 1,
-                        "message": f"CRITICAL RULE VIOLATION: Your Lean code for {temp_etype} '{temp_eid}' is declared as a `theorem` or `lemma` (or has no declaration). You MUST declare EXACTLY ONE `def` using `def {temp_eid.replace('-', '_')} ... : Prop := ...`. You are strictly FORBIDDEN from using `theorem` or `lemma` as the primary declaration for objects, operations, or properties!"
-                    }]
-                }
-            else:
-                print(f"  Lean validating: {lean_code[:80]}...")
-                result = validate_entity(temp_eid, lean_code)
+            print(f"  Lean validating: {lean_code[:80]}...")
+            result = validate_entity(temp_eid, lean_code)
         else:
             print("  No translatable content for Lean validation, skipping.")
             result = {"status": "success", "errors": []}
@@ -526,6 +513,19 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
                     type_match = re.search(r'of type\n\s*(.+)', msg)
                     if type_match:
                         msg = f"ОШИБКА ПЛЕЙСХОЛДЕРА (`_`): ожидается точный тип `{type_match.group(1).strip()}`."
+                
+                elif "unknown identifier" in msg:
+                    ident_match = re.search(r"unknown identifier '([^']+)'", msg)
+                    if ident_match:
+                        ident = ident_match.group(1)
+                        feedback = f"\nСИНТЕЗАТОРУ: Lean не распознал идентификатор '{ident}'. Это означает, что вы либо не объявили переменную '{ident}' с помощью кванторов (\\TerForall, \\TermExists), либо использовали сырой несемантический LaTeX макрос (например, \\{ident}). Пожалуйста, исправьте исходный LaTeX!"
+                        if ident == "in":
+                            feedback += f"\nВНИМАНИЕ: Для объявления фундаментальных типов используйте \\colon (например, x \\colon \\RealNumbers), а для принадлежности к подмножеству — \\TermIn."
+                        msg += feedback
+                        
+                elif "expected " in msg:
+                    msg += f"\nСИНТЕЗАТОРУ: Синтаксическая ошибка. Возможно, вы использовали голый LaTeX-макрос, который разрушил парсер Lean. Используйте только разрешенные семантические макросы."
+                    
                 messages.append(msg)
                 
             if is_semantic_error(lean_code, result["errors"], temp_etype):

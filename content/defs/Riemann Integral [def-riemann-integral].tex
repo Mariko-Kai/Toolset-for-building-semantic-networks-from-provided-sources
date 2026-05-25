@@ -28,9 +28,9 @@
 \TerForall \Function{f} \colon \ClosedInterval{a,b} \TermTo \RealNumbers
 \TerForall I \colon \RealNumbers
 \mathrm{IsRiemannIntegral}(\Function{f}, I) \TermDefinedAs
-\TerForall \varepsilon \in \RealNumbers \left( \varepsilon > 0 \TermImplication 
-\TermExists \delta \in \RealNumbers \left( \delta > 0 \TermConjunction 
-\TerForall n \in \NaturalNumbers \TerForall P \in \Partition{[a,b]} \TerForall \xi \in \Partition{P} 
+\TerForall \varepsilon \colon \RealNumbers \left( \varepsilon > 0 \TermImplication 
+\TermExists \delta \colon \RealNumbers \left( \delta > 0 \TermConjunction 
+\TerForall n \colon \NaturalNumbers \TerForall P \TermIn \Partition{[a,b]} \TerForall \xi \TermIn \Partition{P} 
 \left( \Partition{\lambda}(P) < \delta \TermImplication 
 \AbsAbstract{ I - \sum_{i=0}^{n-1} f(\xi(i)) \cdot (x(i+1) - x(i)) } < \varepsilon \right) \right) \right)
 \]

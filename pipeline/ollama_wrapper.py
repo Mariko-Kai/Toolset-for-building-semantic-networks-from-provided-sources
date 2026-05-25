@@ -153,6 +153,39 @@ def extract_keyword(query):
 
 # ── Multi-Result Entity Resolution ───────────────────────────────────────────
 
+_RERANKER_CACHE = None
+
+def get_reranker():
+    global _RERANKER_CACHE
+    if _RERANKER_CACHE is None:
+        try:
+            from pipeline.hybrid_search import CrossEncoderReranker
+            from pipeline.config import resolve_module_config
+            _, preview_model, _ = resolve_module_config("preview")
+            
+            backend = "local"
+            model_name = "BAAI/bge-reranker-v2-m3"
+            api_url = None
+            
+            import urllib.request
+            for url in ["http://localhost:8080/rerank", "http://localhost:8080/v1/rerank", "http://localhost:8000/v1/rerank"]:
+                try:
+                    req = urllib.request.Request(url, data=b"{}", headers={'Content-Type': 'application/json'})
+                    with urllib.request.urlopen(req, timeout=0.2) as conn:
+                        pass
+                    api_url = url
+                    backend = "rest"
+                    break
+                except Exception:
+                    continue
+                    
+            _RERANKER_CACHE = CrossEncoderReranker(backend=backend, model_name=model_name, api_url=api_url)
+        except Exception as e:
+            print(f"[-] Failed to initialize CrossEncoderReranker: {e}")
+            _RERANKER_CACHE = False
+    return _RERANKER_CACHE if _RERANKER_CACHE is not False else None
+
+
 def normalize_math_term(term):
     """Кастомный стеммер/нормализатор для математических терминов"""
     import re
@@ -212,21 +245,28 @@ def resolve_entities(query, canonical_term, available_entities):
     conn.close()
     
     # 1. Normalization (Dictionary Search)
-    norm_query = normalize_math_term(canonical_term)
+    term_ru, term_en = extract_term_ru_en(canonical_term)
+    norm_query_ru = normalize_math_term(term_ru)
+    norm_query_en = normalize_math_term(term_en)
     candidates = []
     
     for eid, title, nl_desc, emb_blob, lean_path in rows:
         norm_title = normalize_math_term(title)
         
-        query_words = set(norm_query.split())
-        title_words = set(norm_title.split())
-        
-        # Match if exact match, or if one is a proper subset of the other (with at least 2 words to avoid false positives on 'the' etc)
-        if norm_query == norm_title or (len(title_words) >= 2 and title_words.issubset(query_words)) or (len(query_words) >= 2 and query_words.issubset(title_words)):
-            candidates.append({"entity_id": eid, "title": title, "nl_desc": nl_desc, "score": 1.0, "method": "dictionary"})
+        for nq in [norm_query_ru, norm_query_en]:
+            if not nq: continue
+            query_words = set(nq.split())
+            title_words = set(norm_title.split())
+            
+            # Match if exact match, or if one is a proper subset of the other (with at least 2 words to avoid false positives on 'the' etc)
+            if nq == norm_title or (len(title_words) >= 2 and title_words.issubset(query_words)) or (len(query_words) >= 2 and query_words.issubset(title_words)):
+                if not any(c["entity_id"] == eid for c in candidates):
+                    candidates.append({"entity_id": eid, "title": title, "nl_desc": nl_desc, "score": 1.0, "method": "dictionary"})
+                break
     
     # 2. Embedding Search (Always run to pool candidates)
     if not candidates:
+        emb_candidates = []
         try:
             query_emb = mgr.get_embedding(canonical_term, role="embed")
             if query_emb:
@@ -235,16 +275,46 @@ def resolve_entities(query, canonical_term, available_entities):
                         num_floats = len(emb_blob) // 4
                         emb_vec = struct.unpack(f"{num_floats}f", emb_blob)
                         sim = cosine_similarity(query_emb, emb_vec)
-                        if sim > 0.85:
-                            candidates.append({"entity_id": eid, "title": title, "nl_desc": nl_desc, "score": sim, "method": "embedding"})
+                        if sim > 0.65:
+                            emb_candidates.append({"entity_id": eid, "title": title, "nl_desc": nl_desc, "score": sim, "method": "embedding"})
         except Exception as e:
             print(f"[-] Embedding search failed: {e}")
             
+        if emb_candidates:
+            # Sort by embedding score and take Top 15
+            emb_candidates.sort(key=lambda x: x["score"], reverse=True)
+            emb_candidates = emb_candidates[:15]
+            
+            reranker = get_reranker()
+            if reranker:
+                print(f"[*] Reranking {len(emb_candidates)} candidates for '{canonical_term}'...")
+                docs_for_reranker = []
+                for idx, c in enumerate(emb_candidates):
+                    doc_text = f"{c['title']}. {c['nl_desc'] or ''}"
+                    docs_for_reranker.append((idx, doc_text))
+                    
+                try:
+                    reranked_results = reranker.rerank(canonical_term, docs_for_reranker)
+                    for res in reranked_results:
+                        idx = res["page_num"]
+                        score = res["score"]
+                        if score >= 0.50:
+                            candidate = emb_candidates[idx].copy()
+                            candidate["score"] = score
+                            candidate["method"] = "reranker"
+                            candidates.append(candidate)
+                except Exception as e:
+                    print(f"[-] Reranker failed: {e}")
+                    candidates.extend(emb_candidates[:5])
+            else:
+                candidates.extend(emb_candidates[:5])
+                
     if not candidates:
         return [], canonical_term
         
     # Sort candidates by score
     candidates.sort(key=lambda x: x["score"], reverse=True)
+    candidates = candidates[:3]  # Take top 3 for LLM arbitration
     
     # 3. LLM-Judge Arbitration
     for best_candidate in candidates:
@@ -252,7 +322,12 @@ def resolve_entities(query, canonical_term, available_entities):
         
         desc_text = str(best_candidate['nl_desc'])[:1000] if best_candidate['nl_desc'] else "No description available."
         prompt = f"""You are 'goedel-prover', a strict mathematical arbiter.
-Your goal is to decide if the USER TERM is EXACTLY equivalent to the CANDIDATE entity in the context of mathematical definitions.
+Your goal is to decide if the USER TERM fundamentally refers to the SAME mathematical concept as the CANDIDATE entity.
+
+CRITICAL RULES FOR ARBITRATION:
+1. Ignore conversational framing: Users often phrase their queries as commands, questions, or conversational requests (e.g., "define X", "compute X", "what is the property of X", "tell me about X"). You MUST mentally strip these imperative verbs and question words, and focus ONLY on the core mathematical concept "X".
+2. Semantic Equivalence of Intent: If the user asks for the definition, formulation, or computation of a concept, and the candidate IS the definition or formulation of that exact concept, then they ARE IDENTICAL matches. Do not reject a match just because the user's term is an action phrase and the candidate title is a noun.
+3. Strict Concept Matching (No partial matches): The core concept "X" requested by the user must match the candidate concept exactly. A constituent part, an approximation, or a related theorem is NOT identical to the concept itself.
 
 USER TERM: "{canonical_term}"
 
@@ -260,7 +335,7 @@ CANDIDATE TITLE: "{best_candidate['title']}"
 CANDIDATE DESCRIPTION:
 {desc_text}
 
-Is the USER TERM identical to this CANDIDATE? 
+Does the USER TERM request the mathematical concept described by this CANDIDATE? 
 Answer EXACTLY with valid JSON:
 {{ "is_identical": true, "reason": "short explanation" }} or {{ "is_identical": false, "reason": "why they differ" }}
 """

@@ -5,94 +5,65 @@
 <div class="hero">
     <h1>Каталог сущностей</h1>
     <div class="stats-row">
-        <div class="stat-chip">{{ axioms|length }} аксиом</div>
-        <div class="stat-chip">{{ objects|length }} объектов</div>
-        <div class="stat-chip">{{ properties|length }} свойств</div>
-        <div class="stat-chip">{{ operations|length }} операций</div>
+        <div class="stat-chip">{{ defs|length }} определений</div>
+        <div class="stat-chip">{{ props|length }} утверждений</div>
+    </div>
+    <div class="hero-actions" style="margin-top: 1.5rem;">
+        <button id="build-full-book-btn" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Скомпилировать всю книгу (full_book.pdf)
+        </button>
     </div>
 </div>
 
-<!-- AXIOMS -->
-<section class="entity-section" id="axioms">
+<!-- DEFINITIONS -->
+<section class="entity-section" id="defs">
     <div class="section-header">
-        <span class="type-badge" style="background: {{ types.axiom.color }}">{{ types.axiom.icon }}</span>
-        <h2>{{ types.axiom.name_ru }}</h2>
-        <span class="count-badge">{{ axioms|length }}</span>
+        <span class="type-badge" style="background: {{ types.def.color }}">{{ types.def.icon }}</span>
+        <h2>{{ types.def.name_ru }}</h2>
+        <span class="count-badge">{{ defs|length }}</span>
     </div>
     <div class="entity-grid">
-        {% for a in axioms %}
-        <a href="/axioms/{{ a.id }}" class="entity-card" style="--accent: {{ types.axiom.color }}">
+        {% for d in defs %}
+        <a href="/full_book.pdf#nameddest=entity:{{ d.id }}" class="entity-card" target="_blank" style="--accent: {{ types.def.color }}">
             <div class="card-header">
-                <span class="card-id">{{ a.id }}</span>
-                <span class="card-system">{{ a.system }}</span>
+                <span class="card-id">{{ d.id }}</span>
             </div>
-            <h3 class="card-name">{{ a.name }}</h3>
-            <div class="card-formula">{{ a.statement }}</div>
+            <h3 class="card-name">{{ d.name }}</h3>
+            <div class="card-formula">{{ d.formal_definition }}</div>
         </a>
         {% endfor %}
     </div>
 </section>
 
-<!-- OBJECTS -->
-<section class="entity-section" id="objects">
+<!-- PROPOSITIONS -->
+<section class="entity-section" id="props">
     <div class="section-header">
-        <span class="type-badge" style="background: {{ types.object.color }}">{{ types.object.icon }}</span>
-        <h2>{{ types.object.name_ru }}</h2>
-        <span class="count-badge">{{ objects|length }}</span>
+        <span class="type-badge" style="background: {{ types.prop.color }}">{{ types.prop.icon }}</span>
+        <h2>{{ types.prop.name_ru }}</h2>
+        <span class="count-badge">{{ props|length }}</span>
     </div>
     <div class="entity-grid">
-        {% for o in objects %}
-        <a href="/objects/{{ o.id }}" class="entity-card" style="--accent: {{ types.object.color }}">
-            <div class="card-header">
-                <span class="card-id">{{ o.id }}</span>
-                <span class="card-module">{{ o.module }}</span>
-            </div>
-            <h3 class="card-name">{{ o.name }}</h3>
-            <div class="card-formula">{{ o.formal_definition }}</div>
-        </a>
-        {% endfor %}
-    </div>
-</section>
-
-<!-- PROPERTIES -->
-<section class="entity-section" id="properties">
-    <div class="section-header">
-        <span class="type-badge" style="background: {{ types.property.color }}">{{ types.property.icon }}</span>
-        <h2>{{ types.property.name_ru }}</h2>
-        <span class="count-badge">{{ properties|length }}</span>
-    </div>
-    <div class="entity-grid">
-        {% for p in properties %}
-        <a href="/properties/{{ p.id }}" class="entity-card" style="--accent: {{ types.property.color }}">
+        {% for p in props %}
+        <a href="/full_book.pdf#nameddest=entity:{{ p.id }}" class="entity-card" target="_blank" style="--accent: {{ types.prop.color }}">
             <div class="card-header">
                 <span class="card-id">{{ p.id }}</span>
-                <span class="card-module">{{ p.module }}</span>
             </div>
             <h3 class="card-name">{{ p.name }}</h3>
-            <div class="card-formula">{{ p.formal_definition }}</div>
+            <div class="card-formula">{{ p.statement }}</div>
         </a>
         {% endfor %}
     </div>
 </section>
 
-<!-- OPERATIONS -->
-<section class="entity-section" id="operations">
-    <div class="section-header">
-        <span class="type-badge" style="background: {{ types.operation.color }}">{{ types.operation.icon }}</span>
-        <h2>{{ types.operation.name_ru }}</h2>
-        <span class="count-badge">{{ operations|length }}</span>
-    </div>
-    <div class="entity-grid">
-        {% for op in operations %}
-        <a href="/operations/{{ op.id }}" class="entity-card" style="--accent: {{ types.operation.color }}">
-            <div class="card-header">
-                <span class="card-id">{{ op.id }}</span>
-                <span class="card-arity">arity: {{ op.arity }}</span>
-            </div>
-            <h3 class="card-name">{{ op.name }}</h3>
-            <div class="card-formula">{{ op.formal_definition }}</div>
-        </a>
-        {% endfor %}
-    </div>
-</section>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const buildBtn = document.getElementById('build-full-book-btn');
+    if (buildBtn && window.startCompilation) {
+        buildBtn.addEventListener('click', () => {
+            window.startCompilation('full_book', 'all');
+        });
+    }
+});
+</script>
 {% endblock %}

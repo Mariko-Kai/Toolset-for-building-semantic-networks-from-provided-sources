@@ -843,3 +843,83 @@ a:hover {
 
 
 
+/* --- Global Console Sidebar --- */
+.global-console-panel {
+    position: fixed;
+    top: 0;
+    right: -450px;
+    width: 450px;
+    height: 100vh;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    box-shadow: -5px 0 25px rgba(0,0,0,0.5);
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s ease-in-out;
+}
+
+.global-console-panel.open {
+    right: 0;
+}
+
+.console-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+}
+
+.console-panel-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.btn-close-console {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition);
+}
+
+.btn-close-console:hover {
+    color: var(--text-primary);
+    background: rgba(255,255,255,0.05);
+}
+
+.btn-console-toggle {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+    margin-right: 1rem;
+}
+
+.btn-console-toggle:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-blue);
+    background: rgba(52, 152, 219, 0.1);
+}
+
+#global-console-log {
+    border-radius: 0;
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0;
+}
+

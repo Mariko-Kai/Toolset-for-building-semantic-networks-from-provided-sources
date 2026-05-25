@@ -61,7 +61,7 @@
         </script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=2">
 </head>
 
 <body>
@@ -87,7 +87,24 @@
                 {% endif %}
             </span>
         </div>
+        <!-- Console Toggle Button -->
+        <button id="global-console-toggle" class="btn-console-toggle" title="Отрыть логи компилятора">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+        </button>
     </nav>
+
+    <!-- Global Sliding Console Panel -->
+    <div id="global-console-panel" class="global-console-panel">
+        <div class="console-panel-header">
+            <h3>Логи компиляции</h3>
+            <button id="global-console-close" class="btn-close-console">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div id="global-console-log" class="console-box">
+            <div class="console-placeholder">Ожидание запуска компиляции...</div>
+        </div>
+    </div>
 
     <main class="container">
         {% block content %}{% endblock %}
@@ -96,6 +113,138 @@
     <footer class="footer">
         <p>&mu;&alpha;&theta;&eta;&sigma;&iota;&sigmaf; &mdash; structured mathematical knowledge</p>
     </footer>
+
+    <!-- Global WebSocket and Console Logic -->
+    <script>
+        const consolePanel = document.getElementById('global-console-panel');
+        const consoleToggleBtn = document.getElementById('global-console-toggle');
+        const consoleCloseBtn = document.getElementById('global-console-close');
+        const globalConsoleLog = document.getElementById('global-console-log');
+        
+        let wsSocket = null;
+        let isGlobalCompiling = false;
+
+        // Toggle panel
+        consoleToggleBtn.addEventListener('click', () => {
+            consolePanel.classList.toggle('open');
+        });
+        consoleCloseBtn.addEventListener('click', () => {
+            consolePanel.classList.remove('open');
+        });
+
+        // Helper to format and colorize log lines
+        function appendGlobalLogLine(line) {
+            const placeholder = globalConsoleLog.querySelector('.console-placeholder');
+            if (placeholder) placeholder.remove();
+            
+            const span = document.createElement('span');
+            if (line.includes('status=success') || line.includes('[OK]') || line.includes('successful')) {
+                span.style.color = '#2ecc71';
+            } else if (line.includes('status=failed') || line.includes('[ERROR]') || line.includes('failed') || line.includes('Error')) {
+                span.style.color = '#e74c3c';
+            } else if (line.includes('event=graph_') || line.includes('event=dependency_') || line.includes('[BFS]') || line.includes('Collected')) {
+                span.style.color = '#3498db';
+            } else if (line.includes('status=cancelled') || line.startsWith('=== ')) {
+                span.style.color = '#f39c12';
+                span.style.fontWeight = 'bold';
+            }
+            span.textContent = line + '\n';
+            globalConsoleLog.appendChild(span);
+            globalConsoleLog.scrollTop = globalConsoleLog.scrollHeight;
+        }
+
+        function connectGlobalWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/compiler`;
+            
+            wsSocket = new WebSocket(wsUrl);
+            window.wsSocket = wsSocket; // Export globally for other scripts
+            
+            wsSocket.onopen = () => console.log('Global WebSocket connected');
+            
+            wsSocket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'init') {
+                    if (data.logs && data.logs.length > 0) {
+                        globalConsoleLog.innerHTML = '';
+                        data.logs.forEach(line => appendGlobalLogLine(line));
+                    }
+                    isGlobalCompiling = data.is_compiling;
+                    if (window.updateLocalCompilationUI) {
+                        window.updateLocalCompilationUI(isGlobalCompiling);
+                    }
+                    if (data.is_compiling) {
+                        consolePanel.classList.add('open');
+                    }
+                }
+                else if (data.type === 'start') {
+                    globalConsoleLog.innerHTML = `<span style="color: #8b949e;">event=compilation.requested mode=${data.mode} value=${JSON.stringify(data.value)}\n</span>`;
+                    isGlobalCompiling = true;
+                    if (window.updateLocalCompilationUI) window.updateLocalCompilationUI(true);
+                    consolePanel.classList.add('open'); // Auto-open on start
+                }
+                else if (data.type === 'log') {
+                    appendGlobalLogLine(data.line);
+                }
+                else if (data.type === 'done') {
+                    isGlobalCompiling = false;
+                    if (window.updateLocalCompilationUI) window.updateLocalCompilationUI(false);
+                    
+                    const statusSpan = document.createElement('span');
+                    statusSpan.style.color = '#2ecc71';
+                    statusSpan.style.fontWeight = 'bold';
+                    statusSpan.textContent = `\nevent=compilation.completed status=success output_path=result.pdf\n`;
+                    globalConsoleLog.appendChild(statusSpan);
+                    globalConsoleLog.scrollTop = globalConsoleLog.scrollHeight;
+                    
+                    // Trigger PDF reload if function exists
+                    if (window.reloadPDF) window.reloadPDF();
+                }
+                else if (data.type === 'cancelling') {
+                    appendGlobalLogLine('event=compilation.cancel_requested action=terminate_process_tree');
+                }
+                else if (data.type === 'cancelled') {
+                    isGlobalCompiling = false;
+                    if (window.updateLocalCompilationUI) window.updateLocalCompilationUI(false);
+                    
+                    const statusSpan = document.createElement('span');
+                    statusSpan.style.color = '#f39c12';
+                    statusSpan.style.fontWeight = 'bold';
+                    statusSpan.textContent = '\nevent=compilation.completed status=cancelled\n';
+                    globalConsoleLog.appendChild(statusSpan);
+                    globalConsoleLog.scrollTop = globalConsoleLog.scrollHeight;
+                }
+                else if (data.type === 'input') {
+                    // Forward input sync to compiler page if function exists
+                    if (window.syncRemoteInput) window.syncRemoteInput(data);
+                }
+            };
+            
+            wsSocket.onclose = () => {
+                setTimeout(connectGlobalWebSocket, 3000);
+            };
+        }
+
+        // Global function to trigger compilation from any page
+        window.startCompilation = function(mode, value) {
+            if (wsSocket && wsSocket.readyState === WebSocket.OPEN) {
+                wsSocket.send(JSON.stringify({
+                    type: 'start',
+                    mode: mode,
+                    value: value
+                }));
+            }
+        };
+        
+        window.cancelCompilation = function() {
+            if (wsSocket && wsSocket.readyState === WebSocket.OPEN) {
+                wsSocket.send(JSON.stringify({ type: 'cancel' }));
+            }
+        }
+
+        connectGlobalWebSocket();
+    </script>
 </body>
 
 </html>

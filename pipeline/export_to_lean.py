@@ -144,6 +144,10 @@ def is_semantic_error(lean_code: str, errors: list, entity_type: str) -> bool:
             return True
         if "don't know how to synthesize placeholder" in msg:
             return True
+        if "unknown identifier" in msg:
+            return True
+        if "expected " in msg: # Catch syntax errors caused by bare LaTeX macros leaking into Lean
+            return True
             
     return False
 
@@ -209,7 +213,7 @@ ADDITIONAL CONSTRAINTS:
         # Смена фрейма и Prefix Forcing (Убрано жесткое требование начала ответа, чтобы не ломать <think> у DeepSeek-R1)
         # Смена фрейма и Prefix Forcing
         if entity_type == "def":
-            system_intro = f"Please formalize the following mathematical definition in Lean 4 as a pure `def`. Use the following definition name: {problem_name}"
+            system_intro = f"Please formalize the following mathematical entity in Lean 4 as a `def`, `theorem`, or `lemma`. Use the following name: {problem_name}"
             prefix_hint = f"\n\nCRITICAL: Output the Lean code inside a ```lean4 block. Ensure your declaration is named exactly: {lean_name}"
         else:
             system_intro = f"Please autoformalize the following natural language problem statement in Lean 4 as a `theorem` or `lemma` signature.\nDO NOT ATTEMPT TO WRITE THE PROOF. You MUST append `:= sorry` at the end of the theorem statement. Your ONLY job is to compile the signature correctly. Use the following theorem name: {problem_name}"
@@ -392,20 +396,11 @@ Lean 4 Code:"""
     response = response.strip()
     
     # Extract Lean code blocks robustly
-    prompt_ends_in_code_block = is_goedel and entity_type == "def"
-    
     parts = re.split(r'```(?:lean|lean4)?\s*', response, flags=re.IGNORECASE)
     blocks = []
-    if prompt_ends_in_code_block:
-        # Segment 0 is the immediate completion of the prefix
-        if parts[0].strip():
-            blocks.append(parts[0].strip())
-        # Other segments are in between backticks
-        for i in range(2, len(parts), 2):
-            blocks.append(parts[i].strip())
-    else:
-        for i in range(1, len(parts), 2):
-            blocks.append(parts[i].strip())
+    
+    for i in range(1, len(parts), 2):
+        blocks.append(parts[i].strip())
             
     if not blocks:
         clean = re.sub(r'^```(?:lean|lean4)?\s*', '', response, flags=re.MULTILINE | re.IGNORECASE)
@@ -421,10 +416,7 @@ Lean 4 Code:"""
                 best_block = b
                 break
                 
-        if prompt_ends_in_code_block and best_block == blocks[0]:
-            response = f"def {lean_name} {best_block}"
-        else:
-            response = best_block
+        response = best_block
     else:
         response = response.strip()
         
@@ -433,23 +425,6 @@ Lean 4 Code:"""
     if lines and lines[0].strip() in ("4", "lean", "lean4"):
         lines = lines[1:]
     response = "\n".join(lines).strip()
-    
-    # Auto-heal cheat patterns where reasoning models define helper defs and theorem equivalents
-    if entity_type == "def":
-        helper_matches = re.findall(r'\bdef\s+([A-Za-z0-9_]+)\b', response)
-        helpers = [h for h in helper_matches if h != lean_name]
-        
-        if helpers and lean_name not in helper_matches:
-            has_theorem = re.search(rf'\b(theorem|lemma)\s+{lean_name}\b', response)
-            if has_theorem:
-                helper_to_rename = helpers[0]
-                print(f"  [Auto-Heal] Renaming helper '{helper_to_rename}' to target '{lean_name}' and removing theorem.")
-                response = re.sub(rf'\bdef\s+{helper_to_rename}\b', f'def {lean_name}', response)
-                response = re.sub(rf'\b(theorem|lemma)\s+{lean_name}\b.*', '', response, flags=re.DOTALL).strip()
-                
-        elif not re.search(r'\bdef\b', response) and re.search(rf'\b(theorem|lemma)\s+{lean_name}\b', response):
-            print(f"  [Auto-Heal] Changing theorem '{lean_name}' to def.")
-            response = re.sub(rf'\b(theorem|lemma)\s+{lean_name}\b', f'def {lean_name}', response)
     
     # Log Lean code
     if response:
@@ -576,6 +551,10 @@ def attempt_generation_with_repair(eid, entity_type, tex_content, model="goedel:
         elif validation_result["status"] == "failed":
             errors = validation_result.get("errors", [])
             error_feedback = "\n".join([f"Line {e['line']}: {e['message']}" for e in errors])
+            
+            if "unexpected token 'in'" in error_feedback:
+                error_feedback += "\nHINT: You used the word `in` as a token (e.g., `∑ x in s`). In Lean 4, you MUST use `∈` (\\in) for set membership in binders like `∑ x ∈ s, f x`. The word `in` is invalid syntax here."
+                
             print(f"  [!] {eid} ошибка (Попытка {attempt}/{max_attempts}). Отправляем фидбек модели...")
             log_to_file("lean_errors", error_feedback, entity_id=eid, attempt=attempt)
             

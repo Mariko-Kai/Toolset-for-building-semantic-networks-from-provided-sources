@@ -156,7 +156,7 @@ WEB_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=WEB_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=WEB_DIR / "templates")
 
-DB_PATH = PROJECT_ROOT / "mathesis_index.db"
+DB_PATH = PROJECT_ROOT / "db" / "mathesis_index.db"
 kb = MathesisDB(str(DB_PATH))
 
 
@@ -416,10 +416,8 @@ def cancel_running_compilation():
 # ---------------------------------------------------------------------------
 
 ENTITY_TYPES = {
-    "axiom":     {"name_ru": "Аксиомы",   "icon": "A", "color": "#e74c3c"},
-    "object":    {"name_ru": "Объекты",    "icon": "O", "color": "#3498db"},
-    "property":  {"name_ru": "Свойства",   "icon": "P", "color": "#2ecc71"},
-    "operation": {"name_ru": "Операции",   "icon": "Op","color": "#f39c12"},
+    "def":  {"name_ru": "Определения",  "icon": "D", "color": "#3498db"},
+    "prop": {"name_ru": "Утверждения", "icon": "P", "color": "#2ecc71"},
 }
 
 
@@ -431,19 +429,11 @@ ENTITY_TYPES = {
 async def index(request: Request):
     """Homepage: PDF compiler page."""
     try:
-        axioms = kb.list_axioms()
-        objects = kb.list_objects()
-        properties = kb.list_properties()
-        operations = kb.list_operations()
+        cursor = kb.conn.cursor()
+        cursor.execute("SELECT entity_id FROM entities ORDER BY entity_id")
+        all_entity_ids = [r[0] for r in cursor.fetchall()]
     except Exception:
-        axioms, objects, properties, operations = [], [], [], []
-        
-    all_entity_ids = []
-    for a in axioms: all_entity_ids.append(a.id)
-    for o in objects: all_entity_ids.append(o.id)
-    for p in properties: all_entity_ids.append(p.id)
-    for op in operations: all_entity_ids.append(op.id)
-    all_entity_ids.sort()
+        all_entity_ids = []
 
     return templates.TemplateResponse("compiler.html", {
         "request": request,
@@ -464,37 +454,32 @@ async def catalog_page(request: Request):
             except json.JSONDecodeError:
                 cache_data = {}
 
-    axioms, objects, properties, operations = [], [], [], []
-    for eid, data in cache_data.items():
-        entity = {
-            "id": eid,
-            "name": data.get("name_ru") or eid,
-            "statement": data.get("desc_ru") or "",
-            "formal_definition": data.get("desc_ru") or "",
-            "system": "ZFC",
-            "module": "analysis",
-            "arity": "?"
-        }
-        if eid.startswith("axm-"):
-            axioms.append(entity)
-        elif eid.startswith("obj-"):
-            objects.append(entity)
-        elif eid.startswith("prop-"):
-            properties.append(entity)
-        elif eid.startswith("op-") or eid.startswith("oper-"):
-            operations.append(entity)
-            
-    axioms.sort(key=lambda x: x["id"])
-    objects.sort(key=lambda x: x["id"])
-    properties.sort(key=lambda x: x["id"])
-    operations.sort(key=lambda x: x["id"])
+    defs, props = [], []
+    
+    try:
+        cursor = kb.conn.cursor()
+        cursor.execute("SELECT entity_id, type, title FROM entities ORDER BY entity_id")
+        rows = cursor.fetchall()
+        
+        for eid, etype, title in rows:
+            cdata = cache_data.get(eid, {})
+            entity = {
+                "id": eid,
+                "name": cdata.get("name_ru") or title or eid,
+                "statement": cdata.get("desc_ru") or "",
+                "formal_definition": cdata.get("desc_ru") or ""
+            }
+            if etype == "def":
+                defs.append(entity)
+            elif etype == "prop":
+                props.append(entity)
+    except Exception as e:
+        print(f"[catalog] DB query failed: {e}")
 
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "axioms": axioms,
-        "objects": objects,
-        "properties": properties,
-        "operations": operations,
+        "defs": defs,
+        "props": props,
         "types": ENTITY_TYPES,
     })
 
@@ -704,6 +689,9 @@ async def run_compilation_async(mode: str, value: str):
     if mode == "id":
         state.root_entity = value
         cmd = [sys.executable, "-u", str(PROJECT_ROOT / "pipeline" / "generate_answer.py"), "--root", value]
+    elif mode == "full_book":
+        state.query = value
+        cmd = [sys.executable, "-u", str(PROJECT_ROOT / "pipeline" / "generate_full_book.py")]
     else:
         state.query = value
         cmd = [sys.executable, "-u", str(PROJECT_ROOT / "pipeline" / "ollama_wrapper.py"), value]
