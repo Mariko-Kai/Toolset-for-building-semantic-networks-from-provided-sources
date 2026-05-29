@@ -519,3 +519,271 @@ theorem def_riemann_integral :
     |I - P.sum * (f (P.sum / P.length))| < ε) ∧ 
   I = ∫ x in a..b, f x := by sorry
 
+-- Entity: def-function-uniformly-continuous
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem def_function_uniformly_continuous : 
+  ∃ f : ℝ → ℝ, UniformContinuousOn f (Set.Icc 0 1) ∧ 
+  ∃ M : ℝ, ∀ x ∈ Set.Icc 0 1, |f x| ≤ M := by sorry
+
+-- Entity: prop-weierstrass-extreme-value
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_weierstrass_extreme_value (f : ℝ → ℝ) (a b : ℝ) (hab : a ≤ b) 
+  (hf : ContinuousOn f (Set.Icc a b)) : 
+  ∃ x ∈ Set.Icc a b, ∀ y ∈ Set.Icc a b, f y ≤ f x := by sorry
+
+-- Entity: def-analysis-taylor-series | Type: def
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem taylor_series_representation (f : ℝ → ℝ) (a : ℝ) (r : ℝ) (hr : 0 < r) 
+  (hf : ContDiff ℝ ⊤ f) :
+  ∀ x ∈ Set.Ioo (a - r) (a + r), 
+    f x = ∑' k : ℕ, (iteratedDeriv k f a / (k.factorial : ℝ)) * (x - a) ^ k := by sorry
+
+-- Entity: def-analysis-taylor-series
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem taylor_series_representation (f : ℝ → ℝ) (a : ℝ) (r : ℝ) (hr : 0 < r) 
+  (hf : ContDiff ℝ ⊤ f) :
+  ∀ x ∈ Set.Ioo (a - r) (a + r), 
+    f x = ∑' k : ℕ, (iteratedDeriv k f a / (k.factorial : ℝ)) * (x - a) ^ k := by sorry
+
+-- Entity: def-function-limit-at-point
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+-- Define the limit of a function at a point
+def HasLimitAt (f : ℝ → ℝ) (a L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ x, 0 < |x - a| ∧ |x - a| < δ → |f x - L| < ε
+
+theorem def_function_limit_at_point : 
+  ∀ (f : ℝ → ℝ) (a : ℝ), 
+  (∃ L, HasLimitAt f a L) → 
+  ∃ L, HasLimitAt f a L := by sorry
+
+-- Entity: def-function-limit-at-point
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+-- Define the limit of a function at a point
+def HasLimitAt (f : ℝ → ℝ) (a L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ x, 0 < |x - a| ∧ |x - a| < δ → |f x - L| < ε
+
+theorem def_function_limit_at_point : 
+  ∀ (f : ℝ → ℝ) (a : ℝ), 
+  (∃ L, HasLimitAt f a L) → 
+  ∃ L, HasLimitAt f a L := by sorry
+
+-- Entity: def-real-analysis-limit-one-sided | Type: def
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsOneSidedLimit (f : ℝ → ℝ) (x₀ L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ x, x₀ < x ∧ x < x₀ + δ → |f x - L| < ε
+
+theorem def_real_analysis_limit_one_sided : IsOneSidedLimit (fun x => x) 0 0 := by sorry
+
+-- Entity: def-real-analysis-limit-one-sided
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsOneSidedLimit (f : ℝ → ℝ) (x₀ L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ x, x₀ < x ∧ x < x₀ + δ → |f x - L| < ε
+
+theorem def_real_analysis_limit_one_sided : IsOneSidedLimit (fun x => x) 0 0 := by sorry
+
+-- Entity: def-real-analysis-limit-one-sided | Type: def
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLeftLimit (f : ℝ → ℝ) (x₀ : ℝ) (L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ x, x₀ - δ < x ∧ x < x₀ → |f x - L| < ε
+
+theorem def_real_analysis_limit_one_sided (f : ℝ → ℝ) (x₀ : ℝ) (L : ℝ) :
+  IsLeftLimit f x₀ L ↔ Filter.Tendsto f (nhdsWithin x₀ (Set.Iio x₀)) (nhds L) := by sorry
+
+-- Entity: def-real-analysis-limit-one-sided
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLeftLimit (f : ℝ → ℝ) (x₀ : ℝ) (L : ℝ) : Prop :=
+  ∀ ε > 0, ∃ δ > 0, ∀ x, x₀ - δ < x ∧ x < x₀ → |f x - L| < ε
+
+theorem def_real_analysis_limit_one_sided (f : ℝ → ℝ) (x₀ : ℝ) (L : ℝ) :
+  IsLeftLimit f x₀ L ↔ Filter.Tendsto f (nhdsWithin x₀ (Set.Iio x₀)) (nhds L) := by sorry
+
+-- Entity: def-real-analysis-limitAtInfinity | Type: def
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLimitAtPlusInfinity (f : ℝ → ℝ) : Prop :=
+  ∀ ε > 0, ∃ M : ℝ, ∀ x : ℝ, |x| > M → f x > ε
+
+-- Entity: def-real-analysis-limitAtInfinity
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsLimitAtPlusInfinity (f : ℝ → ℝ) : Prop :=
+  ∀ ε > 0, ∃ M : ℝ, ∀ x : ℝ, |x| > M → f x > ε
+
+-- Entity: def-limit-function-base
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem def_limit_function_base : 
+  ∃ (limit_function : (ℝ → ℝ) → ℝ → ℝ), 
+    ∀ (f : ℝ → ℝ) (a : ℝ), 
+      ∀ ε > 0, ∃ δ > 0, ∀ x, 0 < |x - a| ∧ |x - a| < δ → |f x - limit_function f a| < ε := by sorry
+
+-- Entity: def-real-analysis-infinitesimal | Type: def
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem def_real_analysis_infinitesimal : 
+  ∃ (IsInfinitesimal : ℝ → Prop), 
+    ∀ x : ℝ, IsInfinitesimal x ↔ (x ≠ 0 ∧ ∀ r : ℝ, r > 0 → |x| < r) := by sorry
+
+-- Entity: def-real-analysis-equivalent-functions | Type: def
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsEquivalentFunction (f g : ℝ → ℝ) : Prop :=
+  ∃ C : ℝ, ∀ x : ℝ, f x = g x + C
+
+-- Entity: def-complex-analysis-conjugate | Type: def
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def conjugate (z : ℂ) : ℂ := Complex.re z - Complex.I * Complex.im z
+
+-- Entity: def-set-relation-equivalence | Type: def
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem def_set_relation_equivalence (A : Type*) (R : Set (A × A)) :
+  (∀ x : A, (x, x) ∈ R) ∧ 
+  (∀ x y : A, (x, y) ∈ R → (y, x) ∈ R) ∧ 
+  (∀ x y z : A, ((x, y) ∈ R ∧ (y, z) ∈ R) → (x, z) ∈ R) →
+  Equivalence (fun x y : A => (x, y) ∈ R) := by sorry
+
+-- Entity: def-real-analysis-equivalent-functions
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def IsEquivalentFunction (f g : ℝ → ℝ) : Prop :=
+  ∃ C : ℝ, ∀ x : ℝ, f x = g x + C
+
+-- Entity: def-complex-analysis-conjugate
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+def conjugate (z : ℂ) : ℂ := Complex.re z - Complex.I * Complex.im z
+
+-- Entity: def-set-relation-equivalence
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem def_set_relation_equivalence (A : Type*) (R : Set (A × A)) :
+  (∀ x : A, (x, x) ∈ R) ∧ 
+  (∀ x y : A, (x, y) ∈ R → (y, x) ∈ R) ∧ 
+  (∀ x y z : A, ((x, y) ∈ R ∧ (y, z) ∈ R) → (x, z) ∈ R) →
+  Equivalence (fun x y : A => (x, y) ∈ R) := by sorry
+
+-- Entity: def-analysis-taylor-series
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem taylor_series_representation (f : ℝ → ℝ) (a : ℝ) (r : ℝ) (hr : 0 < r) 
+  (hf : ContDiff ℝ ⊤ f) :
+  ∀ x ∈ Set.Ioo (a - r) (a + r), 
+    f x = ∑' k : ℕ, (iteratedDeriv k f a / (k.factorial : ℝ)) * (x - a) ^ k := by sorry
+

@@ -1,0 +1,21 @@
+% defined-in: zorich (page 31)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types:
+%    - $A$: Set (The underlying set on which the relation is defined).
+%    - $R$: Relation (A subset of $A \times A$).
+% 2. Data Structures:
+%    - Relations are represented as subsets of a Cartesian product, $A \times A$.
+% 3. Implicit Bounds:
+%    - None, assuming $A$ is a general set.
+% ========================
+
+% entity-id: def-set-relation-equivalence
+% entity-type: def
+% macro: IsEquivalenceRelation
+% args: 1
+% notation: R
+\begin{definition}[Equivalence Relation]
+\TerForall A \colon \Set
+\TerForall R \colon \SetSubset{\CartesianProduct{A}{A}}
+\mathrm{IsEquivalenceRelation}(R) \coloneqq \left( \forall x \colon A, (x, x) \in R \right) \TermConjunction \left( \forall x \colon A, \forall y \colon A, ((x, y) \in R \Rightarrow (y, x) \in R) \right) \TermConjunction \left( \forall x \colon A, \forall y \colon A, \forall z \colon A, (((x, y) \in R \land (y, z) \in R) \Rightarrow (x, z) \in R) \right)
+\end{definition}

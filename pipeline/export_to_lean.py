@@ -540,7 +540,9 @@ def attempt_generation_with_repair(eid, entity_type, tex_content, model="goedel:
         )
         
         if not lean_code:
-            return None, False
+            error_feedback = "Your previous response was empty or rejected. Please provide a valid Lean 4 code block."
+            print(f"  [!] {eid} пустой или отклоненный ответ (Попытка {attempt}/{max_attempts}). Пробуем еще раз...")
+            continue
 
         validation_result = validate_entity(eid, lean_code)
         

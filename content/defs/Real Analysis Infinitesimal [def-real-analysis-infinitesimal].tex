@@ -1,0 +1,17 @@
+% defined-in: apostol (page 195)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%     - $x$: Type ($\RealNumbers$)
+%     - $r$: Type ($\RealNumbers$)
+% 2. Data Structures: None.
+% 3. Implicit Bounds: None.
+% ========================
+
+% entity-id: def-real-analysis-infinitesimal
+% entity-type: def
+% macro: IsInfinitesimal
+% args: 1
+% notation: \mathrm{IsInfinitesimal}(x)
+\begin{definition}[Infinitesimal Quantity]
+\TerForall x \colon \RealNumbers \mathrm{IsInfinitesimal}(x) \coloneqq \left( x \neq 0 \right) \land \left( \forall r \colon \RealNumbers, \left( r > 0 \Rightarrow \AbsAbstract{x} < r \right) \right)
+\end{definition}

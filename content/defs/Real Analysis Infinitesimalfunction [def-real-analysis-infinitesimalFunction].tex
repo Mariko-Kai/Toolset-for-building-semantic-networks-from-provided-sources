@@ -1,0 +1,21 @@
+% defined-in: spivak (page 59)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%     - $f$: Function (Type: \Function{\RealNumbers}{\RealNumbers})
+%     - $\epsilon$: Real number (Type: \RealNumbers)
+%     - $x$: Real number (Type: \RealNumbers)
+% 2. Data Structures: 
+%     - Functions are represented using the \Function macro.
+%     - Real numbers and intervals use \RealNumbers and \ClosedInterval.
+% 3. Implicit Bounds: 
+%     - The definition requires universal quantification over the real numbers ($\forall \epsilon \colon \RealNumbers$).
+% ========================
+
+% entity-id: def-real-analysis-infinitesimalFunction
+% entity-type: def
+% macro: \mathrm{IsInfinitesimal}
+% args: 1
+% notation: \mathrm{IsInfinitesimal}(f)
+\begin{definition}[\mathrm{IsInfinitesimal}]
+\terForall f \colon \Function{\RealNumbers}{\RealNumbers} \mathrm{IsInfinitesimal}(f) \coloneqq \left( \forall \epsilon \colon \RealNumbers \left( \epsilon > 0 \Rightarrow \AbsAbstract{f} < \epsilon \right) \right)
+\end{definition}

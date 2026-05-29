@@ -491,7 +491,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
 
         if lean_code:
             print(f"  Lean validating: {lean_code[:80]}...")
-            result = validate_entity(temp_eid, lean_code)
+            result = validate_entity(temp_eid, lean_code, deps=resolved_eids if 'resolved_eids' in locals() else [])
         else:
             print("  No translatable content for Lean validation, skipping.")
             result = {"status": "success", "errors": []}
@@ -598,17 +598,11 @@ def rebuild_master_tex():
     print(f"\n[master-rebuild] Rebuilding {master_path.relative_to(PROJECT_ROOT)} from current content directory...", flush=True)
     
     # 1. Discover all tex files
-    tex_files = []
+    file_by_id = {}
+    all_ids = []
     for filepath in CONTENT_DIR.rglob("*.tex"):
         if filepath.name in ("master.tex", "TEMPLATE.tex", "mathesis.sty"):
             continue
-        tex_files.append(filepath)
-        
-    # 2. Parse ID and dependencies of each file
-    nodes = {}
-    file_by_id = {}
-    
-    for filepath in tex_files:
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 text = f.read()
@@ -616,43 +610,27 @@ def rebuild_master_tex():
             if not id_match:
                 continue
             entity_id = id_match.group(1).strip()
-            
-            # Extract dependencies using latex_utils macro parser
-            from pipeline.latex_utils import extract_dependencies
-            deps = extract_dependencies(text)
-            
-            nodes[entity_id] = deps
             file_by_id[entity_id] = filepath
+            all_ids.append(entity_id)
         except Exception as e:
             print(f"  [WARN] Failed to parse {filepath.name}: {e}", flush=True)
             
-    # 3. Topological Sort using DFS
-    visited = set()
-    temp_visited = set()
-    order = []
+    # 2. Topological Sort using LeanTreeBuilder (single source of truth for ordering)
+    import sys
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from tools.lean_tree_builder import LeanTreeBuilder
+    builder = LeanTreeBuilder()
     
-    def visit(node):
-        if node in temp_visited:
-            return
-        if node not in visited:
-            temp_visited.add(node)
-            if node in nodes:
-                for dep in nodes[node]:
-                    if dep in nodes:
-                        visit(dep)
-            temp_visited.remove(node)
-            visited.add(node)
-            order.append(node)
-            
-    for node in nodes:
-        visit(node)
-        
-    # 4. Generate master.tex content
+    order = builder.build_closure_order(all_ids)
+    
+    # 3. Generate master.tex content
     input_lines = []
     for entity_id in order:
-        filepath = file_by_id[entity_id]
-        rel_path = filepath.relative_to(PROJECT_ROOT).as_posix()
-        input_lines.append(f"\\input{{{rel_path}}}")
+        if entity_id in file_by_id:
+            filepath = file_by_id[entity_id]
+            rel_path = filepath.relative_to(PROJECT_ROOT).as_posix()
+            input_lines.append(f"\\input{{{rel_path}}}")
         
     master_template = r"""\documentclass{report}
 \usepackage{mathesis}

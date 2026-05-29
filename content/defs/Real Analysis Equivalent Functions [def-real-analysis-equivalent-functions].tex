@@ -1,0 +1,22 @@
+% defined-in: spivak (page 250)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%     - f: Function (Type: \RealNumbers \TermTo \RealNumbers)
+%     - g: Function (Type: \RealNumbers \TermTo \RealNumbers)
+%     - C: Constant (Type: \RealNumbers)
+%     - x: Input variable (Type: \RealNumbers)
+% 2. Data Structures: 
+%     - Functions are represented using the \Function macro.
+%     - Quantifiers (\TerForall, \TermExists) handle universal and existential quantification.
+% 3. Implicit Bounds: 
+%     - The functions f and g are assumed to operate on the entire set of real numbers, \RealNumbers.
+% ========================
+
+% entity-id: def-real-analysis-equivalent-functions
+% entity-type: def
+% macro: \mathrm{IsEquivalentFunction}
+% args: 2
+% notation: \mathrm{IsEquivalentFunction}(f, g)
+\begin{definition}[Equivalent Functions]
+\mathrm{IsEquivalentFunction}(f, g) \coloneqq \mathrm{TermExists} C \colon \RealNumbers \cdot \mathrm{TermForall} x \colon \RealNumbers \cdot \left( f(x) = g(x) + C \right)
+\end{definition}

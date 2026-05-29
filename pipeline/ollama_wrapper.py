@@ -688,13 +688,13 @@ def main():
             if eid in validated_entities:
                 continue
                 
-            print(f"\n[Queue] Lean-валидация для сущности: '{eid}'")
+            print(f"\n[Queue] Шаг 1: Проверка правильности извлечения формулировки в мат. запись для: '{eid}'")
             
             # Load the lean draft saved by the synthesizer
             lean_file_path = PROJECT_ROOT / "lean_validator" / "Validated" / f"{eid}.lean"
             if not lean_file_path.exists():
-                print(f"[Queue] [-] Lean файл не найден: {lean_file_path}")
-                print(f"[Queue] [*] Запуск догенерации Lean для сущности {eid}...")
+                print(f"[Queue] [-] Мат. запись не найдена: {lean_file_path}")
+                print(f"[Queue] [*] Запуск генерации мат. записи (Lean) по формулировке {eid}...")
                 
                 from pipeline.export_to_lean import attempt_generation_with_repair
                 tex_files = list(PROJECT_ROOT.joinpath("content").rglob(f"*[{eid}].tex"))
@@ -720,9 +720,10 @@ def main():
                     continue
                 
             lean_code = lean_file_path.read_text(encoding='utf-8')
-            print(f"  Lean validating: {lean_code[:80]}...")
+            print(f"  Получен код: {lean_code[:80]}...")
             
-            # Run lean_validator logic directly
+            print(f"\n[Queue] Шаг 2: Построение DAG для подтверждения правильности формулировки '{eid}' с использованием зависимых объектов...")
+            # Run lean_validator logic directly (which builds DAG using LeanTreeBuilder)
             result = validate_entity(eid, lean_code)
             
             if result["status"] == "success":

@@ -1,0 +1,21 @@
+% defined-in: zorich (page 132)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types:
+%     * $f$: Function. Type: $\RealNumbers \to \RealNumbers$.
+%     * $x$: Input variable. Type: $\RealNumbers$.
+%     * $\epsilon$: Threshold variable. Type: $\RealNumbers$.
+%     * $M$: Boundary variable (representing the minimum magnitude for the domain). Type: $\RealNumbers$.
+% 2. Data Structures:
+%     * The concept of the domain $B$ (where $|x| > M$) is represented by an implication: $(|x| > M) \implies P(x)$. This avoids treating $B$ as a formal set variable, simplifying the structure while maintaining rigor.
+% 3. Implicit Bounds:
+%     * The existence of the boundary $M \colon \RealNumbers$ is crucial for defining the domain condition.
+% ========================
+
+% entity-id: def-real-analysis-limitAtInfinity
+% entity-type: def
+% macro: IsLimitAtPlusInfinity
+% args: 1
+% notation: \mathrm{IsLimitAtPlusInfinity}(f)
+\begin{definition}[Limit at Positive Infinity]
+\mathrm{IsLimitAtPlusInfinity}(f) \coloneqq \forall \epsilon \colon \RealNumbers \ \exists M \colon \RealNumbers \ \forall x \colon \RealNumbers \ ( \mathrm{RealAbsoluteValue{x}} > M \ \Rightarrow \ f(x) > \epsilon )$
+\end{definition}

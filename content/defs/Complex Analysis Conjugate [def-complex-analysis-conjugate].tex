@@ -1,0 +1,22 @@
+% defined-in: spivak (page 0)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types:
+%     - z : \ComplexNumber (The input variable)
+%     - x : \RealNumbers (The real component of z)
+%     - y : \RealNumbers (The imaginary component of z)
+% 2. Data Structures:
+%     - Complex numbers are represented using the \ComplexNumber macro.
+%     - Real numbers are represented using the \RealNumbers macro.
+% 3. Implicit Bounds:
+%     - None needed for the definition itself, as it is a function definition.
+% ========================
+
+% entity-id: def-complex-analysis-conjugate
+% entity-type: def
+% macro: DefineConjugateFunction
+% args: 1
+% notation: \overline{f}(z)
+\begin{definition}[Conjugate Function]
+\TerForall z \colon \ComplexNumber \\
+\mathrm{IsConjugateFunction}(\overline{f}) \coloneqq \left( \mathrm{Re}(z) - i \cdot \mathrm{Im}(z) \right)
+\end{definition}

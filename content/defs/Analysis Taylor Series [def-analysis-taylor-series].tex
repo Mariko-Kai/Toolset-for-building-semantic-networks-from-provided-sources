@@ -1,0 +1,19 @@
+% defined-in: apostol (page 413), apostol (page 457), apostol (page 457), apostol (page 460), apostol (page 462)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: [f : \RealNumbers \TermTo \RealNumbers, a : \RealNumbers, x : \RealNumbers, k : \NaturalNumbers, n : \NaturalNumbers]
+% 2. Data Structures: [The Taylor series is represented as an infinite series of terms involving the k-th derivative of f at a.]
+% 3. Implicit Bounds: [The function f must be infinitely differentiable in a neighborhood of a.]
+% ========================
+
+% entity-id: def-analysis-taylor-series
+% entity-type: def
+% macro: \TaylorSeries
+% args: 3
+% notation: \TaylorSeries{f}{a}{x}
+
+\begin{definition}[Taylor Series]
+\[
+\TerForall f \colon \RealNumbers \TermTo \RealNumbers \TerForall a \colon \RealNumbers \TerForall x \colon \RealNumbers
+\mathrm{IsTaylorSeries}(f, a, x) \coloneqq \sum_{k=0}^{\infty} \frac{f^{(k)}(a)}{k!} \cdot (x - a)^k
+\]
+\end{definition}

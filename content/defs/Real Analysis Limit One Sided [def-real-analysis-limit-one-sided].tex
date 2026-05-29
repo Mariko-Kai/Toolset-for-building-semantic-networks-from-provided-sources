@@ -1,0 +1,26 @@
+% defined-in: zorich (page 131)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types:
+%     - f: Function (f \colon X \rightarrow \RealNumbers)
+%     - X: Set (The domain of the function, typically a subset of \RealNumbers)
+%     - x_0: Point (The point where the limit is evaluated, x_0 \colon X)
+%     - L: Real Number (The value of the limit, L \colon \RealNumbers)
+%     - V: Neighborhood (A set in the codomain \RealNumbers)
+%     - B_prime: Base element (A set in the domain X, representing the approach from the left)
+% 2. Data Structures:
+%     - The concept of 'left approach' is handled by the specialized macro \mathrm{IsOneSidedLimit}(f, x_0, L), which implicitly restricts the base elements B_prime to those approaching x_0 from below.
+%     - Sets (Domains and Codomains) are represented using the \Function and \RealNumbers macros.
+% 3. Implicit Bounds:
+%     - The definition requires the existence of a domain X (often a subset of \RealNumbers) and a point x_0 \colon X.
+%     - The definition relies on the standard topological definition of neighborhoods \Neighborhood.
+% ========================
+
+% entity-id: def-real-analysis-limit-one-sided
+% entity-type: def
+% macro: DefinitionOneSidedLimit
+% args: 3
+% notation: \mathrm{IsOneSidedLimit}(f, x_0, L)
+\begin{definition}[Left Limit of a Function]
+\TerForall X \colon \Set \TerForall f \colon \Function{X}{\RealNumbers} \TerForall x_0 \colon X \TerForall L \colon \RealNumbers \\
+\mathrm{IsOneSidedLimit}(f, x_0, L) \coloneqq \left( L = \lim_{x \to x_0^-} f(x) \right)
+\end{definition}
