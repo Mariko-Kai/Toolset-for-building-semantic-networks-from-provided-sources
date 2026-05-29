@@ -4,7 +4,7 @@ import time
 import urllib.request
 import re
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, List
 
 try:
     from google import genai
@@ -19,10 +19,15 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
 
+# Таймаут сетевых вызовов (сек). Для urllib применяется как socket-таймаут на
+# каждую блокирующую операцию чтения, поэтому для стриминга ограничивает паузу
+# между чанками, а не общую длительность ответа. Переопределяется через env.
+HTTP_TIMEOUT = float(os.environ.get("MATHESIS_HTTP_TIMEOUT", "60"))
+
 def log_think(content: str):
     from pathlib import Path
     import datetime
-    
+
     PROJECT_ROOT = Path(__file__).resolve().parent.parent
     logs_dir = PROJECT_ROOT / "logs" / "pipeline" / "think"
     logs_dir.mkdir(parents=True, exist_ok=True)
@@ -43,7 +48,7 @@ class ModelStrategy(ABC):
     @abstractmethod
     def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False, stream_callback=None) -> str:
         pass
-        
+
     @abstractmethod
     def get_embedding(self, text: str) -> Optional[List[float]]:
         pass
@@ -54,12 +59,12 @@ class OllamaStrategy(ModelStrategy):
         # Check api_key (often used as host for Ollama in this codebase)
         if self.api_key and (self.api_key.startswith("http://") or self.api_key.startswith("https://")):
             return self.api_key.rstrip('/')
-        
+
         # Check environment variable
         env_host = os.environ.get("MATHESIS_OLLAMA_HOST") or os.environ.get("MATHESIS_EMBED_API_KEY")
         if env_host and (env_host.startswith("http://") or env_host.startswith("https://")):
             return env_host.rstrip('/')
-            
+
         return "http://localhost:11434"
 
     def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False, stream_callback=None) -> str:
@@ -71,9 +76,12 @@ class OllamaStrategy(ModelStrategy):
             "prompt": prompt,
             "stream": stream_callback is not None,
             "options": {
-                "temperature": 0.0,
+                "temperature": 0.6,
                 "top_p": 0.9,
-                "num_ctx": 8192
+                "num_ctx": 8192,
+                "num_predict": 8192,
+                "repeat_penalty": 1.1,
+                "repeat_last_n": 8192
             }
         }
         if system_prompt:
@@ -84,7 +92,7 @@ class OllamaStrategy(ModelStrategy):
         req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"),
                                      headers={"Content-Type": "application/json"})
         try:
-            with urllib.request.urlopen(req) as response:
+            with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as response:
                 if stream_callback is not None:
                     full_ans = []
                     for line in response:
@@ -97,7 +105,7 @@ class OllamaStrategy(ModelStrategy):
                 else:
                     result = json.loads(response.read().decode("utf-8"))
                     ans = result.get("response", "")
-                    
+
                 think_match = re.search(r'<think>(.*?)</think>', ans, re.DOTALL)
                 if think_match:
                     log_think(think_match.group(1).strip())
@@ -106,7 +114,7 @@ class OllamaStrategy(ModelStrategy):
         except Exception as e:
             print(f"[OllamaStrategy] Error: {e} (URL: {url})")
             return ""
-            
+
     def get_embedding(self, text: str) -> Optional[List[float]]:
         model = self.model_name or "nomic-embed-text:latest"
         base_url = self._get_base_url()
@@ -118,13 +126,13 @@ class OllamaStrategy(ModelStrategy):
         try:
             req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'))
             req.add_header('Content-Type', 'application/json')
-            with urllib.request.urlopen(req) as response:
+            with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as response:
                 result = json.loads(response.read().decode('utf-8'))
                 return result.get("embedding")
         except urllib.error.HTTPError as e:
             error_body = e.read().decode('utf-8') if e.fp else ""
             print(f"[OllamaStrategy] Embedding error: HTTP {e.code} {e.reason} (URL: {url}) Body: {error_body}")
-            
+
             # If 404 and we used /api/embeddings, maybe the endpoint is gone or model missing
             if e.code == 404 and "api/embeddings" in url and "model" not in error_body.lower():
                 print("[OllamaStrategy] Retrying with /api/embed endpoint...")
@@ -133,7 +141,7 @@ class OllamaStrategy(ModelStrategy):
                 try:
                     req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'))
                     req.add_header('Content-Type', 'application/json')
-                    with urllib.request.urlopen(req) as response:
+                    with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as response:
                         result = json.loads(response.read().decode('utf-8'))
                         # /api/embed returns {"embeddings": [[...]]}
                         return result.get("embeddings", [None])[0]
@@ -163,22 +171,22 @@ class GeminiStrategy(ModelStrategy):
         if not GEMINI_AVAILABLE:
             print("[GeminiStrategy] google-genai is not installed.")
             return ""
-            
+
         api_key = self.api_key or os.environ.get("GEMINI_API_KEY")
         if not api_key:
             print("[GeminiStrategy] No GEMINI_API_KEY found.")
             return ""
-            
+
         model = self.model_name or "gemini-3.1-flash-lite"
         client = genai.Client(api_key=api_key)
-        
+
         config = types.GenerateContentConfig(
             temperature=0.0,
             system_instruction=system_prompt,
         )
         if json_mode:
             config.response_mime_type = "application/json"
-            
+
         try:
             response = client.models.generate_content(
                 model=model,
@@ -189,7 +197,7 @@ class GeminiStrategy(ModelStrategy):
         except Exception as e:
             print(f"[GeminiStrategy] Error: {e}")
             return ""
-            
+
     def get_embedding(self, text: str) -> Optional[List[float]]:
         self._enforce_rate_limit()
         if not GEMINI_AVAILABLE:
@@ -197,7 +205,7 @@ class GeminiStrategy(ModelStrategy):
         api_key = self.api_key or os.environ.get("GEMINI_API_KEY")
         if not api_key:
             return None
-            
+
         model = self.model_name or "text-embedding-004"
         client = genai.Client(api_key=api_key)
         try:
@@ -218,20 +226,20 @@ class OpenAIStrategy(ModelStrategy):
         if not OPENAI_AVAILABLE:
             print("[OpenAIStrategy] openai is not installed.")
             return ""
-            
+
         api_key = self.api_key or os.environ.get("OPENAI_API_KEY")
         if not api_key:
             print("[OpenAIStrategy] No OPENAI_API_KEY found.")
             return ""
-            
+
         model = self.model_name or "gpt-4o-mini"
         client = openai.OpenAI(api_key=api_key)
-        
+
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
-        
+
         try:
             kwargs = {
                 "model": model,
@@ -240,20 +248,20 @@ class OpenAIStrategy(ModelStrategy):
             }
             if json_mode:
                 kwargs["response_format"] = {"type": "json_object"}
-                
+
             response = client.chat.completions.create(**kwargs)
             return response.choices[0].message.content
         except Exception as e:
             print(f"[OpenAIStrategy] Error: {e}")
             return ""
-            
+
     def get_embedding(self, text: str) -> Optional[List[float]]:
         if not OPENAI_AVAILABLE:
             return None
         api_key = self.api_key or os.environ.get("OPENAI_API_KEY")
         if not api_key:
             return None
-            
+
         model = self.model_name or "text-embedding-3-small"
         client = openai.OpenAI(api_key=api_key)
         try:
@@ -272,20 +280,20 @@ class GroqStrategy(ModelStrategy):
         if not OPENAI_AVAILABLE:
             print("[GroqStrategy] openai package is required for Groq.")
             return ""
-            
+
         api_key = self.api_key or os.environ.get("GROQ_API_KEY")
         if not api_key:
             print("[GroqStrategy] No GROQ_API_KEY found.")
             return ""
-            
+
         model = self.model_name or "llama-3.3-70b-versatile"
         client = openai.OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
-        
+
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
-        
+
         try:
             kwargs = {
                 "model": model,
@@ -294,13 +302,13 @@ class GroqStrategy(ModelStrategy):
             }
             if json_mode:
                 kwargs["response_format"] = {"type": "json_object"}
-                
+
             response = client.chat.completions.create(**kwargs)
             return response.choices[0].message.content
         except Exception as e:
             print(f"[GroqStrategy] Error: {e}")
             return ""
-            
+
     def get_embedding(self, text: str) -> Optional[List[float]]:
         print("[GroqStrategy] Groq does not support embeddings.")
         return None
@@ -331,11 +339,11 @@ class LlamaCppStrategy(ModelStrategy):
                 if system_prompt:
                     messages.append({"role": "system", "content": system_prompt})
                 messages.append({"role": "user", "content": prompt})
-                
+
                 kwargs = {"model": model, "messages": messages, "temperature": 0.0}
                 if json_mode:
                     kwargs["response_format"] = {"type": "json_object"}
-                    
+
                 response = client.chat.completions.create(**kwargs)
                 return response.choices[0].message.content
             except Exception as e:
@@ -345,7 +353,7 @@ class LlamaCppStrategy(ModelStrategy):
         # Otherwise, run it directly in-process via llama_cpp
         try:
             from llama_cpp import Llama
-            
+
             if self._llm is None or getattr(self, '_current_model', None) != model:
                 print(f"[LlamaCppStrategy] Loading GGUF model in memory: {model}...")
                 # Try to enable GPU if available (n_gpu_layers=-1)
@@ -361,10 +369,10 @@ class LlamaCppStrategy(ModelStrategy):
             if json_mode:
                 kwargs["response_format"] = {"type": "json_object"}
 
-            print(f"[LlamaCppStrategy] Inferencing locally...")
+            print("[LlamaCppStrategy] Inferencing locally...")
             response = self._llm.create_chat_completion(**kwargs)
             return response["choices"][0]["message"]["content"]
-            
+
         except ImportError:
             print("[LlamaCppStrategy] Error: llama-cpp-python is not installed. Please `pip install llama-cpp-python`.")
             return ""
@@ -426,7 +434,7 @@ class ModelManager:
             if not strategy:
                 return ""
         return strategy.generate_content(prompt, system_prompt, json_mode, stream_callback=stream_callback)
-        
+
     def get_embedding(self, text: str, provider: Optional[str] = None, model: Optional[str] = None, role: Optional[str] = None) -> Optional[List[float]]:
         if role and role in self.strategies:
             strategy = self.strategies[role]

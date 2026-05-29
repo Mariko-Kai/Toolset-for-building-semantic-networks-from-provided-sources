@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mathesis"
+version = "0.1.0"
+description = "Mathesis — нейросимвольный конвейер: извлечение математики из PDF, канонический LaTeX и трансляция в Lean 4."
+readme = "README.md"
+requires-python = ">=3.10"
+
+# Базовые runtime-зависимости (лёгкие). Тяжёлый AI/ML-стек — в extras ниже,
+# чтобы базовая установка и dev-окружение ставились без GPU/больших колёс.
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.27",
+    "jinja2>=3.1",
+    "numpy>=1.26",
+    "psutil>=5.9",
+]
+
+[project.optional-dependencies]
+# AI/ML и обработка PDF — устанавливается отдельно: pip install -e .[ai]
+ai = [
+    "PyMuPDF>=1.23",
+    "ollama>=0.3",
+    "openai>=1.0",
+    "groq>=0.9",
+    "google-genai>=0.3",
+    "sentence-transformers>=2.2",
+    "python-dotenv>=1.0",
+    "pillow>=10.0",
+]
+# Инструменты разработки: pip install -e .[dev]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+    "mypy>=1.8",
+]
+
+[tool.setuptools]
+# Пакеты находятся в корне репозитория.
+packages = ["mathesis", "pipeline"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+# На время поэтапного рефактора ограничиваем область проверки активным кодом.
+extend-exclude = [".venv", "archive", "scratch", "lean_validator", "tools/archive", "output"]
+
+[tool.ruff.lint]
+# Базовый набор: ошибки pyflakes (F) и часть pycodestyle (E). Расширим по мере чистки.
+select = ["E", "F", "W"]
+# Пока не форсируем стилевые правила, пронизывающие легаси-код; чистим постепенно:
+#   E501 — длина строки; E741 — неоднозначные имена; E701 — несколько операторов в строке.
+ignore = ["E501", "E741", "E701"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+# Включаем строгость постепенно, по мере типизации модулей.
+files = ["mathesis", "tests"]
