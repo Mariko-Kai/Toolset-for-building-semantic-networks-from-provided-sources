@@ -40,7 +40,7 @@ dev = [
 
 [tool.setuptools]
 # Пакеты находятся в корне репозитория.
-packages = ["mathesis", "pipeline"]
+packages = ["mathesis", "pipeline", "pipeline.nodes", "pipeline.orchestration"]
 
 [tool.ruff]
 line-length = 120
