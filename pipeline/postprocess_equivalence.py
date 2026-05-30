@@ -557,18 +557,15 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
         self.logger.info("Построение векторного пространства для оставшихся уникальных сущностей...")
         embeddings = [self.get_embedding(e["formulation"]) for e in entities]
 
-        n = len(entities)
-        pairs_to_check = []
         similarity_threshold = 0.90  # Строгий порог для точных дубликатов
 
-        # Находим пары сущностей с высокой схожестью в одной категории
-        for i in range(n):
-            for j in range(i + 1, n):
-                if entities[i]['true_role'] == entities[j]['true_role']:
-                    sim = self.cosine_similarity(embeddings[i], embeddings[j])
-                    self.logger.debug(f"Сравнение [{entities[i]['id']}] <-> [{entities[j]['id']}]: семантическое сходство = {sim:.4f}")
-                    if sim > similarity_threshold:
-                        pairs_to_check.append((entities[i], entities[j], sim))
+        # Векторизованный поиск похожих пар одной роли (numpy-матрица вместо O(n²) питон-цикла).
+        from pipeline.vector_utils import find_similar_pairs
+        roles = [e['true_role'] for e in entities]
+        idx_pairs = find_similar_pairs(embeddings, similarity_threshold, roles=roles)
+        pairs_to_check = [(entities[i], entities[j], sim) for i, j, sim in idx_pairs]
+        for e1, e2, sim in pairs_to_check:
+            self.logger.debug(f"Кандидат [{e1['id']}] <-> [{e2['id']}]: сходство = {sim:.4f}")
 
         if not pairs_to_check:
             self.logger.info("Семантических дубликатов в категориях (def, prop) не обнаружено.")
