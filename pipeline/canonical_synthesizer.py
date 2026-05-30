@@ -1,29 +1,90 @@
 import sqlite3
-import urllib.request
 import json
-import uuid
 import re
 import argparse
 import sys
-import io
-import os
 import time
 from pathlib import Path
 
-# Fix Windows console encoding
+# Fix Windows console encoding. reconfigure на месте (не подменяем объект, чтобы
+# не закрывать чужой буфер — важно под pytest-capture, где reconfigure отсутствует).
 if sys.platform == 'win32':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding='utf-8', errors='replace')
+        except (AttributeError, ValueError):
+            pass
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from pipeline.config import PROVIDERS, resolve_module_config
-from pipeline.model_manager import ModelManager
+from pipeline.config import PROVIDERS, get_db_path, resolve_module_config  # noqa: E402
+from pipeline.model_manager import ModelManager  # noqa: E402
+from mathesis import repo  # noqa: E402
+from mathesis.models import Entity, Source  # noqa: E402
 
-DB_PATH = PROJECT_ROOT / "db/mathesis_index.db"
+DB_PATH = get_db_path()
 CONTENT_DIR = PROJECT_ROOT / "content"
+
+
+def _detect_lean_decl(lean_code: str) -> str:
+    """Грубо определяет форму Lean-декларации по первому ключевому слову."""
+    for kw in ("theorem", "lemma", "def", "abbrev", "structure", "class", "instance", "axiom"):
+        if re.search(rf'(^|\n)\s*(noncomputable\s+)?{kw}\b', lean_code):
+            return kw
+    return ""
+
+
+def promote_cluster(conn, *, cluster_id, entity_id, entity_type, title, nl_desc,
+                    tex_path, lean_path="", lean_code="", latex="",
+                    sources=None, page_refs=None, deps=None, embed_blob=None):
+    """Идемпотентно промоутит кластер черновиков в каноническую сущность.
+
+    Пишет через типизированный mathesis.repo (синхронизирует FTS/алиасы/таймстемпы),
+    поэтому синтезированные сущности сразу видны поиску. Повторный вызов с теми же
+    данными приводит к тому же состоянию (upsert + перезапись источников/pending).
+    Сырые (неразрешённые) зависимости складываются в pending_edges.
+    """
+    sources = sources or []
+    page_refs = page_refs or []
+    deps = deps or []
+
+    if lean_code:
+        lean_status = "sorry" if "sorry" in lean_code else "valid"
+        lean_decl = _detect_lean_decl(lean_code)
+    else:
+        lean_status, lean_decl = "unvalidated", ""
+
+    entity = Entity(
+        id=entity_id, kind=entity_type, title=title, nl_desc=nl_desc,
+        latex=latex, lean_code=lean_code or "", lean_decl=lean_decl,
+        lean_status=lean_status, tex_path=tex_path, lean_path=lean_path or "",
+    )
+    repo.upsert_entity(conn, entity, commit=False)
+    if embed_blob:
+        repo.set_embedding(conn, entity_id, embed_blob, commit=False)
+
+    # Провенанс: перезаписываем, чтобы повторный прогон не плодил дубликаты.
+    conn.execute("DELETE FROM formulation_sources WHERE entity_id = ?", (entity_id,))
+    seen = set()
+    for src, pref in zip(sources, page_refs + [0] * (len(sources) - len(page_refs))):
+        page = f"page {pref}" if pref else ""
+        if (src, page) in seen:
+            continue
+        seen.add((src, page))
+        repo.add_source(conn, Source(entity_id=entity_id, source_book=src, page_info=page), commit=False)
+
+    conn.execute("INSERT OR REPLACE INTO cluster_entity_map (cluster_id, entity_id) VALUES (?, ?)",
+                 (cluster_id, entity_id))
+
+    # Сырые зависимости -> pending_edges (перезапись для идемпотентности).
+    conn.execute("DELETE FROM pending_edges WHERE source_id = ?", (entity_id,))
+    clean_deps = sorted({d.strip() for d in deps if isinstance(d, str) and d.strip()})
+    for dep in clean_deps:
+        conn.execute("INSERT INTO pending_edges (source_id, raw_dep, status) VALUES (?, ?, 'pending')",
+                     (entity_id, dep))
+    return entity_id
 
 
 
@@ -302,7 +363,6 @@ def check_forbidden_macros(latex: str, entity_type: str) -> list:
     return errors
 
 def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=False, model="qwen3:8b", skip_validation=False, canonical_term="", processed_entities=None, deps=None):
-    import time
     print(f"\n{'='*60}", flush=True)
     print(f"[synthesizer] Cluster: {cluster_id}", flush=True)
     print(f"[synthesizer] Sources: {', '.join(sources)} ({len(formulations)} formulations)", flush=True)
@@ -342,7 +402,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
             current_prompt = prompt
 
             if semantic_error_feedback:
-                print(f"[synthesizer] Injecting semantic/type error feedback into LaTeX prompt...", flush=True)
+                print("[synthesizer] Injecting semantic/type error feedback into LaTeX prompt...", flush=True)
                 current_prompt += f"\n\nПРЕДУПРЕЖДЕНИЕ: Твоя предыдущая формулировка семантически неполна или отклонена формализатором Lean.\nОбратная связь от Lean:\n{semantic_error_feedback}\n\nОБЯЗАТЕЛЬНО явно укажи все неявные типы, кванторы (∀, ∃) и домены."
 
             # 1a. Internal LLM Retry Loop for LaTeX Generation
@@ -451,7 +511,6 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
             break
 
         # Mathlib discovery
-        import string
         clean_title = temp_eid.replace('def-', '').replace('thm-', '').replace('axm-', '').replace('-', ' ')
         entity_words = [w for w in clean_title.split() if len(w) > 2]
         discovery_terms = [w.title() for w in entity_words]
@@ -464,7 +523,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
             print(f"  [synthesizer] Running Mathlib discovery for terms: {discovery_terms}")
             try:
                 signatures = discover_mathlib_signatures(discovery_terms)
-            except Exception as e:
+            except Exception:
                 pass
         hints = "\n".join(signatures) if signatures else "No hints found."
 
@@ -509,7 +568,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
             print("  [TIMEOUT] Lean validation timed out. Proceeding without validation.")
             break
         else:
-            print(f"  [FAIL] Lean validation failed or model cheated.")
+            print("  [FAIL] Lean validation failed or model cheated.")
 
             messages = []
             for e in result["errors"][:3]:
@@ -525,11 +584,11 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
                         ident = ident_match.group(1)
                         feedback = f"\nСИНТЕЗАТОРУ: Lean не распознал идентификатор '{ident}'. Это означает, что вы либо не объявили переменную '{ident}' с помощью кванторов (\\TerForall, \\TermExists), либо использовали сырой несемантический LaTeX макрос (например, \\{ident}). Пожалуйста, исправьте исходный LaTeX!"
                         if ident == "in":
-                            feedback += f"\nВНИМАНИЕ: Для объявления фундаментальных типов используйте \\colon (например, x \\colon \\RealNumbers), а для принадлежности к подмножеству — \\TermIn."
+                            feedback += "\nВНИМАНИЕ: Для объявления фундаментальных типов используйте \\colon (например, x \\colon \\RealNumbers), а для принадлежности к подмножеству — \\TermIn."
                         msg += feedback
 
                 elif "expected " in msg:
-                    msg += f"\nСИНТЕЗАТОРУ: Синтаксическая ошибка. Возможно, вы использовали голый LaTeX-макрос, который разрушил парсер Lean. Используйте только разрешенные семантические макросы."
+                    msg += "\nСИНТЕЗАТОРУ: Синтаксическая ошибка. Возможно, вы использовали голый LaTeX-макрос, который разрушил парсер Lean. Используйте только разрешенные семантические макросы."
 
                 messages.append(msg)
 
@@ -554,7 +613,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
                         print("  [-] No implicit assumptions found in preceding pages.")
                         implicit_assumptions = "NONE FOUND" # Mark as checked
             else:
-                print(f"  [!] Syntax/Translation error detected. Routing back to Lean formalizer.")
+                print("  [!] Syntax/Translation error detected. Routing back to Lean formalizer.")
                 syntax_error_feedback = "\n".join(messages)
 
                 # Check for sorry abuse in definitions or theorem formulations
@@ -844,22 +903,24 @@ def main():
         except Exception as e:
             print(f"[synthesizer] [-] Could not generate embedding: {e}")
 
-        cursor.execute("INSERT OR REPLACE INTO entities (entity_id, type, title, path, file_path, lean_path, nl_desc, embedding) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                       (entity_id, entity_type, title, str(file_path.relative_to(PROJECT_ROOT)), str(file_path.relative_to(PROJECT_ROOT)), str(lean_file_path.relative_to(PROJECT_ROOT)) if valid_lean_code else None, nl_desc, embed_blob))
-        print(f"[synthesizer] [OK] DB updated: entities({entity_id})")
-
-        for source in data['sources']:
-            cursor.execute("INSERT INTO formulation_sources (entity_id, source_book) VALUES (?, ?)", (entity_id, source))
-
-        # Map cluster -> entity and record parsed deps
-        cursor.execute("INSERT OR REPLACE INTO cluster_entity_map (cluster_id, entity_id) VALUES (?, ?)", (cid, entity_id))
+        rel_tex = str(file_path.relative_to(PROJECT_ROOT))
+        rel_lean = str(lean_file_path.relative_to(PROJECT_ROOT)) if valid_lean_code else ""
         unique_deps = list({d.strip() for d in data.get('deps', []) if d and isinstance(d, str)})
+
+        # Идемпотентный промоушен черновика в каноническую сущность (через типизированный repo).
+        promote_cluster(
+            conn,
+            cluster_id=cid, entity_id=entity_id, entity_type=entity_type,
+            title=title, nl_desc=nl_desc, tex_path=rel_tex, lean_path=rel_lean,
+            lean_code=valid_lean_code or "",
+            sources=data['sources'], page_refs=data['page_refs'],
+            deps=unique_deps, embed_blob=embed_blob,
+        )
+        print(f"[synthesizer] [OK] DB updated: entities({entity_id})")
         import json as _json
         print(f"[synthesizer] ParsedDeps: {_json.dumps({'entity_id': entity_id, 'deps': unique_deps}, ensure_ascii=False)}", flush=True)
-        for dep in unique_deps:
-            cursor.execute("INSERT INTO pending_edges (source_id, raw_dep, status) VALUES (?, ?, 'pending')", (entity_id, dep))
 
-        # Clean up cache
+        # Clean up cache (черновик промоутнут)
         cursor.execute("DELETE FROM formulation_raw_cache WHERE temp_cluster_id = ?", (cid,))
 
     conn.commit()
