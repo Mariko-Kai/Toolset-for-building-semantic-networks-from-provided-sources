@@ -56,6 +56,26 @@ def missing_representations(required) -> set[str]:
     return {r for r in required if not has_capability(r)}
 
 
+def produce(name: str, *args, **kwargs):
+    """Вызывает продюсер возможности (получить представление). Бросает, если у
+    возможности нет продюсера."""
+    cap = get_capability(name)
+    if cap.producer is None:
+        raise ValueError(f"У возможности '{name}' нет продюсера (representation-only).")
+    return cap.producer(*args, **kwargs)
+
+
+# --- Реальные продюсеры (ленивые, чтобы не тянуть тяжёлые зависимости при импорте) ---
+def _produce_embedding(text: str):
+    from pipeline.model_manager import ModelManager
+    return ModelManager.get_instance().get_embedding(text, role="embed")
+
+
+def _produce_ocr(images: list, prompt: str = "Extract text and math as LaTeX-friendly plain text."):
+    from pipeline.model_manager import ModelManager
+    return ModelManager.get_instance().query_vision(prompt, images, role="cv")
+
+
 def clear_capabilities() -> None:
     """Только для тестов."""
     _CAPS.clear()
@@ -65,10 +85,10 @@ def register_defaults() -> None:
     """Регистрирует базовые возможности математического домена (идемпотентно)."""
     defaults = [
         Capability("extract_text", "raw_text", "Извлечение текстового слоя PDF"),
-        Capability("ocr", "raw_text", "Распознавание сканов через vision-модель"),
+        Capability("ocr", "raw_text", "Распознавание сканов через vision-модель", producer=_produce_ocr),
         Capability("synth_latex", "latex", "Синтез канонического LaTeX"),
         Capability("to_lean", "lean_code", "Трансляция в Lean 4"),
-        Capability("embed", "embedding", "Векторный эмбеддинг для поиска"),
+        Capability("embed", "embedding", "Векторный эмбеддинг для поиска", producer=_produce_embedding),
     ]
     for c in defaults:
         _CAPS.setdefault(c.name, c)

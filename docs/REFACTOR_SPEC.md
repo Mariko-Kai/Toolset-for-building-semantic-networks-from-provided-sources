@@ -308,6 +308,26 @@
 - **Риск:** объём. **Снижение:** строгий порядок этапов; каждый этап самодостаточен и оставляет проект в рабочем состоянии.
 
 ## Журнал прогресса
+- **2026-05-30 — Пост-Этап-5: легаси, драйвер, мониторинг, остальное.**
+  - **Легаси (ruff-долг закрыт):** `ruff check .` чист. Безопасный автофикс по
+    активному коду + ручной разбор. Исправлены латентные баги: f-string системного
+    промпта (`export_to_lean`) с неопределёнными `{R}/{type}/{domain_or_parent}/{concept}`
+    (NameError на не-Goedel); `export_to_lean.main()` вызывал несуществующие
+    `get_graph_from_files`/`topological_sort` (реализованы); дубли ключей MATH_DICT;
+    bare-except; мёртвые `*_AVAILABLE` блоки; неиспользуемые переменные. E402 — в ignore.
+  - **Основной драйвер:** `run_enrichment_orchestrated` + флаг `--orchestrated`
+    (env `MATHESIS_ORCHESTRATED`): шаги конвейера как узлы под Orchestrator с
+    мониторингом и персистенцией RunState; парсинг результата — через node.output, не
+    stdout. Линейный путь сохранён как fallback. `_build_enrichment_commands` (DRY).
+  - **Мониторинг CLI:** `python -m pipeline.monitor` (список/детали/инциденты,
+    `--resolve … --as confirmed|rejected`); `store.list_runs/open_incidents/
+    set_incident_resolution`.
+  - **Мониторинг web:** `/monitor`, `/monitor/{run_id}`, `/api/runs`, `/api/runs/{id}`,
+    `POST /api/incidents/{id}/resolve` (gate человека); шаблоны monitor/run_detail.
+  - **Остальное:** capability-продюсеры привязаны к реальным функциям (`embed`→
+    ModelManager, `ocr`→query_vision) + `capabilities.produce()`; пилотный второй
+    домен `logic_coq` (`mathesis/domains_extra.py`) — проверка домен-агностичности ядра.
+  - 144 теста зелёных; `ruff check .` чист по всему проекту.
 - **2026-05-30 — Этап 5 (переупорядочен для контроля рисков).** Сначала конкретика
   и прогон субстрата на реальной работе, потом абстракции (правило «дважды конкретно
   → потом абстрагировать»).
