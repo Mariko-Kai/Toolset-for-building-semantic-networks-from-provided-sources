@@ -1,0 +1,7 @@
+Based on the investigation of a Mathesis pipeline incident, propose a MINIMAL, SAFE patch plan. The patch will be applied ONLY after explicit human confirmation, via a git branch with the full test suite. Do NOT output code — only the plan.
+
+Root cause: {{root_cause}}
+Findings: {{findings}}
+
+Return ONLY valid JSON with this shape (no prose, no code fences):
+{"summary": "<one line>", "steps": ["<step>", "..."], "files": ["<path>", "..."], "tests": ["<test to add/run>", "..."], "risk": "low|medium|high"}
