@@ -1,129 +1,109 @@
-"""Validation utilities for mathesis.
+"""Проверки целостности канонического графа (ТЗ Этап 2.2).
 
-Checks referential integrity, DAG acyclicity, and data consistency.
+  * битые ссылки — рёбра/алиасы/источники, указывающие на отсутствующие сущности
+    (возможно, если БД собиралась с выключенными FK);
+  * циклы — поиск SCC алгоритмом Тарьяна (итеративно, без рекурсии и без ложных
+    срабатываний наивного рекурсивного DFS);
+  * недоказанные — сущности с lean_status ∈ {sorry, failed}.
 """
-
 from __future__ import annotations
 
 import sqlite3
 
-from . import models
+from .models import ValidationReport
 
 
-def validate(conn: sqlite3.Connection) -> models.ValidationReport:
-    """Run all validation checks and return a report."""
-    report = models.ValidationReport()
-
-    _check_broken_refs(conn, report)
-    _check_dag_cycles(conn, report)
-    _check_orphan_lemmas(conn, report)
-
-    report.is_valid = (
-        not report.broken_refs
-        and not report.cycles
-        and not report.orphan_lemmas
-    )
+def validate(conn: sqlite3.Connection) -> ValidationReport:
+    report = ValidationReport()
+    report.broken_refs = _broken_refs(conn)
+    report.cycles = _find_cycles(conn)
+    report.unproven = _unproven(conn)
+    report.is_valid = not (report.broken_refs or report.cycles)
     return report
 
 
-def _check_broken_refs(conn: sqlite3.Connection,
-                       report: models.ValidationReport) -> None:
-    """Check all FK-like references for dangling IDs."""
-
-    # theorem_object → object
-    for r in conn.execute("""
-        SELECT to2.object_id FROM theorem_object to2
-        LEFT JOIN object o ON o.id = to2.object_id
-        WHERE o.id IS NULL
-    """).fetchall():
-        report.broken_refs.append(f"theorem_object → object '{r[0]}' not found")
-
-    # theorem_property → property
-    for r in conn.execute("""
-        SELECT tp.property_id FROM theorem_property tp
-        LEFT JOIN property p ON p.id = tp.property_id
-        WHERE p.id IS NULL
-    """).fetchall():
-        report.broken_refs.append(f"theorem_property → property '{r[0]}' not found")
-
-    # theorem_operation → operation
-    for r in conn.execute("""
-        SELECT top.operation_id FROM theorem_operation top
-        LEFT JOIN operation op ON op.id = top.operation_id
-        WHERE op.id IS NULL
-    """).fetchall():
-        report.broken_refs.append(
-            f"theorem_operation → operation '{r[0]}' not found"
-        )
-
-    # theorem_axiom → axiom
-    for r in conn.execute("""
-        SELECT ta.axiom_id FROM theorem_axiom ta
-        LEFT JOIN axiom a ON a.id = ta.axiom_id
-        WHERE a.id IS NULL
-    """).fetchall():
-        report.broken_refs.append(f"theorem_axiom → axiom '{r[0]}' not found")
-
-    # theorem_dependency → theorem
-    for r in conn.execute("""
-        SELECT td.used_thm_id FROM theorem_dependency td
-        LEFT JOIN theorem t ON t.id = td.used_thm_id
-        WHERE t.id IS NULL
-    """).fetchall():
-        report.broken_refs.append(
-            f"theorem_dependency → theorem '{r[0]}' not found"
-        )
-
-    # operation.codomain_id → object
-    for r in conn.execute("""
-        SELECT op.id, op.codomain_id FROM operation op
-        LEFT JOIN object o ON o.id = op.codomain_id
-        WHERE op.codomain_id IS NOT NULL AND o.id IS NULL
-    """).fetchall():
-        report.broken_refs.append(
-            f"operation '{r[0]}' → codomain '{r[1]}' not found"
-        )
+def _broken_refs(conn: sqlite3.Connection) -> list[str]:
+    broken: list[str] = []
+    checks = [
+        ("entity_dependency.source_id",
+         "SELECT DISTINCT source_id FROM entity_dependency "
+         "WHERE source_id NOT IN (SELECT entity_id FROM entities)"),
+        ("entity_dependency.target_id",
+         "SELECT DISTINCT target_id FROM entity_dependency "
+         "WHERE target_id NOT IN (SELECT entity_id FROM entities)"),
+        ("alias.entity_id",
+         "SELECT DISTINCT entity_id FROM alias "
+         "WHERE entity_id NOT IN (SELECT entity_id FROM entities)"),
+        ("formulation_sources.entity_id",
+         "SELECT DISTINCT entity_id FROM formulation_sources "
+         "WHERE entity_id NOT IN (SELECT entity_id FROM entities)"),
+    ]
+    for label, sql in checks:
+        for row in conn.execute(sql):
+            broken.append(f"{label} -> {row[0]}")
+    return broken
 
 
-def _check_dag_cycles(conn: sqlite3.Connection,
-                      report: models.ValidationReport) -> None:
-    """Detect cycles in the theorem_dependency graph using DFS."""
-    edges: dict[str, list[str]] = {}
-    for r in conn.execute("SELECT theorem_id, used_thm_id FROM theorem_dependency"):
-        edges.setdefault(r[0], []).append(r[1])
+def _find_cycles(conn: sqlite3.Connection) -> list[list[str]]:
+    """Поиск циклов через сильно связные компоненты (Тарьян, итеративно)."""
+    adj: dict[str, list[str]] = {}
+    for src, tgt in conn.execute("SELECT source_id, target_id FROM entity_dependency"):
+        adj.setdefault(src, []).append(tgt)
+        adj.setdefault(tgt, [])
 
-    visited: set[str] = set()
-    in_stack: set[str] = set()
-    path: list[str] = []
+    index_counter = [0]
+    indexes: dict[str, int] = {}
+    lowlink: dict[str, int] = {}
+    on_stack: dict[str, bool] = {}
+    stack: list[str] = []
+    cycles: list[list[str]] = []
 
-    def dfs(node: str) -> None:
-        if node in in_stack:
-            cycle_start = path.index(node)
-            report.cycles.append(path[cycle_start:] + [node])
-            return
-        if node in visited:
-            return
-        visited.add(node)
-        in_stack.add(node)
-        path.append(node)
-        for neighbor in edges.get(node, []):
-            dfs(neighbor)
-        path.pop()
-        in_stack.discard(node)
+    for start in list(adj.keys()):
+        if start in indexes:
+            continue
+        # Итеративный Тарьян: work-stack из (узел, итератор по соседям).
+        work = [(start, iter(adj[start]))]
+        indexes[start] = lowlink[start] = index_counter[0]
+        index_counter[0] += 1
+        stack.append(start)
+        on_stack[start] = True
 
-    for node in edges:
-        if node not in visited:
-            dfs(node)
+        while work:
+            node, it = work[-1]
+            advanced = False
+            for w in it:
+                if w not in indexes:
+                    indexes[w] = lowlink[w] = index_counter[0]
+                    index_counter[0] += 1
+                    stack.append(w)
+                    on_stack[w] = True
+                    work.append((w, iter(adj[w])))
+                    advanced = True
+                    break
+                elif on_stack.get(w):
+                    lowlink[node] = min(lowlink[node], indexes[w])
+            if advanced:
+                continue
+            work.pop()
+            if work:
+                parent = work[-1][0]
+                lowlink[parent] = min(lowlink[parent], lowlink[node])
+            if lowlink[node] == indexes[node]:
+                comp = []
+                while True:
+                    w = stack.pop()
+                    on_stack[w] = False
+                    comp.append(w)
+                    if w == node:
+                        break
+                # Цикл = SCC размера >1 ИЛИ петля сама на себя.
+                if len(comp) > 1 or (comp[0] in adj.get(comp[0], [])):
+                    cycles.append(sorted(comp))
+    return cycles
 
 
-def _check_orphan_lemmas(conn: sqlite3.Connection,
-                         report: models.ValidationReport) -> None:
-    """Find lemmas whose parent_theorem_id points to a non-existent theorem."""
-    for r in conn.execute("""
-        SELECT l.id, l.parent_theorem_id FROM theorem l
-        LEFT JOIN theorem p ON p.id = l.parent_theorem_id
-        WHERE l.subtype = 'lemma' AND p.id IS NULL
-    """).fetchall():
-        report.orphan_lemmas.append(
-            f"lemma '{r[0]}' → parent '{r[1]}' not found"
-        )
+def _unproven(conn: sqlite3.Connection) -> list[str]:
+    rows = conn.execute(
+        "SELECT entity_id FROM entities WHERE lean_status IN ('sorry','failed') ORDER BY entity_id"
+    )
+    return [r[0] for r in rows]

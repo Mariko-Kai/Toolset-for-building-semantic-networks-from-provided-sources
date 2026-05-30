@@ -29,8 +29,11 @@ class ValidationError(MathesisError):
     pass
 
 
-class IndexError(MathesisError):
-    """Raised when indexing .tex files fails."""
+class MathesisIndexError(MathesisError):
+    """Raised when indexing .tex files fails.
+
+    Назван MathesisIndexError, чтобы не затенять встроенный IndexError.
+    """
     pass
 
 

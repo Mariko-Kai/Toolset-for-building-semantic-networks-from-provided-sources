@@ -86,6 +86,16 @@ def sample_content(tmp_path) -> Path:
     return content
 
 
+@pytest.fixture
+def canon_conn(tmp_path):
+    """Соединение со свежей канонической схемой Mathesis (Этап 2)."""
+    from mathesis import db as mdb
+    conn = mdb.connect(str(tmp_path / "canon.db"))
+    mdb.init_schema(conn)
+    yield conn
+    conn.close()
+
+
 class FakeModelManager:
     """Детерминированная замена ModelManager для тестов (без сети).
 

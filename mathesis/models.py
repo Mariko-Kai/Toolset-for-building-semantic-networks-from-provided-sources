@@ -1,184 +1,127 @@
-"""Data models for mathesis entities.
+"""Типизированные модели канонической схемы Mathesis (ТЗ Этап 2.2).
 
-All models are plain dataclasses — no ORM dependency.
-Core module uses these for input/output; transports serialize them as needed.
+Спина модели — единая сущность `Entity` с осью `kind ∈ {def, prop}` (зеркало
+Lean). Прежняя ветвистая таксономия (object/property/operation/theorem/axiom)
+свёрнута в `kind` + типизированные рёбра `Dependency`.
 """
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Optional
 
 
-# ---------------------------------------------------------------------------
-# Core entity models
-# ---------------------------------------------------------------------------
+class Kind(str, Enum):
+    """Ось знаний = ось Lean. Только два значения; axiom — НЕ отдельный вид."""
+    DEF = "def"
+    PROP = "prop"
+
+
+class LeanStatus(str, Enum):
+    UNVALIDATED = "unvalidated"
+    VALID = "valid"
+    SORRY = "sorry"      # компилируется, но доказательство = sorry
+    FAILED = "failed"
+
+
+class LeanDecl(str, Enum):
+    """Форма Lean-декларации. 'axiom' допустим (постулируется без доказательства)."""
+    DEF = "def"
+    ABBREV = "abbrev"
+    STRUCTURE = "structure"
+    CLASS = "class"
+    INSTANCE = "instance"
+    THEOREM = "theorem"
+    LEMMA = "lemma"
+    AXIOM = "axiom"
+
+
+class DepRole(str, Enum):
+    USES = "uses"
+    GENERALIZES = "generalizes"
+    INSTANCE_OF = "instance_of"
+    PROOF_USES = "proof_uses"
+    COMPONENT = "component"
+
 
 @dataclass
-class Axiom:
+class Entity:
+    """Каноническая сущность графа знаний."""
     id: str
-    name: str
-    system: str                     # 'ZFC' | 'FOL' | 'Tool'
-    statement: str                  # LaTeX
-    file_path: str = ""
-
-
-@dataclass
-class Object:
-    id: str
-    name: str
+    kind: str                       # 'def' | 'prop'
+    title: str
+    module: str = ""
+    nl_desc: str = ""
+    latex: str = ""                 # канонический формальный LaTeX
+    lean_code: str = ""
+    lean_decl: str = ""             # форма Lean-декларации (вкл. 'axiom')
+    lean_status: str = "unvalidated"
+    tex_path: str = ""              # относительный путь .tex (колонка file_path)
+    lean_path: str = ""
+    path: str = ""                  # легаси: директория .tex
     aliases: list[str] = field(default_factory=list)
-    module: str = ""
-    formal_definition: str = ""     # LaTeX
-    intuition: str = ""             # LaTeX
-    file_path: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+
+    @property
+    def is_axiomatic(self) -> bool:
+        """Постулируется без доказательства (Lean-декларация axiom)."""
+        return self.lean_decl == "axiom"
 
 
 @dataclass
-class Property:
-    id: str
-    name: str
-    aliases: list[str] = field(default_factory=list)
-    module: str = ""
-    formal_definition: str = ""     # LaTeX
-    equivalent_forms: str = ""      # LaTeX, optional
-    file_path: str = ""
+class Dependency:
+    """Типизированное ребро графа: source зависит от target."""
+    source_id: str
+    target_id: str
+    role: str = "uses"
+    proof_step: str = ""
 
 
 @dataclass
-class Operation:
-    id: str
-    name: str
-    aliases: list[str] = field(default_factory=list)
-    module: str = ""
-    arity: int = 1
-    formal_definition: str = ""     # LaTeX
-    codomain_id: Optional[str] = None
-    file_path: str = ""
-
-
-@dataclass
-class OperationArgument:
-    operation_id: str
-    position: int
-    object_id: str
-    role: str = "operand"           # 'operand' | 'parameter'
-
-
-@dataclass
-class Theorem:
-    id: str
-    name: str
-    subtype: str = "theorem"        # 'theorem' | 'lemma'
-    parent_theorem_id: Optional[str] = None
-    module: str = ""
-    statement: str = ""             # LaTeX
-    proof: str = ""                 # LaTeX
-    strategy: str = ""              # proof method summary
-    file_path: str = ""
-
-
-# ---------------------------------------------------------------------------
-# Relationship / junction models
-# ---------------------------------------------------------------------------
-
-@dataclass
-class ObjectProperty:
-    """M:N link between Object and Property, with optional context."""
-    id: Optional[int] = None        # surrogate PK
-    object_id: str = ""
-    property_id: str = ""
-    context: Optional[str] = None   # LaTeX, e.g. "на $(0,1)$"
-    context_ref: Optional[str] = None  # FK → object.id
-
-
-@dataclass
-class TheoremDependency:
-    """Logical DAG edge: theorem uses another theorem in its proof."""
-    theorem_id: str = ""
-    used_thm_id: str = ""
-    proof_step: str = ""            # e.g. "Step 3"
+class Source:
+    """Провенанс: откуда извлечена сущность."""
+    entity_id: str
+    source_book: str
+    page_info: str = ""
+    id: Optional[int] = None
 
 
 @dataclass
 class Equivalence:
-    """Symmetric equivalence between two entities."""
-    entity_a_id: str = ""
-    entity_b_id: str = ""
-    proof_id: Optional[str] = None  # FK → theorem.id
+    entity_a_id: str
+    entity_b_id: str
+    proof_id: Optional[str] = None
 
-
-@dataclass
-class ObjectComposition:
-    """Container object (space) is composed of components."""
-    container_id: str = ""
-    obj_comp_id: Optional[str] = None
-    prop_comp_id: Optional[str] = None
-    op_comp_id: Optional[str] = None
-    role: str = ""                  # 'base_set' | 'structure' | 'axiom'
-
-    @property
-    def component_id(self) -> str:
-        return self.obj_comp_id or self.prop_comp_id or self.op_comp_id or ""
-
-    @property
-    def component_type(self) -> str:
-        if self.obj_comp_id:
-            return "object"
-        if self.prop_comp_id:
-            return "property"
-        if self.op_comp_id:
-            return "operation"
-        return ""
-
-
-# ---------------------------------------------------------------------------
-# Aggregate / result models
-# ---------------------------------------------------------------------------
 
 @dataclass
 class TraceNode:
-    """A node in the axiom-trace tree."""
+    """Узел трассировки к корням (аксиоматичным сущностям или листьям DAG)."""
     id: str
-    name: str
-    subtype: str = "theorem"
+    title: str
+    kind: str = "prop"
     depth: int = 0
-    axiom_ids: list[str] = field(default_factory=list)
-
-
-@dataclass
-class UsedByResult:
-    """Backlinks: which entities reference a given entity."""
-    entity_id: str = ""
-    theorems: list[Theorem] = field(default_factory=list)
-    objects: list[Object] = field(default_factory=list)
-    properties: list[Property] = field(default_factory=list)
-    operations: list[Operation] = field(default_factory=list)
+    is_root: bool = False
 
 
 @dataclass
 class SearchResult:
     id: str
-    name: str
-    entity_type: str                # 'object' | 'property' | 'operation' | 'theorem' | 'axiom'
-    snippet: str = ""               # FTS match snippet
+    title: str
+    kind: str                       # 'def' | 'prop'
+    snippet: str = ""
 
 
 @dataclass
-class IndexReport:
-    """Result of a reindex operation."""
-    objects: int = 0
-    properties: int = 0
-    operations: int = 0
-    theorems: int = 0
-    axioms: int = 0
-    errors: list[str] = field(default_factory=list)
+class UsedByResult:
+    """Обратные ссылки: какие сущности зависят от данной."""
+    entity_id: str = ""
+    used_by: list[Entity] = field(default_factory=list)
 
 
 @dataclass
 class ValidationReport:
-    """Result of a validation pass."""
     is_valid: bool = True
-    broken_refs: list[str] = field(default_factory=list)
-    cycles: list[list[str]] = field(default_factory=list)
-    orphan_lemmas: list[str] = field(default_factory=list)
+    broken_refs: list[str] = field(default_factory=list)   # рёбра на несуществующие id
+    cycles: list[list[str]] = field(default_factory=list)  # циклы в графе
+    unproven: list[str] = field(default_factory=list)      # lean_status sorry/failed
