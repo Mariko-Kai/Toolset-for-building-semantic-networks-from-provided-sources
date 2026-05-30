@@ -148,8 +148,12 @@
 - **Целевая схема (спина = Lean):**
   - `entity`:
     - `id TEXT PK` (slug, напр. `def-real-analysis-limit`)
-    - `kind TEXT CHECK(kind IN ('def','prop','axiom'))` — ось Lean
-    - `lean_decl TEXT` — конкретная форма (`def|abbrev|structure|class|instance|theorem|lemma|axiom`)
+    - `kind TEXT CHECK(kind IN ('def','prop'))` — **строго бинарная ось Lean (def / prop)**.
+      Отдельного вида `axiom` НЕТ: аксиомы вносятся как `def` (постулируют объект/структуру)
+      или `prop` (постулируют утверждение) — по контексту.
+    - `lean_decl TEXT` — конкретная форма Lean-декларации (`def|abbrev|structure|class|instance|theorem|lemma|axiom`).
+      «Аксиоматичность» (постулируется без доказательства) выражается здесь: `lean_decl='axiom'`
+      на prop-сущности — а не отдельным видом в графе знаний.
     - `title TEXT`, `module TEXT`, `nl_desc TEXT`
     - `latex TEXT` (канонический формальный LaTeX)
     - `lean_code TEXT`, `lean_status TEXT CHECK(... IN ('unvalidated','valid','sorry','failed'))`
@@ -163,14 +167,18 @@
   - `entity_fts` — FTS5 по `title, nl_desc, latex` (`unicode61`).
   - **Индексы** на `entity.kind`, `entity.module`, FK-колонки рёбер/источников.
 - **Staging (отдельный жизненный цикл, можно очищать):** `raw_formulation` (бывший `formulation_raw_cache`), `cluster_entity_map`, `pending_edges`.
-- **Приёмка:** `docs/architecture/data_model.md` с ER-описанием и маппингом старых таксономий (object→`kind=def`/role, theorem→`kind=prop`, и т.д.); ревью схемы.
+- **Приёмка:** `docs/architecture/data_model.md` с ER-описанием и маппингом старых таксономий
+  (object/operation → `kind=def`; theorem/lemma/property → `kind=prop`; аксиома → `def`|`prop`
+  с `lean_decl='axiom'` при необходимости); ревью схемы.
 
 ### 2.2 Слой доступа `mathesis/` как типизированный API над единой схемой
 - **Мотивация:** объединить два слоя в один источник истины с типобезопасным API.
 - **Файлы:** `mathesis/db.py` (connection: WAL, FK, единый путь из конфига), `mathesis/models.py` (dataclasses `Entity`, `Dependency`, `Source`, `Equivalence`; enum'ы `Kind`, `LeanDecl`, `DepRole`, `LeanStatus`), `mathesis/repo.py` (CRUD + граф), `mathesis/validator.py` (целостность).
 - **Что сделать:**
   - CRUD по `entity`/рёбрам с валидацией enum на входе.
-  - Граф: `trace_to_axioms` (recursive CTE), `get_used_by` (через `set`, без питоновского `any()`), `get_full_dag`.
+  - Граф: `trace_to_roots` (recursive CTE; трассировка обрывается на аксиоматичных
+    сущностях `lean_decl='axiom'` или листьях DAG — отдельного вида `axiom` нет),
+    `get_used_by` (через `set`, без питоновского `any()`), `get_full_dag`.
   - FTS-поиск с пагинацией.
   - Валидатор: битые ссылки, циклы (Tarjan SCC вместо рекурсивного DFS), сироты, учёт `sorry`/`lean_status`.
   - Убрать дубль `IndexError` (→ `MathesisIndexError`).
@@ -300,6 +308,31 @@
 - **Риск:** объём. **Снижение:** строгий порядок этапов; каждый этап самодостаточен и оставляет проект в рабочем состоянии.
 
 ## Журнал прогресса
+- **2026-05-30 — Этап 2 завершён.** Консолидация модели данных вокруг оси Lean def/prop.
+  - **2.1** `mathesis/schema.py` — единая каноническая схема (надмножество прежней
+    плоской): `entities` (kind=type∈{def,prop}+CHECK, lean_decl/lean_code/lean_status,
+    latex, module, created/updated), `alias`, `formulation_sources`, типизированный
+    `entity_dependency` (role+proof_step), `equivalence`, `entity_fts` (FTS5), индексы,
+    staging; версия в `schema_meta`. `docs/architecture/data_model.md`. Вид `axiom`
+    убран (аксиома = def|prop + lean_decl='axiom').
+  - **2.2** Типизированный слой: `models.py` (Entity + enum'ы), `db.py` (connect/init/
+    надёжный reset/версия), `repo.py` (CRUD, FTS, типизированный граф, trace_to_roots),
+    `validator.py` (битые ссылки, циклы Тарьяна, недоказанные), фасад `core.py`;
+    `IndexError`→`MathesisIndexError`; удалён мёртвый `queries.py`.
+  - **2.3** Единый путь к БД (`config.get_db_path`, env override); `init_db` →
+    каноническая схема; общий `actualize_db.rebuild()` через типизированный repo
+    (автонаполнение FTS/алиасов); `reseed_db` — обёртка без эмбеддингов. Проверено
+    реальной пересборкой из content/ (97 сущностей, FTS, version=2).
+  - **2.4** `canonical_synthesizer.promote_cluster` — идемпотентный staging→promotion
+    через repo (синтезированные сущности теперь попадают в FTS — исправлен баг
+    невидимости в поиске); сохраняются lean_code/status/decl. Экстракция пишет только
+    в staging.
+  - **2.5** `web/app.py` на канонический API: единый путь к БД; 4 детальных роута →
+    единый `/entity/{id}` (+ старые пути как алиасы); `entity.html` переписан;
+    удалены мёртвые импорты. Тесты web через TestClient.
+  - 54 теста зелёные (добавлено 27); новый/затронутый код чист по ruff. В крупных
+    легаси-файлах остаются единичные пред-существующие замечания (bare except, пробелы
+    в промптах) — чистятся постепенно.
 - **2026-05-30 — Этап 1 завершён.** Стабильность подпроцессов и конвейера.
   - **1.1** Новый `mathesis/proc.py`: `kill_process_tree` (psutil, убийство дерева,
     кроссплатформенно, деградация без psutil), `run_with_timeout` (поток+join),
