@@ -18,6 +18,38 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+
+def _load_dotenv() -> None:
+    """Загружает .env (ключи провайдеров по умолчанию) в os.environ как можно
+    раньше — до того, как стратегии моделей прочитают переменные окружения.
+
+    Использует python-dotenv, если он установлен; иначе — простой встроенный
+    парсер KEY=VALUE (чтобы .env работал и без зависимости). Существующие
+    переменные окружения НЕ перезаписываются (setdefault).
+    """
+    env_path = PROJECT_ROOT / ".env"
+    if not env_path.exists():
+        return
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(env_path)  # не перезаписывает уже заданные переменные
+        return
+    except ImportError:
+        pass
+    try:
+        for raw in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+    except OSError:
+        pass
+
+
+_load_dotenv()
+
+
 # Единый источник истины для пути к канонической БД (ТЗ Этап 2.3).
 # Переопределяется через переменную окружения MATHESIS_DB_PATH (полезно для тестов/CI).
 def get_db_path() -> str:

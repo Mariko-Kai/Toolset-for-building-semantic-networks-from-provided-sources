@@ -6,7 +6,6 @@ from pathlib import Path
 import yaml
 import fitz  # PyMuPDF
 from google import genai
-from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 BOOKS_DIR = PROJECT_ROOT / "Books"
@@ -18,7 +17,8 @@ import sys
 sys.path.append(str(PROJECT_ROOT))
 from pipeline.pdftoimages.pdf_to_images import BOOK_REGISTRY
 
-load_dotenv(PROJECT_ROOT / ".env")
+# .env загружается централизованно в pipeline.config (с фолбэком без python-dotenv).
+from pipeline import config as _config  # noqa: F401
 
 def get_ranked_books(discipline="mathematical_analysis"):
     """Reads registry and returns ordered list of book keys."""

@@ -51,5 +51,6 @@ build/
 mathesis_index.db-shm
 mathesis_index.db-wal
 
-# API Configuration
+# API Configuration / secrets
 api_config.json
+.env
