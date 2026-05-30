@@ -22,6 +22,17 @@ def web_client(tmp_path, monkeypatch):
                                     aliases=["X"]))
     repo.upsert_entity(conn, Entity(id="prop-y", kind="prop", title="Утверждение Игрек"))
     repo.add_dependency(conn, Dependency("prop-y", "def-x"))
+    # Сидируем прогон и инцидент для монитора.
+    from pipeline.nodes import NodeResult, NodeStatus
+    from pipeline.orchestration.incidents import Incident
+    from pipeline.orchestration.state import RunState
+    from pipeline.orchestration.store import save_incident, save_run_state
+    st = RunState(run_id="run-1")
+    st.record_start("synth")
+    st.record_result("synth", NodeResult(NodeStatus.DEVIATION, message="0 entities"))
+    st.status = "paused"
+    save_run_state(conn, st)
+    save_incident(conn, Incident(run_id="run-1", node="synth", status="deviation", severity="warning"))
     conn.close()
 
     import web.app as webapp
@@ -63,3 +74,30 @@ def test_missing_entity_404(web_client):
 def test_catalog_and_index_ok(web_client):
     assert web_client.get("/catalog").status_code == 200
     assert web_client.get("/").status_code == 200
+
+
+def test_monitor_page_lists_run(web_client):
+    r = web_client.get("/monitor")
+    assert r.status_code == 200
+    assert "run-1" in r.text
+    assert "synth" in r.text  # открытый инцидент
+
+
+def test_monitor_run_detail(web_client):
+    r = web_client.get("/monitor/run-1")
+    assert r.status_code == 200
+    assert "0 entities" in r.text
+    assert web_client.get("/monitor/missing").status_code == 404
+
+
+def test_api_runs_and_resolve(web_client):
+    data = web_client.get("/api/runs").json()
+    assert any(run["run_id"] == "run-1" for run in data["runs"])
+    detail = web_client.get("/api/runs/run-1").json()
+    assert detail["status"] == "paused"
+    assert len(detail["incidents"]) == 1
+    iid = detail["incidents"][0]["id"]
+    resp = web_client.post(f"/api/incidents/{iid}/resolve?resolution=confirmed")
+    assert resp.status_code == 200
+    # инцидент больше не «открыт» -> на странице монитора его нет
+    assert "Открытых инцидентов нет" in web_client.get("/monitor").text

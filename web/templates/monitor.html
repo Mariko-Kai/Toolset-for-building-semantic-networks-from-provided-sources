@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Монитор прогонов{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="/catalog">Каталог</a><span class="bc-sep">/</span><span class="bc-current">Монитор</span></div>
+
+<article class="entity-detail">
+    <div class="detail-section">
+        <h2>Открытые инциденты</h2>
+        {% if incidents %}
+        <table class="args-table">
+            <thead><tr><th>ID</th><th>Прогон</th><th>Узел</th><th>Статус</th><th>Важность</th><th></th></tr></thead>
+            <tbody>
+            {% for i in incidents %}
+                <tr>
+                    <td>{{ i.id }}</td>
+                    <td><a href="/monitor/{{ i.run_id }}">{{ i.run_id }}</a></td>
+                    <td>{{ i.node }}</td>
+                    <td>{{ i.status }}</td>
+                    <td>{{ i.severity }}</td>
+                    <td>
+                        <button onclick="resolve({{ i.id }}, 'confirmed')">Подтвердить</button>
+                        <button onclick="resolve({{ i.id }}, 'rejected')">Отклонить</button>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}<p>Открытых инцидентов нет.</p>{% endif %}
+    </div>
+
+    <div class="detail-section">
+        <h2>Прогоны</h2>
+        {% if runs %}
+        <table class="args-table">
+            <thead><tr><th>Run ID</th><th>Статус</th><th>Узлов</th><th>Отклон.</th><th>Сбоев</th><th>Обновлён</th></tr></thead>
+            <tbody>
+            {% for r in runs %}
+                <tr>
+                    <td><a href="/monitor/{{ r.run_id }}">{{ r.run_id }}</a></td>
+                    <td><span class="detail-status status-{{ r.status }}">{{ r.status }}</span></td>
+                    <td>{{ r.health.get('nodes_total', 0) }}</td>
+                    <td>{{ r.health.get('deviations', 0) }}</td>
+                    <td>{{ r.health.get('failures', 0) }}</td>
+                    <td>{{ (r.updated_at or '')[:19] }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}<p>Прогонов пока нет.</p>{% endif %}
+    </div>
+</article>
+
+<script>
+async function resolve(id, resolution) {
+    await fetch(`/api/incidents/${id}/resolve?resolution=${resolution}`, {method: 'POST'});
+    location.reload();
+}
+</script>
+{% endblock %}

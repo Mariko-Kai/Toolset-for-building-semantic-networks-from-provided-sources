@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Прогон {{ run.run_id }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="/monitor">Монитор</a><span class="bc-sep">/</span><span class="bc-current">{{ run.run_id }}</span>
+</div>
+
+<article class="entity-detail">
+    <div class="detail-header">
+        <div>
+            <h1>{{ run.run_id }}</h1>
+            <div class="detail-meta">
+                <span class="detail-status status-{{ run.status }}">{{ run.status }}</span>
+                <span class="detail-module">обновлён: {{ (run.updated_at or '')[:19] }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-section">
+        <h2>Здоровье</h2>
+        <div class="formula-block">{{ run.health }}</div>
+    </div>
+
+    {% if run.incidents %}
+    <div class="detail-section">
+        <h2>Инциденты</h2>
+        <table class="args-table">
+            <thead><tr><th>ID</th><th>Узел</th><th>Статус</th><th>Важность</th><th>Резолюция</th></tr></thead>
+            <tbody>
+            {% for i in run.incidents %}
+                <tr><td>{{ i.id }}</td><td>{{ i.node }}</td><td>{{ i.status }}</td><td>{{ i.severity }}</td><td>{{ i.resolution }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <div class="detail-section">
+        <h2>События</h2>
+        <table class="args-table">
+            <thead><tr><th>#</th><th>Узел</th><th>Событие</th><th>Статус</th><th>Сообщение</th></tr></thead>
+            <tbody>
+            {% for e in run.events %}
+                <tr><td>{{ e.seq }}</td><td>{{ e.node }}</td><td>{{ e.kind }}</td><td>{{ e.status }}</td><td>{{ e.message }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</article>
+{% endblock %}

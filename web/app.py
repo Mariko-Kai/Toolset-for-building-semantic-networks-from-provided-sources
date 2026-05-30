@@ -555,6 +555,55 @@ async def axiom_page(request: Request, id: str):
 
 
 # ---------------------------------------------------------------------------
+# Monitor: orchestrator runs, events, incidents (ТЗ: мониторинг в web)
+# ---------------------------------------------------------------------------
+from pipeline.orchestration import (  # noqa: E402
+    list_runs as _list_runs,
+    load_run as _load_run,
+    open_incidents as _open_incidents,
+    set_incident_resolution as _set_incident_resolution,
+)
+
+
+@app.get("/monitor", response_class=HTMLResponse)
+async def monitor_page(request: Request):
+    return templates.TemplateResponse("monitor.html", {
+        "request": request,
+        "runs": _list_runs(kb.conn, 100),
+        "incidents": _open_incidents(kb.conn),
+    })
+
+
+@app.get("/monitor/{run_id}", response_class=HTMLResponse)
+async def monitor_run_page(request: Request, run_id: str):
+    run = _load_run(kb.conn, run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found")
+    return templates.TemplateResponse("run_detail.html", {"request": request, "run": run})
+
+
+@app.get("/api/runs")
+async def api_runs(limit: int = 100):
+    return {"runs": _list_runs(kb.conn, limit)}
+
+
+@app.get("/api/runs/{run_id}")
+async def api_run(run_id: str):
+    run = _load_run(kb.conn, run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="not found")
+    return run
+
+
+@app.post("/api/incidents/{incident_id}/resolve")
+async def api_resolve_incident(incident_id: int, resolution: str = "confirmed"):
+    if resolution not in ("confirmed", "rejected", "applied"):
+        raise HTTPException(status_code=400, detail="invalid resolution")
+    _set_incident_resolution(kb.conn, incident_id, resolution)
+    return {"incident_id": incident_id, "resolution": resolution}
+
+
+# ---------------------------------------------------------------------------
 # WebSocket Connection Manager & Async Compilation
 # ---------------------------------------------------------------------------
 
