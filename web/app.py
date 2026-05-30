@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 
 from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -22,8 +22,8 @@ from fastapi.templating import Jinja2Templates
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from mathesis import MathesisDB, EntityNotFoundError
-from pipeline.logging_utils import normalize_pipeline_log_line as normalize_pipeline_stdout
+from mathesis import MathesisDB  # noqa: E402  (импорт после настройки sys.path)
+from pipeline.config import get_db_path  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Compiler Global State (for multiplayer sync)
@@ -45,7 +45,7 @@ api_config = None
 
 def load_or_create_api_config():
     config_path = PROJECT_ROOT / "api_config.json"
-    
+
     # 1. Fetch defaults from pipeline.config
     try:
         from pipeline.config import get_default_provider, get_default_model
@@ -95,12 +95,12 @@ def load_or_create_api_config():
         try:
             content = config_path.read_text(encoding='utf-8').strip()
             if not content:
-                print(f"[config] api_config.json is empty. Generating default configuration.")
+                print("[config] api_config.json is empty. Generating default configuration.")
             else:
                 config = json.loads(content)
         except Exception as e:
             print(f"[config] Error reading/parsing api_config.json: {e}. Re-generating standard defaults.")
-            
+
     if not config:
         config = default_config
         try:
@@ -122,7 +122,7 @@ def load_or_create_api_config():
         if updated:
             try:
                 config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding='utf-8')
-                print(f"[config] Updated api_config.json with missing fields.")
+                print("[config] Updated api_config.json with missing fields.")
             except Exception as e:
                 print(f"[config] Failed to update api_config.json: {e}")
 
@@ -139,7 +139,7 @@ def load_or_create_api_config():
     for k, prov in config.get("providers", {}).items():
         model = config.get("models", {}).get(k, "")
         print(f"  - Module '{k}': provider = {prov}, model = {model}")
-        
+
     return config
 
 # ---------------------------------------------------------------------------
@@ -156,8 +156,8 @@ WEB_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=WEB_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=WEB_DIR / "templates")
 
-DB_PATH = PROJECT_ROOT / "db" / "mathesis_index.db"
-kb = MathesisDB(str(DB_PATH))
+DB_PATH = get_db_path()  # единый источник пути к БД (pipeline.config)
+kb = MathesisDB(DB_PATH)
 
 
 # ---------------------------------------------------------------------------
@@ -166,7 +166,7 @@ kb = MathesisDB(str(DB_PATH))
 if os.name == 'nt':
     import ctypes
     from ctypes import wintypes
-    
+
     JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
     JobObjectExtendedLimitInformation = 9
 
@@ -205,10 +205,10 @@ if os.name == 'nt':
 
     try:
         kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
-        
+
         kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p]
         kernel32.CreateJobObjectW.restype = wintypes.HANDLE
-        
+
         kernel32.SetInformationJobObject.argtypes = [
             wintypes.HANDLE,
             ctypes.c_int,
@@ -216,10 +216,10 @@ if os.name == 'nt':
             wintypes.DWORD
         ]
         kernel32.SetInformationJobObject.restype = wintypes.BOOL
-        
+
         kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
         kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
-        
+
         kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
         kernel32.CloseHandle.restype = wintypes.BOOL
     except Exception as e:
@@ -231,15 +231,15 @@ def start_cloudflare_tunnel():
     if not cloudflared_exe.exists():
         print(f"[cloudflared] Executable not found at {cloudflared_exe}")
         return
-        
+
     cmd = [str(cloudflared_exe), "tunnel", "--url", "http://127.0.0.1:8000"]
     print(f"[cloudflared] Starting tunnel: {' '.join(cmd)}")
-    
+
     # Start process and redirect stderr to stdout
     kwargs = {}
     if os.name == 'nt':
         kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
-        
+
     process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
@@ -250,14 +250,14 @@ def start_cloudflare_tunnel():
         **kwargs
     )
     app.state.cloudflared_process = process
-    
+
     if os.name == 'nt':
         try:
             hJob = kernel32.CreateJobObjectW(None, None)
             if hJob:
                 info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
                 info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
-                
+
                 res = kernel32.SetInformationJobObject(
                     hJob,
                     JobObjectExtendedLimitInformation,
@@ -277,7 +277,7 @@ def start_cloudflare_tunnel():
                     kernel32.CloseHandle(hJob)
         except Exception as e:
             print(f"[cloudflared] Error setting up Windows Job Object: {e}")
-    
+
     # Read output to find trycloudflare URL
     for line in iter(process.stdout.readline, ""):
         print(f"[cloudflared] {line.strip()}")
@@ -293,7 +293,7 @@ def start_cloudflare_tunnel():
                     manager.broadcast({"type": "cloudflare_url", "url": url}),
                     main_loop
                 )
-            
+
     process.stdout.close()
     process.wait()
 
@@ -455,12 +455,12 @@ async def catalog_page(request: Request):
                 cache_data = {}
 
     defs, props = [], []
-    
+
     try:
         cursor = kb.conn.cursor()
         cursor.execute("SELECT entity_id, type, title FROM entities ORDER BY entity_id")
         rows = cursor.fetchall()
-        
+
         for eid, etype, title in rows:
             cdata = cache_data.get(eid, {})
             entity = {
@@ -484,173 +484,74 @@ async def catalog_page(request: Request):
     })
 
 
-@app.get("/axioms/{id}", response_class=HTMLResponse)
-async def axiom_page(request: Request, id: str):
-    try:
-        entity = kb.get_axiom(id)
-    except EntityNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Axiom '{id}' not found")
-
-    used_by = kb.get_used_by(id)
-    
-    # Inject natural language description if available
+def _load_nl_cache() -> dict:
+    """Загружает кэш русскоязычных переводов (имя/описание), если он есть."""
     cache_path = PROJECT_ROOT / "output" / "nl_translations_cache.json"
     if cache_path.exists():
         try:
             with open(cache_path, "r", encoding="utf-8") as f:
-                cache_data = json.load(f)
-                if id in cache_data and cache_data[id].get("desc_ru"):
-                    entity.statement = cache_data[id]["desc_ru"]
+                return json.load(f)
         except Exception:
-            pass
+            return {}
+    return {}
+
+
+def _render_entity(request: Request, id: str):
+    """Единый рендер страницы сущности по канонической модели (def|prop).
+
+    После консолидации все сущности живут в одной таблице, поэтому тип в URL
+    больше не важен — берём по id. Старые пути сохранены как алиасы.
+    """
+    entity = kb.find_entity(id)
+    if entity is None:
+        raise HTTPException(status_code=404, detail=f"Entity '{id}' not found")
+
+    cache = _load_nl_cache().get(id, {})
+    if cache.get("name_ru"):
+        entity.title = cache["name_ru"]
+    if cache.get("desc_ru"):
+        entity.nl_desc = cache["desc_ru"]
+
+    used_by = kb.get_used_by(id)
+    dependencies = kb.get_dependencies(id)
+    sources = kb.get_sources(id)
+    meta = ENTITY_TYPES.get(entity.kind, {"name_ru": entity.kind, "icon": "?", "color": "#888"})
 
     return templates.TemplateResponse("entity.html", {
         "request": request,
         "entity": entity,
-        "entity_type": "axiom",
-        "meta": ENTITY_TYPES["axiom"],
+        "entity_type": entity.kind,
+        "meta": meta,
         "used_by": used_by,
-        "extra": {"system": entity.system},
+        "dependencies": dependencies,
+        "sources": sources,
     })
 
 
+@app.get("/entity/{id}", response_class=HTMLResponse)
+async def entity_page(request: Request, id: str):
+    return _render_entity(request, id)
+
+
+# Обратная совместимость старых ссылок (object/property/operation/axiom -> единый рендер).
 @app.get("/objects/{id}", response_class=HTMLResponse)
 async def object_page(request: Request, id: str):
-    try:
-        entity = kb.get_object(id)
-    except EntityNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Object '{id}' not found")
-
-    props = kb.get_object_properties(id)
-    used_by = kb.get_used_by(id)
-    
-    # Inject natural language description if available
-    cache_path = PROJECT_ROOT / "output" / "nl_translations_cache.json"
-    if cache_path.exists():
-        try:
-            with open(cache_path, "r", encoding="utf-8") as f:
-                cache_data = json.load(f)
-                if id in cache_data and cache_data[id].get("desc_ru"):
-                    entity.formal_definition = cache_data[id]["desc_ru"]
-        except Exception:
-            pass
-
-    # Resolve property names
-    prop_details = []
-    for p in props:
-        try:
-            prop_obj = kb.get_property(p.property_id)
-            prop_details.append({
-                "id": p.property_id,
-                "name": prop_obj.name,
-                "context": p.context,
-            })
-        except EntityNotFoundError:
-            pass
-
-    return templates.TemplateResponse("entity.html", {
-        "request": request,
-        "entity": entity,
-        "entity_type": "object",
-        "meta": ENTITY_TYPES["object"],
-        "used_by": used_by,
-        "extra": {
-            "intuition": entity.intuition,
-            "aliases": entity.aliases,
-            "properties": prop_details,
-        },
-    })
+    return _render_entity(request, id)
 
 
 @app.get("/properties/{id}", response_class=HTMLResponse)
 async def property_page(request: Request, id: str):
-    try:
-        entity = kb.get_property(id)
-    except EntityNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Property '{id}' not found")
-
-    used_by = kb.get_used_by(id)
-
-    # Inject natural language description if available
-    cache_path = PROJECT_ROOT / "output" / "nl_translations_cache.json"
-    if cache_path.exists():
-        try:
-            with open(cache_path, "r", encoding="utf-8") as f:
-                cache_data = json.load(f)
-                if id in cache_data and cache_data[id].get("desc_ru"):
-                    entity.formal_definition = cache_data[id]["desc_ru"]
-        except Exception:
-            pass
-
-    return templates.TemplateResponse("entity.html", {
-        "request": request,
-        "entity": entity,
-        "entity_type": "property",
-        "meta": ENTITY_TYPES["property"],
-        "used_by": used_by,
-        "extra": {
-            "aliases": entity.aliases,
-            "equivalent_forms": entity.equivalent_forms,
-        },
-    })
+    return _render_entity(request, id)
 
 
 @app.get("/operations/{id}", response_class=HTMLResponse)
 async def operation_page(request: Request, id: str):
-    try:
-        entity = kb.get_operation(id)
-    except EntityNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Operation '{id}' not found")
+    return _render_entity(request, id)
 
-    args = kb.get_operation_arguments(id)
-    used_by = kb.get_used_by(id)
 
-    # Inject natural language description if available
-    cache_path = PROJECT_ROOT / "output" / "nl_translations_cache.json"
-    if cache_path.exists():
-        try:
-            with open(cache_path, "r", encoding="utf-8") as f:
-                cache_data = json.load(f)
-                if id in cache_data and cache_data[id].get("desc_ru"):
-                    entity.formal_definition = cache_data[id]["desc_ru"]
-        except Exception:
-            pass
-
-    # Resolve argument object names
-    arg_details = []
-    for a in args:
-        try:
-            obj = kb.get_object(a.object_id)
-            arg_details.append({
-                "position": a.position,
-                "object_name": obj.name,
-                "object_id": a.object_id,
-                "role": a.role,
-            })
-        except EntityNotFoundError:
-            pass
-
-    codomain_name = None
-    if entity.codomain_id:
-        try:
-            codomain_name = kb.get_object(entity.codomain_id).name
-        except EntityNotFoundError:
-            pass
-
-    return templates.TemplateResponse("entity.html", {
-        "request": request,
-        "entity": entity,
-        "entity_type": "operation",
-        "meta": ENTITY_TYPES["operation"],
-        "used_by": used_by,
-        "extra": {
-            "aliases": entity.aliases,
-            "arity": entity.arity,
-            "arguments": arg_details,
-            "codomain_id": entity.codomain_id,
-            "codomain_name": codomain_name,
-        },
-    })
+@app.get("/axioms/{id}", response_class=HTMLResponse)
+async def axiom_page(request: Request, id: str):
+    return _render_entity(request, id)
 
 
 # ---------------------------------------------------------------------------
@@ -685,7 +586,7 @@ async def run_compilation_async(mode: str, value: str):
     state.cancel_requested = False
     state.mode = mode
     state.logs = []
-    
+
     if mode == "id":
         state.root_entity = value
         cmd = [sys.executable, "-u", str(PROJECT_ROOT / "pipeline" / "generate_answer.py"), "--root", value]
@@ -695,12 +596,12 @@ async def run_compilation_async(mode: str, value: str):
     else:
         state.query = value
         cmd = [sys.executable, "-u", str(PROJECT_ROOT / "pipeline" / "ollama_wrapper.py"), value]
-        
+
     if api_config:
         providers = api_config.get("providers", {})
         models = api_config.get("models", {})
         keys = api_config.get("api_keys", {})
-        
+
         # 1. Extract config
         ext_prov = providers.get("extract")
         ext_model = models.get("extract")
@@ -711,7 +612,7 @@ async def run_compilation_async(mode: str, value: str):
             cmd.extend(["--extract-model", ext_model])
         if ext_key:
             cmd.extend(["--extract-api-key", ext_key])
-            
+
         # 2. Preview config
         prev_prov = providers.get("preview")
         prev_model = models.get("preview")
@@ -722,7 +623,7 @@ async def run_compilation_async(mode: str, value: str):
             cmd.extend(["--extract-preview-model", prev_model])
         if prev_key:
             cmd.extend(["--extract-preview-api-key", prev_key])
-            
+
         # 3. Synth config
         synth_prov = providers.get("synth")
         synth_model = models.get("synth")
@@ -733,7 +634,7 @@ async def run_compilation_async(mode: str, value: str):
             cmd.extend(["--synth-model", synth_model])
         if synth_key:
             cmd.extend(["--synth-api-key", synth_key])
-            
+
         # 4. Lean config
         lean_prov = providers.get("lean")
         lean_model = models.get("lean")
@@ -744,16 +645,16 @@ async def run_compilation_async(mode: str, value: str):
             cmd.extend(["--lean-model", lean_model])
         if lean_key:
             cmd.extend(["--lean-api-key", lean_key])
-        
+
     # Broadcast that compilation has started to all connected sessions
     await manager.broadcast({
         "type": "start",
         "mode": mode,
         "value": value
     })
-    
+
     loop = asyncio.get_running_loop()
-    
+
     def log_and_broadcast(line: str):
         if not line:
             return
@@ -762,7 +663,7 @@ async def run_compilation_async(mode: str, value: str):
             "type": "log",
             "line": line
         }))
-        
+
     run_result = {"returncode": None}
 
     def run_cmd():
@@ -777,7 +678,7 @@ async def run_compilation_async(mode: str, value: str):
                 creationflags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
             else:
                 popen_kwargs["start_new_session"] = True
-                
+
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
@@ -792,11 +693,11 @@ async def run_compilation_async(mode: str, value: str):
                 **popen_kwargs
             )
             set_current_compilation_process(process)
-            
+
             for line in iter(process.stdout.readline, ''):
                 clean_line = line.rstrip('\r\n')
                 loop.call_soon_threadsafe(log_and_broadcast, clean_line)
-                
+
             run_result["returncode"] = process.wait()
         except Exception as e:
             err_msg = f"[System Error] Compilation process failed: {str(e)}"
@@ -806,7 +707,7 @@ async def run_compilation_async(mode: str, value: str):
                 clear_current_compilation_process(process)
 
     await asyncio.to_thread(run_cmd)
-        
+
     state.is_compiling = False
     was_cancelled = state.cancel_requested
     state.cancel_requested = False
@@ -869,11 +770,11 @@ async def websocket_endpoint(websocket: WebSocket):
         "logs": state.logs,
         "cloudflare_url": app.state.cloudflare_url
     })
-    
+
     try:
         while True:
             data = await websocket.receive_json()
-            
+
             if data["type"] == "input":
                 # User typed something -> sync search text on all devices in real-time
                 state.mode = data["mode"]
@@ -886,7 +787,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     "mode": state.mode,
                     "value": data["value"]
                 })
-                
+
             elif data["type"] == "start":
                 # User clicked "Compile" -> trigger build if not already running
                 if not state.is_compiling:
@@ -898,7 +799,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     await manager.broadcast({
                         "type": "cancelling"
                     })
-                    
+
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 

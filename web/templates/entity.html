@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ entity.name }}{% endblock %}
+{% block title %}{{ entity.title }}{% endblock %}
 
 {% block content %}
 <div class="breadcrumb">
@@ -7,7 +7,7 @@
     <span class="bc-sep">/</span>
     <a href="/catalog#{{ entity_type }}s">{{ meta.name_ru }}</a>
     <span class="bc-sep">/</span>
-    <span class="bc-current">{{ entity.name }}</span>
+    <span class="bc-current">{{ entity.title }}</span>
 </div>
 
 <article class="entity-detail">
@@ -15,15 +15,12 @@
     <div class="detail-header">
         <span class="type-badge type-badge-lg" style="background: {{ meta.color }}">{{ meta.icon }}</span>
         <div>
-            <h1>{{ entity.name }}</h1>
+            <h1>{{ entity.title }}</h1>
             <div class="detail-meta">
                 <code class="detail-id">{{ entity.id }}</code>
-                {% if entity.module is defined and entity.module %}
-                <span class="detail-module">{{ entity.module }}</span>
-                {% endif %}
-                {% if extra.system is defined %}
-                <span class="detail-system">{{ extra.system }}</span>
-                {% endif %}
+                {% if entity.module %}<span class="detail-module">{{ entity.module }}</span>{% endif %}
+                {% if entity.lean_decl %}<span class="detail-system">lean: {{ entity.lean_decl }}</span>{% endif %}
+                <span class="detail-status status-{{ entity.lean_status }}">{{ entity.lean_status }}</span>
             </div>
         </div>
         <a href="/full_book.pdf#{{ entity.id }}" target="_blank" class="pdf-action-btn">
@@ -32,108 +29,80 @@
     </div>
 
     <!-- Aliases -->
-    {% if extra.aliases is defined and extra.aliases %}
+    {% if entity.aliases %}
     <div class="detail-section">
         <h2>Псевдонимы</h2>
         <div class="alias-list">
-            {% for alias in extra.aliases %}
+            {% for alias in entity.aliases %}
             <span class="alias-chip">{{ alias }}</span>
             {% endfor %}
         </div>
     </div>
     {% endif %}
 
-    <!-- Formal Definition / Statement -->
+    <!-- Formal statement (canonical LaTeX) -->
+    {% if entity.latex %}
     <div class="detail-section">
         <h2>Формулировка</h2>
-        <div class="formula-block">
-            {% if entity.statement is defined %}
-            {{ entity.statement }}
-            {% elif entity.formal_definition is defined %}
-            {{ entity.formal_definition }}
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Intuition (for objects) -->
-    {% if extra.intuition is defined and extra.intuition %}
-    <div class="detail-section">
-        <h2>Интуиция</h2>
-        <div class="intuition-block">
-            {{ extra.intuition }}
-        </div>
+        <div class="formula-block">\[ {{ entity.latex }} \]</div>
     </div>
     {% endif %}
 
-    <!-- Properties (for objects) -->
-    {% if extra.properties is defined and extra.properties %}
+    <!-- Natural-language description -->
+    {% if entity.nl_desc %}
     <div class="detail-section">
-        <h2>Свойства</h2>
+        <h2>Описание</h2>
+        <div class="intuition-block">{{ entity.nl_desc }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Lean code -->
+    {% if entity.lean_code %}
+    <div class="detail-section">
+        <h2>Lean 4</h2>
+        <pre class="lean-block"><code>{{ entity.lean_code }}</code></pre>
+    </div>
+    {% endif %}
+
+    <!-- Depends on -->
+    {% if dependencies %}
+    <div class="detail-section">
+        <h2>Зависит от</h2>
         <div class="related-list">
-            {% for p in extra.properties %}
-            <a href="/properties/{{ p.id }}" class="related-item" style="--accent: #2ecc71">
-                <span class="related-name">{{ p.name }}</span>
-                {% if p.context %}
-                <span class="related-context">${{ p.context }}$</span>
-                {% endif %}
+            {% for d in dependencies %}
+            <a href="/entity/{{ d.id }}" class="related-item" style="--accent: #3498db">
+                <span class="related-name">{{ d.title }}</span>
+                <span class="related-type">{{ d.kind }}</span>
             </a>
             {% endfor %}
         </div>
     </div>
     {% endif %}
 
-    <!-- Arguments (for operations) -->
-    {% if extra.arguments is defined and extra.arguments %}
-    <div class="detail-section">
-        <h2>Аргументы</h2>
-        <table class="args-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Объект</th>
-                    <th>Роль</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for arg in extra.arguments %}
-                <tr>
-                    <td>{{ arg.position }}</td>
-                    <td><a href="/objects/{{ arg.object_id }}">{{ arg.object_name }}</a></td>
-                    <td>{{ arg.role }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% if extra.codomain_name %}
-        <p class="codomain-info">
-            Codomain: <a href="/objects/{{ extra.codomain_id }}">{{ extra.codomain_name }}</a>
-        </p>
-        {% endif %}
-    </div>
-    {% endif %}
-
-    <!-- Equivalent forms (for properties) -->
-    {% if extra.equivalent_forms is defined and extra.equivalent_forms %}
-    <div class="detail-section">
-        <h2>Эквивалентные формы</h2>
-        <div class="formula-block">
-            $${{ extra.equivalent_forms }}$$
-        </div>
-    </div>
-    {% endif %}
-
     <!-- Used by (backlinks) -->
-    {% if used_by.theorems %}
+    {% if used_by.used_by %}
     <div class="detail-section">
         <h2>Используется в</h2>
         <div class="related-list">
-            {% for t in used_by.theorems %}
-            <span class="related-item" style="--accent: #9b59b6">
-                <span class="related-name">{{ t.name }}</span>
-                <span class="related-type">{{ t.subtype }}</span>
-            </span>
+            {% for u in used_by.used_by %}
+            <a href="/entity/{{ u.id }}" class="related-item" style="--accent: #9b59b6">
+                <span class="related-name">{{ u.title }}</span>
+                <span class="related-type">{{ u.kind }}</span>
+            </a>
             {% endfor %}
         </div>
+    </div>
+    {% endif %}
+
+    <!-- Provenance -->
+    {% if sources %}
+    <div class="detail-section">
+        <h2>Источники</h2>
+        <ul class="source-list">
+            {% for s in sources %}
+            <li>{{ s.source_book }}{% if s.page_info %}, {{ s.page_info }}{% endif %}</li>
+            {% endfor %}
+        </ul>
     </div>
     {% endif %}
 </article>
