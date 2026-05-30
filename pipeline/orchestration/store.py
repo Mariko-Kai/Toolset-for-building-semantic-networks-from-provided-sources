@@ -69,6 +69,48 @@ def save_incident(conn: sqlite3.Connection, incident: Incident,
     return cur.lastrowid
 
 
+def list_runs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
+    """Список последних прогонов (для монитора CLI/web)."""
+    try:
+        rows = conn.execute(
+            "SELECT run_id, status, created_at, updated_at, health FROM run "
+            "ORDER BY updated_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    out = []
+    for r in rows:
+        health = {}
+        if r[4]:
+            try:
+                health = json.loads(r[4])
+            except Exception:
+                health = {}
+        out.append({"run_id": r[0], "status": r[1], "created_at": r[2],
+                    "updated_at": r[3], "health": health})
+    return out
+
+
+def open_incidents(conn: sqlite3.Connection) -> list[dict]:
+    """Открытые инциденты (ожидающие решения человека)."""
+    try:
+        rows = conn.execute(
+            "SELECT id, run_id, node, status, severity FROM incident "
+            "WHERE resolution = 'open' ORDER BY id DESC"
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    return [{"id": r[0], "run_id": r[1], "node": r[2], "status": r[3], "severity": r[4]} for r in rows]
+
+
+def set_incident_resolution(conn: sqlite3.Connection, incident_id: int, resolution: str,
+                            commit: bool = True) -> None:
+    """Помечает инцидент confirmed/rejected/applied (для gate подтверждения)."""
+    conn.execute("UPDATE incident SET resolution = ? WHERE id = ?", (resolution, incident_id))
+    if commit:
+        conn.commit()
+
+
 def load_run(conn: sqlite3.Connection, run_id: str) -> dict | None:
     """Загружает прогон с событиями и инцидентами (для монитора/инспекции)."""
     row = conn.execute(

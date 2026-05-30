@@ -9,7 +9,14 @@ from .incidents import (
 from .llm_handler import LLMIncidentHandler
 from .orchestrator import Orchestrator
 from .state import Event, NodeRun, RunState, RunStatus
-from .store import load_run, save_incident, save_run_state
+from .store import (
+    list_runs,
+    load_run,
+    open_incidents,
+    save_incident,
+    save_run_state,
+    set_incident_resolution,
+)
 
 __all__ = [
     "Orchestrator",
@@ -26,4 +33,7 @@ __all__ = [
     "save_run_state",
     "save_incident",
     "load_run",
+    "list_runs",
+    "open_incidents",
+    "set_incident_resolution",
 ]
