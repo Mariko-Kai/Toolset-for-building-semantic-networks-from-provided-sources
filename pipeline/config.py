@@ -13,6 +13,7 @@ pipeline/config.py — Централизованная конфигурация
 """
 
 import os
+from functools import lru_cache
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -96,22 +97,24 @@ def get_default_provider(module: str) -> str:
     return DEFAULTS.get(module, {}).get("provider", "ollama")
 
 
+@lru_cache(maxsize=1)
 def _load_api_config():
-    """Load api_config.json from the project root (cached)."""
-    if hasattr(_load_api_config, '_cache'):
-        return _load_api_config._cache
+    """Загружает api_config.json из корня проекта (кэшируется через lru_cache,
+    без прежнего hasattr-хака). Возвращает {} при отсутствии/ошибке."""
     import json
-    from pathlib import Path
-    config_path = Path(__file__).resolve().parent.parent / "api_config.json"
+    config_path = PROJECT_ROOT / "api_config.json"
     try:
         if config_path.exists():
             with open(config_path, "r", encoding="utf-8") as f:
-                _load_api_config._cache = json.load(f)
-                return _load_api_config._cache
+                return json.load(f)
     except Exception:
         pass
-    _load_api_config._cache = {}
-    return _load_api_config._cache
+    return {}
+
+
+def reload_api_config() -> None:
+    """Сбрасывает кэш конфигурации (после правки api_config.json в рантайме)."""
+    _load_api_config.cache_clear()
 
 
 def resolve_module_config(

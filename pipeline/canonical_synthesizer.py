@@ -156,8 +156,9 @@ def prepare_macros_from_deps(deps, mgr):
             new_eid = f"def-{clean_dep.replace(' ', '-').lower()}"
             new_macro = f"\\{pascal_name}"
 
-            # Quick arity check via LLM
-            prompt = f'What is the standard LaTeX notation for "{dep}" and how many arguments does it take? Return EXACTLY valid JSON with keys "notation" (e.g. "C(#1)") and "args" (integer).'
+            # Quick arity check via LLM (промпт вынесен в pipeline/prompts/templates).
+            from pipeline.prompts import load_prompt
+            prompt = load_prompt("macro_notation", dep=dep)
             try:
                 resp = mgr.query_llm(prompt, json_mode=True, role="extract")
                 match = re.search(r'(\{.*\})', resp, re.DOTALL)

@@ -1,0 +1,1 @@
+What is the standard LaTeX notation for "{{dep}}" and how many arguments does it take? Return EXACTLY valid JSON with keys "notation" (e.g. "C(#1)") and "args" (integer).

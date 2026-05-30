@@ -40,7 +40,10 @@ dev = [
 
 [tool.setuptools]
 # Пакеты находятся в корне репозитория.
-packages = ["mathesis", "pipeline", "pipeline.nodes", "pipeline.orchestration", "pipeline.registries"]
+packages = ["mathesis", "pipeline", "pipeline.nodes", "pipeline.orchestration", "pipeline.registries", "pipeline.prompts"]
+
+[tool.setuptools.package-data]
+"pipeline.prompts" = ["templates/*.txt"]
 
 [tool.ruff]
 line-length = 120
