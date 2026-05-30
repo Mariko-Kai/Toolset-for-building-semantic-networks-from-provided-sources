@@ -12,6 +12,7 @@ import json
 import re
 import sys
 import io
+import time
 from functools import lru_cache
 from pathlib import Path
 
@@ -379,6 +380,101 @@ Term to translate: "{term}"
         print(f"[-] Failed to translate term: {e}")
         return term, term
 
+def _build_enrichment_commands(
+    term_ru, term_en, *,
+    extract_provider=None, extract_api_key=None, extract_model=None,
+    preview_provider=None, preview_api_key=None, preview_model=None,
+    synth_provider=None, synth_api_key=None, synth_model=None,
+    lean_provider=None, lean_api_key=None, lean_model=None,
+    embed_provider=None, embed_api_key=None, embed_model=None,
+    cv_model="glm-ocr", no_validate=False, canonical_term="", ocr_pages_spec=None,
+):
+    """Собирает команды трёх шагов (extract/align/synth) + env. Единый источник
+    аргументов для линейного и оркестрируемого путей."""
+    env = os.environ.copy()
+    env['PYTHONIOENCODING'] = 'utf-8'
+    env['PYTHONUNBUFFERED'] = '1'
+    env['HF_HUB_OFFLINE'] = '1'
+    env['TRANSFORMERS_OFFLINE'] = '1'
+
+    extract_args = ["--cv-model", cv_model]
+    if extract_provider:
+        extract_args += ["--extract-provider", extract_provider]
+        if extract_api_key: extract_args += ["--extract-api-key", extract_api_key]
+        if extract_model:   extract_args += ["--extract-model", extract_model]
+    if preview_provider:
+        extract_args += ["--extract-preview-provider", preview_provider]
+        if preview_api_key: extract_args += ["--extract-preview-api-key", preview_api_key]
+        if preview_model:   extract_args += ["--extract-preview-model", preview_model]
+    if lean_provider:
+        extract_args += ["--lean-provider", lean_provider]
+    if ocr_pages_spec:
+        extract_args += ["--ocr-pages", ocr_pages_spec]
+
+    synth_args = ["--cv-model", cv_model]
+    if no_validate:
+        synth_args += ["--no-validate"]
+    if canonical_term:
+        synth_args += ["--canonical-term", canonical_term]
+    if synth_provider:
+        synth_args += ["--synth-provider", synth_provider]
+        if synth_api_key: synth_args += ["--synth-api-key", synth_api_key]
+        if synth_model:   synth_args += ["--synth-model", synth_model]
+    if lean_provider:
+        synth_args += ["--lean-provider", lean_provider]
+        if lean_api_key: synth_args += ["--lean-api-key", lean_api_key]
+        if lean_model:   synth_args += ["--lean-model", lean_model]
+    if embed_provider:
+        synth_args += ["--embed-provider", embed_provider]
+        if embed_api_key: synth_args += ["--embed-api-key", embed_api_key]
+        if embed_model:   synth_args += ["--embed-model", embed_model]
+
+    extract_cmd = [sys.executable, str(EXTRACTOR_SCRIPT), f"{term_ru}|{term_en}"] + extract_args
+    align_cmd = [sys.executable, str(ALIGNER_SCRIPT)]
+    synth_cmd = [sys.executable, str(SYNTHESIZER_SCRIPT)] + synth_args
+    return extract_cmd, align_cmd, synth_cmd, env
+
+
+def run_enrichment_orchestrated(extract_cmd, align_cmd, synth_cmd, *, env=None,
+                                canonical_term="", run_id=None, runner=None, persist=True):
+    """Оркестрируемый путь обогащения: те же шаги, но как узлы под Orchestrator с
+    мониторингом и персистенцией RunState. Возвращает (success, entities, deps),
+    совместимо с run_enrichment_pipeline. `runner` инъектируется для тестов."""
+    from pipeline.nodes.adapters import build_enrichment_flow
+    from pipeline.nodes.base import NodeContext
+    from pipeline.orchestration import Orchestrator, RunStatus, save_incident, save_run_state
+
+    if run_id is None:
+        slug = re.sub(r'[^\w-]+', '-', (canonical_term or "enrich")).strip('-')[:40] or "enrich"
+        run_id = f"enrich-{slug}-{int(time.time())}"
+
+    flow = build_enrichment_flow(extract_cmd, align_cmd, synth_cmd, env=env, runner=runner)
+    ctx = NodeContext(run_id=run_id)
+    orch = Orchestrator(flow)
+    state = orch.run(ctx, run_id=run_id)
+
+    if persist:
+        try:
+            from mathesis import db as _db
+            from pipeline.config import get_db_path
+            conn = _db.connect(get_db_path())
+            try:
+                _db.init_schema(conn)  # на случай свежей БД
+                save_run_state(conn, state)
+                for inc in orch.incidents:
+                    save_incident(conn, inc)
+            finally:
+                conn.close()
+        except Exception as e:
+            print(f"[orchestrator] не удалось сохранить состояние прогона: {e}")
+
+    success = state.status == RunStatus.COMPLETED.value
+    entities = ctx.data.get("entities", [])
+    deps = ctx.data.get("deps", {})
+    print(f"[orchestrator] run_id={run_id} status={state.status} entities={len(entities)}")
+    return success, entities, deps
+
+
 def run_enrichment_pipeline(
     clean_term, *,
     # Extraction module
@@ -399,6 +495,8 @@ def run_enrichment_pipeline(
     # OCR pages override (skip search, process only these pages)
     ocr_pages_spec=None,
     term_ru=None,
+    # Драйвер: оркестратор (мониторинг+персистенция) вместо линейного цикла
+    orchestrated=False,
 ):
     """Runs the full extraction → alignment → synthesis pipeline. Returns list of generated entity IDs."""
     print("\n[*] === AUTO-ENRICHMENT: Запускаю конвейер обогащения ===")
@@ -413,54 +511,26 @@ def run_enrichment_pipeline(
     print(f"[*] Целевой термин (RU): '{term_ru}'")
     print(f"[*] Целевой термин (EN): '{term_en}'")
 
-    env = os.environ.copy()
-    env['PYTHONIOENCODING'] = 'utf-8'
-    env['PYTHONUNBUFFERED'] = '1'
-    env['HF_HUB_OFFLINE'] = '1'
-    env['TRANSFORMERS_OFFLINE'] = '1'
+    extract_cmd, align_cmd, synth_cmd, env = _build_enrichment_commands(
+        term_ru, term_en,
+        extract_provider=extract_provider, extract_api_key=extract_api_key, extract_model=extract_model,
+        preview_provider=preview_provider, preview_api_key=preview_api_key, preview_model=preview_model,
+        synth_provider=synth_provider, synth_api_key=synth_api_key, synth_model=synth_model,
+        lean_provider=lean_provider, lean_api_key=lean_api_key, lean_model=lean_model,
+        embed_provider=embed_provider, embed_api_key=embed_api_key, embed_model=embed_model,
+        cv_model=cv_model, no_validate=no_validate, canonical_term=canonical_term,
+        ocr_pages_spec=ocr_pages_spec,
+    )
 
-    # ── Аргументы для ensemble_extractor (extraction) ────────────────────────
-    extract_args = ["--cv-model", cv_model]
-    if extract_provider:
-        extract_args += ["--extract-provider", extract_provider]
-        if extract_api_key: extract_args += ["--extract-api-key", extract_api_key]
-        if extract_model:   extract_args += ["--extract-model", extract_model]
-    if preview_provider:
-        extract_args += ["--extract-preview-provider", preview_provider]
-        if preview_api_key: extract_args += ["--extract-preview-api-key", preview_api_key]
-        if preview_model:   extract_args += ["--extract-preview-model", preview_model]
-    if lean_provider:
-        extract_args += ["--lean-provider", lean_provider]
-    # OCR pages override
-    if ocr_pages_spec:
-        extract_args += ["--ocr-pages", ocr_pages_spec]
-
-    # ── Аргументы для canonical_synthesizer (synth) ──────────────────────────
-    synth_args = ["--cv-model", cv_model]
-    if no_validate:
-        synth_args += ["--no-validate"]
-    if canonical_term:
-        synth_args += ["--canonical-term", canonical_term]
-    if synth_provider:
-        synth_args += ["--synth-provider", synth_provider]
-        if synth_api_key: synth_args += ["--synth-api-key", synth_api_key]
-        if synth_model:   synth_args += ["--synth-model", synth_model]
-    if lean_provider:
-        synth_args += ["--lean-provider", lean_provider]
-        if lean_api_key: synth_args += ["--lean-api-key", lean_api_key]
-        if lean_model:   synth_args += ["--lean-model", lean_model]
-    if embed_provider:
-        synth_args += ["--embed-provider", embed_provider]
-        if embed_api_key: synth_args += ["--embed-api-key", embed_api_key]
-        if embed_model:   synth_args += ["--embed-model", embed_model]
+    # Драйвер-оркестратор: те же шаги как узлы, с мониторингом и персистенцией.
+    if orchestrated:
+        return run_enrichment_orchestrated(extract_cmd, align_cmd, synth_cmd, env=env,
+                                           canonical_term=canonical_term or clean_term)
 
     steps = [
-        ("1/3", "Извлечение из учебников",
-         [sys.executable, str(EXTRACTOR_SCRIPT), f"{term_ru}|{term_en}"] + extract_args),
-        ("2/3", "Выравнивание формулировок",
-         [sys.executable, str(ALIGNER_SCRIPT)]),
-        ("3/3", "Синтез канонической записи",
-         [sys.executable, str(SYNTHESIZER_SCRIPT)] + synth_args),
+        ("1/3", "Извлечение из учебников", extract_cmd),
+        ("2/3", "Выравнивание формулировок", align_cmd),
+        ("3/3", "Синтез канонической записи", synth_cmd),
     ]
 
     generated_entities = []
@@ -544,6 +614,7 @@ def main():
     parser.add_argument("--lean-model",    type=str, default=None)
     parser.add_argument("--lean-api-key",  type=str, default=None)
     parser.add_argument("--no-validate", action='store_true', help='Disable Lean validation inside synthesizer (default: enabled)')
+    parser.add_argument("--orchestrated", action='store_true', help='Прогонять обогащение через Orchestrator (мониторинг+персистенция RunState). Также включается env MATHESIS_ORCHESTRATED=1.')
     parser.add_argument("--force-refresh", action='store_true', help='Force overwrite of cached NLP translations (nl_translations_cache.json)')
 
     # ── Per-module: Embedding ────────────────────────────────────────────────
@@ -654,6 +725,7 @@ def main():
                 canonical_term=term,
                 ocr_pages_spec=args.ocr_pages if hasattr(args, 'ocr_pages') else None,
                 term_ru=keyword if term == canonical else None,
+                orchestrated=getattr(args, 'orchestrated', False) or os.environ.get("MATHESIS_ORCHESTRATED") == "1",
             )
 
             if success:
