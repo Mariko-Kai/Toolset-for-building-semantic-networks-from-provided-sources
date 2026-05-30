@@ -562,8 +562,10 @@ def attempt_generation_with_repair(eid, entity_type, tex_content, model="goedel:
             errors = validation_result.get("errors", [])
             error_feedback = "\n".join([f"Line {e['line']}: {e['message']}" for e in errors])
 
-            if "unexpected token 'in'" in error_feedback:
-                error_feedback += "\nHINT: You used the word `in` as a token (e.g., `∑ x in s`). In Lean 4, you MUST use `∈` (\\in) for set membership in binders like `∑ x ∈ s, f x`. The word `in` is invalid syntax here."
+            # Data-driven подсказки по ошибкам Lean (вместо разбросанных if-ов).
+            from pipeline.registries.lean_hints import hints_for_error
+            for hint in hints_for_error(error_feedback):
+                error_feedback += "\n" + hint
 
             print(f"  [!] {eid} ошибка (Попытка {attempt}/{max_attempts}). Отправляем фидбек модели...")
             log_to_file("lean_errors", error_feedback, entity_id=eid, attempt=attempt)

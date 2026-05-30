@@ -89,20 +89,10 @@ def promote_cluster(conn, *, cluster_id, entity_id, entity_type, title, nl_desc,
 
 
 def detect_entity_type_from_text(raw_texts, has_proof=False):
-    """Определяет тип сущности. Согласно архитектуре, всё, что имеет доказательство — prop."""
-    if has_proof:
-        return "prop"
-
-    combined = " ".join(raw_texts).lower()
-    prop_keywords = ["теорема", "лемма", "следствие", "theorem", "lemma", "corollary", "свойство", "property"]
-
-    # Strong prop check
-    for kw in prop_keywords:
-        if kw in combined:
-            return "prop"
-
-    # Default fallback
-    return "def"
+    """Определяет тип сущности (def|prop). Делегирует в data-driven реестр
+    pipeline.registries.entity_types (ключевые слова — данные, расширяемо)."""
+    from pipeline.registries.entity_types import detect_entity_type
+    return detect_entity_type(raw_texts, has_proof=has_proof)
 
 def prepare_macros_from_deps(deps, mgr):
 
