@@ -7,12 +7,17 @@ import subprocess
 import json
 import os
 import queue
+import sys
 import threading
 from pathlib import Path
 import atexit
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 LEAN_DIR = PROJECT_ROOT / "lean_validator"
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+from mathesis.proc import kill_process_tree  # noqa: E402  (импорт после настройки sys.path)
 
 VALIDATION_TIMEOUT = 150  # seconds
 
@@ -74,18 +79,14 @@ class LeanREPL:
         log("Started Lean REPL process.")
 
     def shutdown(self):
-        if self.p and self.p.poll() is None:
-            self.p.terminate()
+        # Убиваем всё дерево процессов (lake → repl), а не только корневой Popen,
+        # иначе на Windows/Linux остаются осиротевшие процессы.
+        kill_process_tree(self.p)
 
     def _poison(self):
-        """Помечает REPL непригодным: убивает процесс и сбрасывает singleton,
-        чтобы следующий get() создал свежий инстанс. Полноценное убийство дерева
-        процессов будет добавлено на Этапе 1 (mathesis/proc.py)."""
-        try:
-            if self.p and self.p.poll() is None:
-                self.p.terminate()
-        except Exception:
-            pass
+        """Помечает REPL непригодным: убивает дерево процессов и сбрасывает
+        singleton, чтобы следующий get() создал свежий инстанс."""
+        kill_process_tree(self.p)
         type(self)._instance = None
 
     def _read_response(self, result_q: "queue.Queue") -> None:

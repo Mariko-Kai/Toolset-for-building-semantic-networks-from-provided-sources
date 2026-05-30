@@ -24,6 +24,20 @@ except ImportError:
 # между чанками, а не общую длительность ответа. Переопределяется через env.
 HTTP_TIMEOUT = float(os.environ.get("MATHESIS_HTTP_TIMEOUT", "60"))
 
+# Ретраи на уровне менеджера: число ПОВТОРНЫХ попыток (всего попыток = retries + 1).
+MODEL_MAX_RETRIES = int(os.environ.get("MATHESIS_MODEL_RETRIES", "2"))
+# Базовая задержка экспоненциального backoff (сек): delay = base * 2**(attempt-1).
+MODEL_RETRY_BASE_DELAY = float(os.environ.get("MATHESIS_MODEL_RETRY_DELAY", "1.0"))
+
+
+class ModelError(RuntimeError):
+    """Сбой обращения к модели (исчерпаны ретраи). Используется в strict-режиме,
+    чтобы ошибки не «глотались» молчаливым возвратом пустой строки."""
+
+
+class ModelTimeout(ModelError):
+    """Превышен таймаут обращения к модели."""
+
 def log_think(content: str):
     from pathlib import Path
     import datetime
@@ -423,25 +437,74 @@ class ModelManager:
         strategy = ModelFactory.create_strategy(provider, model_name, api_key)
         self.strategies[role] = strategy
 
-    def query_llm(self, prompt: str, model: Optional[str] = None, json_mode: bool = False, provider: Optional[str] = None, system_prompt: Optional[str] = None, role: Optional[str] = None, stream_callback=None) -> str:
-        # Determine the role dynamically or just use an ad-hoc strategy if provider is explicitly passed
+    def _select_strategy(self, role: Optional[str], provider: Optional[str], model: Optional[str]) -> Optional[ModelStrategy]:
         if role and role in self.strategies:
-            strategy = self.strategies[role]
-        elif provider:
-            strategy = ModelFactory.create_strategy(provider, model)
-        else:
-            strategy = self.strategies.get("main")
-            if not strategy:
-                return ""
-        return strategy.generate_content(prompt, system_prompt, json_mode, stream_callback=stream_callback)
+            return self.strategies[role]
+        if provider:
+            return ModelFactory.create_strategy(provider, model)
+        return self.strategies.get("main")
 
-    def get_embedding(self, text: str, provider: Optional[str] = None, model: Optional[str] = None, role: Optional[str] = None) -> Optional[List[float]]:
-        if role and role in self.strategies:
-            strategy = self.strategies[role]
-        elif provider:
-            strategy = ModelFactory.create_strategy(provider, model)
-        else:
-            strategy = self.strategies.get("main")
-            if not strategy:
-                return None
-        return strategy.get_embedding(text)
+    def query_llm(self, prompt: str, model: Optional[str] = None, json_mode: bool = False, provider: Optional[str] = None, system_prompt: Optional[str] = None, role: Optional[str] = None, stream_callback=None, strict: bool = False, max_retries: Optional[int] = None) -> str:
+        """Запрос к LLM с ретраями и экспоненциальным backoff.
+
+        По умолчанию (`strict=False`) при исчерпании ретраев возвращает "" —
+        обратная совместимость с существующими вызовами. При `strict=True`
+        бросает ModelError, чтобы ошибка не «утонула» молча.
+
+        Стриминг (stream_callback задан) не ретраится: повторная попытка
+        отдала бы колбэку частичный вывод дважды.
+        """
+        strategy = self._select_strategy(role, provider, model)
+        if strategy is None:
+            if strict:
+                raise ModelError("No model strategy configured")
+            print("[ModelManager] query_llm: no strategy configured")
+            return ""
+
+        attempts = 1 if stream_callback is not None else (MODEL_MAX_RETRIES if max_retries is None else max_retries) + 1
+        last_err: Optional[str] = None
+        for attempt in range(1, attempts + 1):
+            try:
+                result = strategy.generate_content(prompt, system_prompt, json_mode, stream_callback=stream_callback)
+                if result and result.strip():
+                    return result
+                last_err = "empty response"
+            except Exception as e:  # noqa: BLE001
+                last_err = str(e)
+            if attempt < attempts:
+                delay = MODEL_RETRY_BASE_DELAY * (2 ** (attempt - 1))
+                print(f"[ModelManager] query_llm attempt {attempt}/{attempts} failed ({last_err}); retry in {delay:.1f}s")
+                time.sleep(delay)
+
+        if strict:
+            raise ModelError(f"query_llm failed after {attempts} attempt(s): {last_err}")
+        print(f"[ModelManager] query_llm failed after {attempts} attempt(s): {last_err}")
+        return ""
+
+    def get_embedding(self, text: str, provider: Optional[str] = None, model: Optional[str] = None, role: Optional[str] = None, strict: bool = False, max_retries: Optional[int] = None) -> Optional[List[float]]:
+        """Эмбеддинг с ретраями. По умолчанию возвращает None при сбое
+        (обратная совместимость); при `strict=True` бросает ModelError."""
+        strategy = self._select_strategy(role, provider, model)
+        if strategy is None:
+            if strict:
+                raise ModelError("No model strategy configured")
+            return None
+
+        attempts = (MODEL_MAX_RETRIES if max_retries is None else max_retries) + 1
+        last_err: Optional[str] = None
+        for attempt in range(1, attempts + 1):
+            try:
+                emb = strategy.get_embedding(text)
+                if emb:
+                    return emb
+                last_err = "empty embedding"
+            except Exception as e:  # noqa: BLE001
+                last_err = str(e)
+            if attempt < attempts:
+                delay = MODEL_RETRY_BASE_DELAY * (2 ** (attempt - 1))
+                print(f"[ModelManager] get_embedding attempt {attempt}/{attempts} failed ({last_err}); retry in {delay:.1f}s")
+                time.sleep(delay)
+
+        if strict:
+            raise ModelError(f"get_embedding failed after {attempts} attempt(s): {last_err}")
+        return None

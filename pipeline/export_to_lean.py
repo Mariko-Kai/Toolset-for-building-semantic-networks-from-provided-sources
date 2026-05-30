@@ -54,9 +54,9 @@ def log_to_file(category: str, content: str, entity_id: str = None, attempt: int
     try:
         logs_dir = PROJECT_ROOT / "logs" / category
         logs_dir.mkdir(parents=True, exist_ok=True)
-        
+
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        
+
         # 1. Write the individual category log file
         parts = [timestamp]
         if entity_id:
@@ -64,10 +64,10 @@ def log_to_file(category: str, content: str, entity_id: str = None, attempt: int
             parts.append(safe_eid)
         if attempt is not None:
             parts.append(f"attempt_{attempt}")
-            
+
         filename = "_".join(parts) + ".txt"
         file_path = logs_dir / filename
-        
+
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(content)
             f.flush()
@@ -75,7 +75,7 @@ def log_to_file(category: str, content: str, entity_id: str = None, attempt: int
                 os.fsync(f.fileno())
             except OSError:
                 pass
-                
+
         if not skip_realtime:
             # 2. Append to the real-time unified streaming log file
             realtime_log = PROJECT_ROOT / "logs" / "pipeline_realtime.log"
@@ -89,7 +89,7 @@ def log_to_file(category: str, content: str, entity_id: str = None, attempt: int
                     os.fsync(f.fileno())
                 except OSError:
                     pass
-                
+
         # 3. Flush standard output buffers for instant console response
         sys.stdout.flush()
         sys.stderr.flush()
@@ -148,7 +148,7 @@ def is_semantic_error(lean_code: str, errors: list, entity_type: str) -> bool:
             return True
         if "expected " in msg: # Catch syntax errors caused by bare LaTeX macros leaking into Lean
             return True
-            
+
     return False
 
 
@@ -156,10 +156,10 @@ def translate_to_lean_via_llm(entity_id, entity_type, tex_content, model="goedel
     """
     Translates LaTeX to Lean 4 using LLM, supporting error feedback for self-correction.
     """
-    
+
     proof_match = re.search(r'\\begin\{proof\}(.*?)\\end\{proof\}', tex_content, flags=re.DOTALL)
     informal_proof = proof_match.group(1).strip() if proof_match else ""
-        
+
     tex_clean = re.sub(r'\\begin\{proof\}.*?\\end\{proof\}', '', tex_content, flags=re.DOTALL)
     tex_clean = re.sub(r'^%.*$', '', tex_clean, flags=re.MULTILINE).strip()
     if not tex_clean:
@@ -206,7 +206,7 @@ ADDITIONAL CONSTRAINTS:
         #     informal_statement_content += f"\nInformal proof from textbook:\n{informal_proof}\n"
         if mathlib_hints:
             informal_statement_content += f"\nRelevant Mathlib signatures:\n{mathlib_hints}\n"
-            
+
         informal_statement_content += f"\n{declaration_rules}\n{local_lemmas_str}\n{latex_decryption_guide}\n"
         system_prompt = None
 
@@ -345,7 +345,7 @@ Lean 4 Code:"""
 
     # Prepare the log prefix
     synth_log_prefix = f"=== SYSTEM PROMPT ===\n{system_prompt}\n\n=== PROMPT ===\n{user_prompt}\n\n=== RESPONSE ===\n"
-    
+
     # Write header and prompt to real-time log before streaming starts
     import sys
     realtime_log = PROJECT_ROOT / "logs" / "pipeline_realtime.log"
@@ -357,9 +357,9 @@ Lean 4 Code:"""
             f.flush()
     except OSError:
         pass
-        
+
     print(f"  [lean-export] LLM ({target_model}) is reasoning (streaming)...")
-    
+
     def stream_callback(chunk: str):
         # Print chunk to console
         sys.stdout.write(chunk)
@@ -373,7 +373,7 @@ Lean 4 Code:"""
             pass
 
     response = mgr.query_llm(user_prompt, model=target_model, system_prompt=system_prompt, role="lean", stream_callback=stream_callback)
-    
+
     # After generation finishes, print a newline
     sys.stdout.write("\n")
     sys.stdout.flush()
@@ -383,31 +383,31 @@ Lean 4 Code:"""
             f.flush()
     except OSError:
         pass
-    
+
     # Log to the individual file (skip realtime because we already appended it)
     synth_log = synth_log_prefix + response + "\n"
     log_to_file("synthesis/lean", synth_log, entity_id=entity_id, attempt=attempt, skip_realtime=True)
-    
+
     # Strip DeepSeek reasoning blocks completely
     response = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL | re.IGNORECASE)
     if '</think>' in response.lower():
         # If there's a stray closing tag (opening tag was swallowed by LLM prefix), remove everything before it
         response = re.split(r'</think>', response, flags=re.IGNORECASE)[-1]
     response = response.strip()
-    
+
     # Extract Lean code blocks robustly
     parts = re.split(r'```(?:lean|lean4)?\s*', response, flags=re.IGNORECASE)
     blocks = []
-    
+
     for i in range(1, len(parts), 2):
         blocks.append(parts[i].strip())
-            
+
     if not blocks:
         clean = re.sub(r'^```(?:lean|lean4)?\s*', '', response, flags=re.MULTILINE | re.IGNORECASE)
         clean = re.sub(r'^```\s*$', '', clean, flags=re.MULTILINE)
         if clean.strip():
             blocks.append(clean.strip())
-            
+
     # Select the best block containing actual Lean declarations
     if blocks:
         best_block = blocks[-1]
@@ -415,21 +415,21 @@ Lean 4 Code:"""
             if "def " in b or "theorem " in b or "axiom " in b:
                 best_block = b
                 break
-                
+
         response = best_block
     else:
         response = response.strip()
-        
+
     # Clean up LLM completion prefix junk (like '4', 'lean', 'lean4') on the first line
     lines = response.splitlines()
     if lines and lines[0].strip() in ("4", "lean", "lean4"):
         lines = lines[1:]
     response = "\n".join(lines).strip()
-    
+
     # Log Lean code
     if response:
         log_to_file("lean_code", response, entity_id=entity_id, attempt=attempt)
-        
+
     print(f"  [lean-export] Сгенерированный код Lean:\n{response}\n")
 
     # Forbid 'noncomputable' in generated Lean code per policy
@@ -459,7 +459,7 @@ def translate_to_lean_regex(entity_id, entity_type, tex_content):
         # Quantifiers (Parameterized)
         (r'\\mForall\{([^}]+)\}', r'∀ \1, '),
         (r'\\mExists\{([^}]+)\}', r'∃ \1, '),
-        
+
         # Mappings
         (r'\\mMap\{([^}]+)\}\{([^}]+)\}\{([^}]+)\}', r'\1 : \2 → \3'),
 
@@ -527,39 +527,52 @@ def attempt_generation_with_repair(eid, entity_type, tex_content, model="goedel:
     Loop: Generate -> Validate -> Analyze errors -> Regenerate.
     Returns: (lean_code, is_valid)
     """
+    from pipeline.retry_utils import RepeatedErrorDetector
+
     lean_code = ""
     error_feedback = None
+    # Прекращаем цикл, если одна и та же ошибка повторяется подряд:
+    # модель «застряла» и повторные попытки лишь жгут ресурсы.
+    err_detector = RepeatedErrorDetector(max_repeats=3)
 
     for attempt in range(1, max_attempts + 1):
         lean_code = translate_to_lean_via_llm(
-            eid, entity_type, tex_content, 
+            eid, entity_type, tex_content,
             model=model,
-            error_feedback=error_feedback, 
+            error_feedback=error_feedback,
             previous_code=lean_code,
             attempt=attempt
         )
-        
+
         if not lean_code:
             error_feedback = "Your previous response was empty or rejected. Please provide a valid Lean 4 code block."
             print(f"  [!] {eid} пустой или отклоненный ответ (Попытка {attempt}/{max_attempts}). Пробуем еще раз...")
             continue
 
         validation_result = validate_entity(eid, lean_code)
-        
+
         if validation_result["status"] == "success":
             print(f"  [✓] {eid} успешно валидирован (Попытка {attempt})")
             return lean_code, True
-            
-        elif validation_result["status"] == "failed":
+
+        elif validation_result["status"] == "timeout":
+            print(f"  [!] {eid} валидация превысила таймаут (Попытка {attempt}/{max_attempts}). Прекращаю.")
+            break
+
+        elif validation_result["status"] in ("failed", "crashed"):
             errors = validation_result.get("errors", [])
             error_feedback = "\n".join([f"Line {e['line']}: {e['message']}" for e in errors])
-            
+
             if "unexpected token 'in'" in error_feedback:
                 error_feedback += "\nHINT: You used the word `in` as a token (e.g., `∑ x in s`). In Lean 4, you MUST use `∈` (\\in) for set membership in binders like `∑ x ∈ s, f x`. The word `in` is invalid syntax here."
-                
+
             print(f"  [!] {eid} ошибка (Попытка {attempt}/{max_attempts}). Отправляем фидбек модели...")
             log_to_file("lean_errors", error_feedback, entity_id=eid, attempt=attempt)
-            
+
+            if err_detector.record(error_feedback):
+                print(f"  [!] {eid}: одинаковая ошибка повторяется — прекращаю попытки досрочно.")
+                break
+
     return lean_code, False
 
 
@@ -585,7 +598,7 @@ def main():
         elif args.provider == "openai": args.model = "gpt-4o-mini"
         elif args.provider == "groq": args.model = "llama-3.3-70b-versatile"
         else: args.model = "qwen3:8b"
-    
+
     if args.lean_provider and not args.lean_model:
         if args.lean_provider == "gemini": args.lean_model = "gemini-2.5-flash"
         elif args.lean_provider == "openai": args.lean_model = "gpt-4o-mini"
@@ -627,7 +640,7 @@ def main():
             lean_code = validated_file.read_text(encoding='utf-8')
             lean_fragments.append((eid, lean_code))
             stats["cached"] += 1
-            
+
             # Since it's cached, optionally we can add it to SUCCESS_FILE if we assume it's valid,
             # but we won't double-append to prevent duplicates unless we do a fresh run.
             continue
@@ -650,7 +663,7 @@ def main():
             stats["llm_ok"] += 1
             validated_file.write_text(lean_code, encoding='utf-8')
             lean_fragments.append((eid, lean_code))
-            
+
             with open(SUCCESS_FILE, 'a', encoding='utf-8') as sf:
                 sf.write(f"-- Entity: {eid} | Type: {node['type']}\n")
                 sf.write(f"{lean_code}\n\n")
@@ -664,7 +677,7 @@ def main():
                     stats["regex_ok"] += 1
                     validated_file.write_text(lean_code_regex, encoding='utf-8')
                     lean_fragments.append((eid, lean_code_regex))
-                    
+
                     with open(SUCCESS_FILE, 'a', encoding='utf-8') as sf:
                         sf.write(f"-- Entity: {eid} (Regex Fallback)\n{lean_code_regex}\n\n")
                 else:

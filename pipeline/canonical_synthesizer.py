@@ -31,39 +31,39 @@ def detect_entity_type_from_text(raw_texts, has_proof=False):
     """Определяет тип сущности. Согласно архитектуре, всё, что имеет доказательство — prop."""
     if has_proof:
         return "prop"
-        
+
     combined = " ".join(raw_texts).lower()
     prop_keywords = ["теорема", "лемма", "следствие", "theorem", "lemma", "corollary", "свойство", "property"]
-    
+
     # Strong prop check
     for kw in prop_keywords:
         if kw in combined:
             return "prop"
-            
+
     # Default fallback
     return "def"
 
 def prepare_macros_from_deps(deps, mgr):
-    
+
     if not deps:
         deps = []
-        
+
     unique_deps = list({d.strip() for d in deps if d and isinstance(d, str)})
-    
+
     from pipeline.ollama_wrapper import resolve_entities
     from pipeline.latex_utils import get_macro_metadata
     import re
     import json
     import sqlite3
-    
+
     meta = get_macro_metadata()
     macros_map = {eid: data['macro'] for eid, data in meta.items()}
-    
+
     macro_file = PROJECT_ROOT / "content" / "mathesis_macros.sty"
 
     available_macros = []
     resolved_eids = []
-    
+
     # ALWAYS ADD ALL EXISTING MACROS to available_macros, formatted with notation
     for eid, data in meta.items():
         macro_name = data['macro']
@@ -72,7 +72,7 @@ def prepare_macros_from_deps(deps, mgr):
             available_macros.append(f"{macro_name} : Use instead of standard notation \"{notation}\"")
         else:
             available_macros.append(f"{macro_name} : Use for the concept of '{eid}'")
-        
+
     conn = sqlite3.connect(DB_PATH, timeout=10.0)
     cursor = conn.cursor()
 
@@ -100,11 +100,11 @@ def prepare_macros_from_deps(deps, mgr):
             clean_dep = re.sub(r'[^\w\s]', '', dep).strip()
             if not clean_dep:
                 continue
-            
+
             pascal_name = "".join(w.title() for w in clean_dep.split())
             new_eid = f"def-{clean_dep.replace(' ', '-').lower()}"
             new_macro = f"\\{pascal_name}"
-            
+
             # Quick arity check via LLM
             prompt = f'What is the standard LaTeX notation for "{dep}" and how many arguments does it take? Return EXACTLY valid JSON with keys "notation" (e.g. "C(#1)") and "args" (integer).'
             try:
@@ -117,19 +117,19 @@ def prepare_macros_from_deps(deps, mgr):
             except:
                 args = 0
                 notation = pascal_name
-                
+
             cursor.execute("INSERT OR IGNORE INTO entities (entity_id, type, title) VALUES (?, ?, ?)", (new_eid, "def", dep))
             conn.commit()
-            
+
             if args > 0:
                 macro_def = f"\\newcommand{{{new_macro}}}[{args}]{{\\mathopen{{\\hyperlink{{{new_eid}}}{{{notation}}}}}}}\\mathclose{{}}"
             else:
                 macro_def = f"\\newcommand{{{new_macro}}}{{\\hyperlink{{{new_eid}}}{{{notation}}}}}"
-                
+
             if macro_file.exists():
                 with open(macro_file, "a", encoding="utf-8") as f:
                     f.write(f"\n% Auto-generated stub for {dep}\n{macro_def}\n")
-                    
+
             macro_entry = f"{new_macro} : Use instead of standard notation \"{notation}\""
             if macro_entry not in available_macros:
                 available_macros.append(macro_entry)
@@ -139,7 +139,7 @@ def prepare_macros_from_deps(deps, mgr):
 
     if not available_macros:
         return "", resolved_eids
-        
+
     # Deduplicate while preserving order
     seen = set()
     deduped_macros = []
@@ -147,7 +147,7 @@ def prepare_macros_from_deps(deps, mgr):
         if m not in seen:
             seen.add(m)
             deduped_macros.append(f"- {m}")
-            
+
     header = "\nAVAILABLE MACROS (CRITICAL: You MUST use these instead of standard LaTeX for concepts/types. Example: use \\RealNumbers instead of \\mathbb{R}):\n"
     return header + "\n".join(deduped_macros) + "\n", resolved_eids
 
@@ -176,7 +176,7 @@ OUTPUT: Only LaTeX. No ```latex blocks. Include the following metadata at the to
 % macro: \<PascalCaseNameOfEntity>
 % args: <number-of-arguments>
 % notation: <LaTeX-notation-if-any-using-#1-for-arguments>"""
-    
+
     if target_requirement:
         rules += target_requirement
 
@@ -281,7 +281,7 @@ def enforce_single_entity(latex: str) -> str:
             latex = latex[:starts[1].start()].rstrip()
             print(f"[sanitize] Truncated output: multiple \\begin{{{env}}} found, kept first only.", flush=True)
             return latex
-            
+
     return latex
 
 def warn_natural_language(latex: str) -> list:
@@ -318,7 +318,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
     syntax_error_feedback = ""
     implicit_assumptions = ""
     semantic_map = ""
-    
+
     latex_content = ""
     lean_code = ""
     valid_lean_code = None
@@ -326,18 +326,21 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
     from pipeline.export_to_lean import translate_to_lean_via_llm, translate_to_lean_regex, is_semantic_error
     from pipeline.lean_validator import validate_entity, discover_mathlib_signatures
     from pipeline.ensemble_extractor import gather_implicit_assumptions
+    from pipeline.retry_utils import backoff_delay, RepeatedErrorDetector
     active_provider_name = "ModelManager (synth)"
+    # Детектор «застревания»: одинаковый фидбек об ошибке подряд → прекращаем цикл.
+    err_detector = RepeatedErrorDetector(max_repeats=2)
 
     while current_attempt <= max_attempts:
         print(f"\n[synthesizer] --- Attempt {current_attempt}/{max_attempts} ---", flush=True)
-        
+
         # 1. Regenerate LaTeX if missing or if semantic error occurred
         if not latex_content or semantic_error_feedback:
             mgr = ModelManager.get_instance()
             relevant_macros_str, resolved_eids = prepare_macros_from_deps(deps, mgr)
             prompt = build_synthesis_prompt(cluster_id, formulations, sources, entity_type, implicit_assumptions, canonical_term, relevant_macros_str)
             current_prompt = prompt
-            
+
             if semantic_error_feedback:
                 print(f"[synthesizer] Injecting semantic/type error feedback into LaTeX prompt...", flush=True)
                 current_prompt += f"\n\nПРЕДУПРЕЖДЕНИЕ: Твоя предыдущая формулировка семантически неполна или отклонена формализатором Lean.\nОбратная связь от Lean:\n{semantic_error_feedback}\n\nОБЯЗАТЕЛЬНО явно укажи все неявные типы, кванторы (∀, ∃) и домены."
@@ -350,16 +353,17 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
                 mgr = ModelManager.get_instance()
                 response = mgr.query_llm(current_prompt, role="synth")
                 elapsed = time.time() - t0
-                
+
                 if response and len(response.strip()) >= 10:
                     print(f"[synthesizer] LLM responded in {elapsed:.1f}s ({len(response)} chars)", flush=True)
                     from pipeline.export_to_lean import log_to_file
                     synth_log = f"=== PROMPT ===\n{current_prompt}\n\n=== RESPONSE ===\n{response}\n"
                     log_to_file("synthesis/latex", synth_log, entity_id=cluster_id, attempt=current_attempt)
                     break
-                
-                print(f"[synthesizer] [WARN] LLM returned empty/short response. Inner retry {inner_attempt}/3 in 2s...")
-                time.sleep(2)
+
+                delay = backoff_delay(inner_attempt, base=2.0)
+                print(f"[synthesizer] [WARN] LLM returned empty/short response. Inner retry {inner_attempt}/3 in {delay:.0f}s...")
+                time.sleep(delay)
 
             if not response or len(response.strip()) < 10:
                 print("[synthesizer] [ERROR] LaTeX generation failed after 3 internal retries. Failing main attempt.")
@@ -394,19 +398,19 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
 
             latex_content = enforce_single_entity(latex_content)
             latex_content = sanitize_raw_delimiters(latex_content)
-            
+
             # Check for natural language violations
             nl_warnings = warn_natural_language(latex_content)
             # Check for forbidden macros (mIff in definitions)
             macro_warnings = check_forbidden_macros(latex_content, entity_type)
-            
+
             all_warnings = nl_warnings + macro_warnings
             if all_warnings:
                 print(f"[synthesizer] [WARN] Rule violations detected: {all_warnings}")
                 semantic_error_feedback = "\n".join(all_warnings)
                 current_attempt += 1
                 continue
-                
+
             semantic_error_feedback = ""
             syntax_error_feedback = ""
             lean_code = ""
@@ -426,14 +430,14 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
             from pipeline.ollama_wrapper import normalize_math_term
             temp_title = temp_eid.replace('def-', '').replace('thm-', '').replace('axm-', '').replace('prop-', '').replace('-', ' ')
             norm_temp = normalize_math_term(temp_title)
-            
+
             for pid in processed_entities:
                 p_title = pid.replace('def-', '').replace('thm-', '').replace('axm-', '').replace('prop-', '').replace('-', ' ')
                 norm_p = normalize_math_term(p_title)
-                
+
                 temp_words = set(norm_temp.split())
                 p_words = set(norm_p.split())
-                
+
                 if norm_temp == norm_p or (len(p_words) >= 2 and p_words.issubset(temp_words)) or (len(temp_words) >= 2 and temp_words.issubset(p_words)):
                     print(f"  [synthesizer] [SEMAN-SKIP] Entity '{temp_eid}' semantically matches '{pid}'. Forcing ID to '{pid}'.")
                     temp_eid = pid
@@ -454,9 +458,9 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
         if len(entity_words) >= 2:
             discovery_terms.append(''.join(w.title() for w in entity_words))
         discovery_terms = list(set(discovery_terms))[:4]
-        
+
         signatures = []
-        if discovery_terms and not syntax_error_feedback: 
+        if discovery_terms and not syntax_error_feedback:
             print(f"  [synthesizer] Running Mathlib discovery for terms: {discovery_terms}")
             try:
                 signatures = discover_mathlib_signatures(discovery_terms)
@@ -469,19 +473,20 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
         for inner_attempt in range(1, 4):
             print(f"  [synthesizer] Translating to Lean (Inner Attempt {inner_attempt}/3)...", flush=True)
             lean_code_new = translate_to_lean_via_llm(
-                temp_eid, temp_etype, latex_content, 
-                model=model, mathlib_hints=hints, 
+                temp_eid, temp_etype, latex_content,
+                model=model, mathlib_hints=hints,
                 error_feedback=syntax_error_feedback, previous_code=lean_code,
                 attempt=current_attempt, local_lemmas=[eid.replace('-', '_') for eid in resolved_eids] if 'resolved_eids' in locals() else []
             )
             if lean_code_new:
                 break
-            print(f"  [synthesizer] [WARN] Lean translation returned empty. Inner retry {inner_attempt}/3 in 2s...")
-            time.sleep(2)
+            delay = backoff_delay(inner_attempt, base=2.0)
+            print(f"  [synthesizer] [WARN] Lean translation returned empty. Inner retry {inner_attempt}/3 in {delay:.0f}s...")
+            time.sleep(delay)
 
         if not lean_code_new and not lean_code:
             lean_code_new = translate_to_lean_regex(temp_eid, temp_etype, latex_content)
-            
+
         lean_code = lean_code_new or lean_code
 
         if skip_validation:
@@ -505,7 +510,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
             break
         else:
             print(f"  [FAIL] Lean validation failed or model cheated.")
-            
+
             messages = []
             for e in result["errors"][:3]:
                 msg = e.get("message", "")
@@ -513,7 +518,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
                     type_match = re.search(r'of type\n\s*(.+)', msg)
                     if type_match:
                         msg = f"ОШИБКА ПЛЕЙСХОЛДЕРА (`_`): ожидается точный тип `{type_match.group(1).strip()}`."
-                
+
                 elif "unknown identifier" in msg:
                     ident_match = re.search(r"unknown identifier '([^']+)'", msg)
                     if ident_match:
@@ -522,16 +527,16 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
                         if ident == "in":
                             feedback += f"\nВНИМАНИЕ: Для объявления фундаментальных типов используйте \\colon (например, x \\colon \\RealNumbers), а для принадлежности к подмножеству — \\TermIn."
                         msg += feedback
-                        
+
                 elif "expected " in msg:
                     msg += f"\nСИНТЕЗАТОРУ: Синтаксическая ошибка. Возможно, вы использовали голый LaTeX-макрос, который разрушил парсер Lean. Используйте только разрешенные семантические макросы."
-                    
+
                 messages.append(msg)
-                
+
             if is_semantic_error(lean_code, result["errors"], temp_etype):
                 print("  [!] Semantic error detected (e.g. type mismatch). Routing back to LaTeX synthesizer.")
                 semantic_error_feedback = "\n".join(messages)
-                
+
                 # Context Recovery (Look-back)
                 if not implicit_assumptions:
                     print("  [*] Triggering Context Recovery (looking back at previous pages for implicit assumptions)...")
@@ -541,7 +546,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
                             assump = gather_implicit_assumptions(src, p_ref, "math entity", model)
                             if assump:
                                 recovered_parts.append(f"[{src}]: {assump}")
-                    
+
                     if recovered_parts:
                         implicit_assumptions = "\n".join(recovered_parts)
                         print(f"  [+] Recovered implicit assumptions:\n{implicit_assumptions}")
@@ -551,7 +556,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
             else:
                 print(f"  [!] Syntax/Translation error detected. Routing back to Lean formalizer.")
                 syntax_error_feedback = "\n".join(messages)
-                
+
                 # Check for sorry abuse in definitions or theorem formulations
                 has_sorry_abuse = False
                 sorry_warning = ""
@@ -567,18 +572,18 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
                     if len(parts) > 1 and "sorry" in parts[0]:
                         has_sorry_abuse = True
                         sorry_warning = "CRITICAL ERROR: You used `sorry` in the theorem formulation/statement. This is strictly FORBIDDEN. You must write a complete, precise theorem statement, and `sorry` is only allowed as the proof after `:=`!"
-                
+
                 if has_sorry_abuse:
                     if syntax_error_feedback:
                         syntax_error_feedback = sorry_warning + "\n" + syntax_error_feedback
                     else:
                         syntax_error_feedback = sorry_warning
-                
+
             # Log the Lean compile errors
             error_feedback = "\n".join([f"Line {e['line']}: {e['message']}" for e in result.get("errors", [])])
             from pipeline.export_to_lean import log_to_file
             log_to_file("lean_errors", error_feedback, entity_id=temp_eid, attempt=current_attempt)
-            
+
             if current_attempt == max_attempts:
                 print(f"  [synthesizer] Max attempts reached for {temp_eid}. Applying Fallback to `sorry`...")
                 if temp_etype == "prop" and "sorry" not in lean_code:
@@ -589,6 +594,13 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
                         valid_lean_code = fallback_code
                         break
 
+            # Если один и тот же фидбек об ошибке повторяется — модель «застряла»,
+            # прекращаем цикл досрочно, не дожидаясь max_attempts.
+            repeat_sig = (semantic_error_feedback or "") + "||" + (syntax_error_feedback or "")
+            if err_detector.record(repeat_sig):
+                print(f"  [synthesizer] [ABORT] Одинаковая ошибка повторяется для {temp_eid} — прекращаю попытки.")
+                break
+
             current_attempt += 1
 
     return latex_content, valid_lean_code, semantic_map
@@ -596,7 +608,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
 def rebuild_master_tex():
     master_path = CONTENT_DIR / "master.tex"
     print(f"\n[master-rebuild] Rebuilding {master_path.relative_to(PROJECT_ROOT)} from current content directory...", flush=True)
-    
+
     # 1. Discover all tex files
     file_by_id = {}
     all_ids = []
@@ -614,16 +626,16 @@ def rebuild_master_tex():
             all_ids.append(entity_id)
         except Exception as e:
             print(f"  [WARN] Failed to parse {filepath.name}: {e}", flush=True)
-            
+
     # 2. Topological Sort using LeanTreeBuilder (single source of truth for ordering)
     import sys
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
     from tools.lean_tree_builder import LeanTreeBuilder
     builder = LeanTreeBuilder()
-    
+
     order = builder.build_closure_order(all_ids)
-    
+
     # 3. Generate master.tex content
     input_lines = []
     for entity_id in order:
@@ -631,7 +643,7 @@ def rebuild_master_tex():
             filepath = file_by_id[entity_id]
             rel_path = filepath.relative_to(PROJECT_ROOT).as_posix()
             input_lines.append(f"\\input{{{rel_path}}}")
-        
+
     master_template = r"""\documentclass{report}
 \usepackage{mathesis}
 \usepackage[utf8]{inputenc}
@@ -646,7 +658,7 @@ def rebuild_master_tex():
     inputs_content = "\n".join(input_lines)
     with open(master_path, "w", encoding="utf-8") as f:
         f.write(master_template % {"inputs": inputs_content})
-        
+
     print(f"[master-rebuild] [OK] Rebuilt master.tex with {len(order)} entities in topological order!\n", flush=True)
 
 
@@ -676,7 +688,7 @@ def main():
                         help="Отдельный провайдер для Lean формализации")
     parser.add_argument("--lean-api-key",  type=str, default=None, help="API Key for Lean provider")
     parser.add_argument("--lean-model",    type=str, default=None, help="Model for Lean provider")
-    
+
     # ── Аргументы Embed-провайдера ──────────────────────────────────
     parser.add_argument("--embed-provider", type=str, default=None, choices=PROVIDERS)
     parser.add_argument("--embed-api-key",  type=str, default=None)
@@ -744,8 +756,8 @@ def main():
 
     for cid, data in clusters.items():
         synthesized_tex, valid_lean_code, semantic_map = synthesize_cluster(
-            cid, data['texts'], data['sources'], data['page_refs'], 
-            has_proof=data['has_proof'], model=args.model, 
+            cid, data['texts'], data['sources'], data['page_refs'],
+            has_proof=data['has_proof'], model=args.model,
             skip_validation=args.no_validate, canonical_term=args.canonical_term,
             processed_entities=processed_entities, deps=data.get('deps', [])
         )
@@ -761,12 +773,12 @@ def main():
             continue
 
         entity_id = match_id.group(1).strip()
-        
+
         # Prevent rewriting the same entity multiple times across different clusters
         if entity_id in processed_entities:
             print(f"[synthesizer] [SKIP] Entity '{entity_id}' already synthesized in this run. Skipping redundant cluster.")
             continue
-            
+
         entity_type = match_type.group(1).strip()
         # Remove standard architectural prefixes before generating human-readable title
         clean_id = re.sub(r'^(def|prop)-', '', entity_id)
@@ -802,7 +814,7 @@ def main():
             with open(lean_file_path, "w", encoding="utf-8") as f:
                 f.write(valid_lean_code)
             print(f"[synthesizer] [OK] Saved Lean code: {lean_file_path.relative_to(PROJECT_ROOT)}")
-            
+
             # Append to SuccessfulEntities.lean
             success_file = PROJECT_ROOT / "lean_validator" / "SuccessfulEntities.lean"
             if not success_file.exists():
@@ -818,11 +830,11 @@ def main():
         embed_blob = None
         try:
             mgr = ModelManager.get_instance()
-            
+
             # Use 'embed' role if it exists, otherwise it will fallback to main/provider
             embed_vec = mgr.get_embedding(
-                nl_desc, 
-                provider=getattr(args, "embed_provider", None), 
+                nl_desc,
+                provider=getattr(args, "embed_provider", None),
                 model=getattr(args, "embed_model", None),
                 role="embed"
             )
@@ -831,7 +843,7 @@ def main():
                 embed_blob = struct.pack(f"{len(embed_vec)}f", *embed_vec)
         except Exception as e:
             print(f"[synthesizer] [-] Could not generate embedding: {e}")
-        
+
         cursor.execute("INSERT OR REPLACE INTO entities (entity_id, type, title, path, file_path, lean_path, nl_desc, embedding) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                        (entity_id, entity_type, title, str(file_path.relative_to(PROJECT_ROOT)), str(file_path.relative_to(PROJECT_ROOT)), str(lean_file_path.relative_to(PROJECT_ROOT)) if valid_lean_code else None, nl_desc, embed_blob))
         print(f"[synthesizer] [OK] DB updated: entities({entity_id})")
@@ -852,7 +864,7 @@ def main():
 
     conn.commit()
     conn.close()
-    
+
     print("Canonical synthesis complete.")
 
 if __name__ == "__main__":

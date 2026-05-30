@@ -4,8 +4,10 @@ Handles connection lifecycle, schema initialization, and low-level operations.
 All public functions work with plain sqlite3 connections (sync).
 """
 
+import logging
 import sqlite3
-from pathlib import Path
+
+logger = logging.getLogger("mathesis.db")
 
 SCHEMA_SQL = """
 PRAGMA foreign_keys = ON;
@@ -166,10 +168,14 @@ def connect(db_path: str) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     try:
-        conn.execute("PRAGMA journal_mode = WAL")
-    except sqlite3.OperationalError:
-        # WAL may fail on NTFS mounts from WSL — fall back to default
-        pass
+        mode = conn.execute("PRAGMA journal_mode = WAL").fetchone()
+        # PRAGMA journal_mode возвращает фактический режим. На некоторых ФС
+        # (NTFS-маунты из WSL, сетевые диски) WAL молча откатывается на иной режим.
+        actual = (mode[0] if mode else "").lower()
+        if actual != "wal":
+            logger.warning("journal_mode=WAL не применился, активен режим '%s' (вероятно, ФС не поддерживает WAL).", actual)
+    except sqlite3.OperationalError as e:
+        logger.warning("Не удалось установить journal_mode=WAL: %s. Используется режим по умолчанию.", e)
     return conn
 
 

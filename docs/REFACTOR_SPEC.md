@@ -300,6 +300,26 @@
 - **Риск:** объём. **Снижение:** строгий порядок этапов; каждый этап самодостаточен и оставляет проект в рабочем состоянии.
 
 ## Журнал прогресса
+- **2026-05-30 — Этап 1 завершён.** Стабильность подпроцессов и конвейера.
+  - **1.1** Новый `mathesis/proc.py`: `kill_process_tree` (psutil, убийство дерева,
+    кроссплатформенно, деградация без psutil), `run_with_timeout` (поток+join),
+    `managed_process` (контекст-менеджер). Тесты убивают «внука».
+  - **1.2** `lean_validator.py`: `shutdown`/`_poison` через `kill_process_tree`
+    (дерево lake→repl), пересоздание отравленного REPL, статусы success/failed/timeout/crashed.
+  - **1.3** Новый `pipeline/retry_utils.py` (`backoff_delay`, `RepeatedErrorDetector`):
+    счётчик визитов валидации в `ollama_wrapper` (лимит `MATHESIS_MAX_VALIDATION_VISITS`,
+    устранение бесконечного re-queue), экспоненциальный backoff + детектор повтора в
+    `canonical_synthesizer` и `export_to_lean`.
+  - **1.4** `postprocess_equivalence.py`: транзакционный `cleanup_database` (атомарность
+    + `finally` close), удаление файлов ТОЛЬКО после успешного коммита БД, флаг `--dry-run`;
+    `mathesis/db.py` — WAL больше не глушится молча (логируется фактический режим).
+    Попутно исправлен латентный баг: `ModelManager` использовался без импорта (F821).
+  - **1.5** `model_manager.py`: классы `ModelError`/`ModelTimeout`, ретраи с
+    экспоненциальным backoff в `query_llm`/`get_embedding`, opt-in `strict`
+    (бросает вместо молчаливого ""), стриминг не ретраится. HTTP-таймауты из Этапа 0.
+  - 27 тестов зелёные; новые и небольшие затронутые файлы чисты по ruff. В трёх крупных
+    легаси-файлах остаётся ~80 стилевых замечаний (неисп. импорты, f-строки) — чистятся
+    постепенно; пробельный долг в затронутых файлах автофикшен.
 - **2026-05-29 — Этап 0 завершён.** Гигиена (удалён `delete.py`, файл-копия, пустой
   корневой `mathesis_index.db`, `test_tree.py`); добавлены `pyproject.toml` (ruff/pytest/mypy,
   extras `ai`/`dev`) и `psutil`/`numpy` в `requirements.txt`; каркас тестов

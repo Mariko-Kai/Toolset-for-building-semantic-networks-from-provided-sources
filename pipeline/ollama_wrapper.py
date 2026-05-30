@@ -61,7 +61,7 @@ def get_available_entities():
 def extract_term_ru_en(term: str) -> tuple:
     """Translates a term into EN and RU using LLM with a robust local dictionary fallback."""
     term_clean = term.strip().lower()
-    
+
     # Standard mathematical dictionary fallback for robust translation
     MATH_DICT = {
         "open interval": ("открытый интервал", "open interval"),
@@ -93,7 +93,7 @@ def extract_term_ru_en(term: str) -> tuple:
         "partial order": ("частичный порядок", "partial order"),
         "ordered set": ("упорядоченное множество", "ordered set"),
     }
-    
+
     if term_clean in MATH_DICT:
         return MATH_DICT[term_clean]
 
@@ -125,27 +125,27 @@ def extract_keyword(query):
     Strips question words to act like a search engine, and translates to RU and EN.
     """
     stop_words = [
-        "что называется", "что такое", "расскажи про", "дайте определение", 
+        "что называется", "что такое", "расскажи про", "дайте определение",
         "определение", "свойства", "что значит", "как найти", "понятие", "объясни"
     ]
-    
+
     clean = query.lower()
     for sw in stop_words:
         clean = clean.replace(sw, "")
-    
+
     # Clean up punctuation and extra spaces
     import string
     punct_to_remove = string.punctuation.replace('-', '')
     clean = clean.translate(str.maketrans('', '', punct_to_remove))
     clean = " ".join(clean.split())
-    
+
     # Translate clean term to both RU and EN
     canonical_ru, canonical_en = extract_term_ru_en(clean)
-    
+
     # Clean them up just in case
     ru_term = canonical_ru.translate(str.maketrans('', '', punct_to_remove)).lower().strip()
     en_term = canonical_en.translate(str.maketrans('', '', punct_to_remove)).lower().strip()
-    
+
     print(f"[*] Целевой термин (RU): '{ru_term}'")
     print(f"[*] Целевой термин (EN): '{en_term}'")
     return ru_term, en_term
@@ -162,11 +162,11 @@ def get_reranker():
             from pipeline.hybrid_search import CrossEncoderReranker
             from pipeline.config import resolve_module_config
             _, preview_model, _ = resolve_module_config("preview")
-            
+
             backend = "local"
             model_name = "BAAI/bge-reranker-v2-m3"
             api_url = None
-            
+
             import urllib.request
             for url in ["http://localhost:8080/rerank", "http://localhost:8080/v1/rerank", "http://localhost:8000/v1/rerank"]:
                 try:
@@ -178,7 +178,7 @@ def get_reranker():
                     break
                 except Exception:
                     continue
-                    
+
             _RERANKER_CACHE = CrossEncoderReranker(backend=backend, model_name=model_name, api_url=api_url)
         except Exception as e:
             print(f"[-] Failed to initialize CrossEncoderReranker: {e}")
@@ -227,43 +227,43 @@ def resolve_entities(query, canonical_term, available_entities):
     import json
     import re
     from pathlib import Path
-    
+
     db_path = PROJECT_ROOT / "db/mathesis_index.db"
     if not db_path.exists():
         return [], canonical_term
-        
+
     conn = sqlite3.connect(db_path, timeout=10.0)
     cursor = conn.cursor()
-    
+
     try:
         cursor.execute("SELECT entity_id, title, nl_desc, embedding, lean_path FROM entities")
         rows = cursor.fetchall()
     except sqlite3.OperationalError:
         conn.close()
         return [], canonical_term
-        
+
     conn.close()
-    
+
     # 1. Normalization (Dictionary Search)
     term_ru, term_en = extract_term_ru_en(canonical_term)
     norm_query_ru = normalize_math_term(term_ru)
     norm_query_en = normalize_math_term(term_en)
     candidates = []
-    
+
     for eid, title, nl_desc, emb_blob, lean_path in rows:
         norm_title = normalize_math_term(title)
-        
+
         for nq in [norm_query_ru, norm_query_en]:
             if not nq: continue
             query_words = set(nq.split())
             title_words = set(norm_title.split())
-            
+
             # Match if exact match, or if one is a proper subset of the other (with at least 2 words to avoid false positives on 'the' etc)
             if nq == norm_title or (len(title_words) >= 2 and title_words.issubset(query_words)) or (len(query_words) >= 2 and query_words.issubset(title_words)):
                 if not any(c["entity_id"] == eid for c in candidates):
                     candidates.append({"entity_id": eid, "title": title, "nl_desc": nl_desc, "score": 1.0, "method": "dictionary"})
                 break
-    
+
     # 2. Embedding Search (Always run to pool candidates)
     if not candidates:
         emb_candidates = []
@@ -279,12 +279,12 @@ def resolve_entities(query, canonical_term, available_entities):
                             emb_candidates.append({"entity_id": eid, "title": title, "nl_desc": nl_desc, "score": sim, "method": "embedding"})
         except Exception as e:
             print(f"[-] Embedding search failed: {e}")
-            
+
         if emb_candidates:
             # Sort by embedding score and take Top 15
             emb_candidates.sort(key=lambda x: x["score"], reverse=True)
             emb_candidates = emb_candidates[:15]
-            
+
             reranker = get_reranker()
             if reranker:
                 print(f"[*] Reranking {len(emb_candidates)} candidates for '{canonical_term}'...")
@@ -292,7 +292,7 @@ def resolve_entities(query, canonical_term, available_entities):
                 for idx, c in enumerate(emb_candidates):
                     doc_text = f"{c['title']}. {c['nl_desc'] or ''}"
                     docs_for_reranker.append((idx, doc_text))
-                    
+
                 try:
                     reranked_results = reranker.rerank(canonical_term, docs_for_reranker)
                     for res in reranked_results:
@@ -308,18 +308,18 @@ def resolve_entities(query, canonical_term, available_entities):
                     candidates.extend(emb_candidates[:5])
             else:
                 candidates.extend(emb_candidates[:5])
-                
+
     if not candidates:
         return [], canonical_term
-        
+
     # Sort candidates by score
     candidates.sort(key=lambda x: x["score"], reverse=True)
     candidates = candidates[:3]  # Take top 3 for LLM arbitration
-    
+
     # 3. LLM-Judge Arbitration
     for best_candidate in candidates:
         print(f"[*] Candidate found by {best_candidate['method']}: {best_candidate['entity_id']} (score {best_candidate['score']:.2f})")
-        
+
         desc_text = str(best_candidate['nl_desc'])[:1000] if best_candidate['nl_desc'] else "No description available."
         prompt = f"""You are 'goedel-prover', a strict mathematical arbiter.
 Your goal is to decide if the USER TERM fundamentally refers to the SAME mathematical concept as the CANDIDATE entity.
@@ -343,7 +343,7 @@ Answer EXACTLY with valid JSON:
             response = mgr.query_llm(prompt, json_mode=True, role="extract")
             match = re.search(r'(\\{.*\\})', response, re.DOTALL)
             if match: response = match.group(1)
-            
+
             decision = json.loads(response)
             if decision.get("is_identical", False):
                 print(f"[Queue] [+] Goedel Arbitration confirmed match for {best_candidate['entity_id']}: {decision.get('reason')}")
@@ -354,7 +354,7 @@ Answer EXACTLY with valid JSON:
             print(f"[-] Failed to parse arbiter JSON: {e}")
             if best_candidate["method"] == "dictionary":
                 return [{"entity_id": best_candidate["entity_id"], "confidence": 1.0}], canonical_term
-            
+
     return [], canonical_term
 
 
@@ -412,7 +412,7 @@ def run_enrichment_pipeline(
         if extract_provider:
             setup_provider(extract_provider, api_key=extract_api_key, model=extract_model)
         term_ru, term_en = translate_term(clean_term, model=extract_model, provider=extract_provider)
-        
+
     print(f"[*] Целевой термин (RU): '{term_ru}'")
     print(f"[*] Целевой термин (EN): '{term_en}'")
 
@@ -548,12 +548,12 @@ def main():
     parser.add_argument("--lean-api-key",  type=str, default=None)
     parser.add_argument("--no-validate", action='store_true', help='Disable Lean validation inside synthesizer (default: enabled)')
     parser.add_argument("--force-refresh", action='store_true', help='Force overwrite of cached NLP translations (nl_translations_cache.json)')
-    
+
     # ── Per-module: Embedding ────────────────────────────────────────────────
     parser.add_argument("--embed-provider", type=str, default="ollama", choices=PROVIDERS)
     parser.add_argument("--embed-model",    type=str, default="nomic-embed-text:latest")
     parser.add_argument("--embed-api-key",  type=str, default=None)
-    
+
     # ── OCR Pages Override ────────────────────────────────────────────────────
     parser.add_argument("--ocr-pages", type=str, default=None,
                         help='Skip search and process only specified pages. Format: JSON {"book": "zorich", "pages": [1, 2, 3]} or comma-separated "1,2,3" (first book)')
@@ -609,20 +609,25 @@ def main():
     validation_queue = []
     processed_synthesis_terms = set()
     validated_entities = set()
+    failed_entities = set()          # сущности, исчерпавшие лимит повторов валидации
+    validation_visits = {}           # eid -> сколько раз входил в валидацию
+    # Лимит повторных постановок сущности в очередь валидации, чтобы избежать
+    # бесконечного цикла, когда пропущенные зависимости не разрешаются.
+    MAX_VALIDATION_VISITS = int(os.environ.get("MATHESIS_MAX_VALIDATION_VISITS", "3"))
     root_generated_ids = [] # IDs generated specifically for the initial query term
 
 
     import sqlite3
     from pipeline.lean_validator import validate_entity
-    
+
     # Dual-queue loop
     while synthesis_queue or validation_queue:
-        
+
         # ── Phase 1: Process Synthesis Queue ──
         while synthesis_queue:
             # We pop from the front to process dependencies first (DFS-like)
             term = synthesis_queue.pop(0)
-            
+
             if term in processed_synthesis_terms:
                 continue
             processed_synthesis_terms.add(term)
@@ -630,7 +635,7 @@ def main():
             print(f"\n[Queue] Извлечение и синтез для термина: '{term}'")
             available = get_available_entities()
             matches, _ = resolve_entities(term, term, available)
-            
+
             if matches:
                 print(f"[Queue] Термин '{term}' уже существует в базе:")
                 for m in matches:
@@ -639,7 +644,7 @@ def main():
                     if m['entity_id'] not in validated_entities and m['entity_id'] not in validation_queue:
                         validation_queue.append(m['entity_id'])
                 continue
-            
+
             # If not in base, trigger enrichment
             success, generated_ids, generated_deps = run_enrichment_pipeline(
                 term,
@@ -654,7 +659,7 @@ def main():
                 ocr_pages_spec=args.ocr_pages if hasattr(args, 'ocr_pages') else None,
                 term_ru=keyword if term == canonical else None,
             )
-            
+
             if success:
                 print(f"[Queue] Синтезированы новые сущности: {generated_ids}")
                 if term == canonical:
@@ -684,33 +689,35 @@ def main():
         if validation_queue:
             # Take the first one in the queue
             eid = validation_queue.pop(0)
-            
-            if eid in validated_entities:
+
+            if eid in validated_entities or eid in failed_entities:
                 continue
-                
-            print(f"\n[Queue] Шаг 1: Проверка правильности извлечения формулировки в мат. запись для: '{eid}'")
-            
+
+            validation_visits[eid] = validation_visits.get(eid, 0) + 1
+
+            print(f"\n[Queue] Шаг 1: Проверка правильности извлечения формулировки в мат. запись для: '{eid}' (попытка {validation_visits[eid]}/{MAX_VALIDATION_VISITS})")
+
             # Load the lean draft saved by the synthesizer
             lean_file_path = PROJECT_ROOT / "lean_validator" / "Validated" / f"{eid}.lean"
             if not lean_file_path.exists():
                 print(f"[Queue] [-] Мат. запись не найдена: {lean_file_path}")
                 print(f"[Queue] [*] Запуск генерации мат. записи (Lean) по формулировке {eid}...")
-                
+
                 from pipeline.export_to_lean import attempt_generation_with_repair
                 tex_files = list(PROJECT_ROOT.joinpath("content").rglob(f"*[{eid}].tex"))
                 if not tex_files:
                     print(f"[Queue] [-] Не удалось найти .tex файл для {eid} в content/ для догенерации!")
                     continue
-                
+
                 tex_content = tex_files[0].read_text(encoding='utf-8')
                 entity_type = "def" if "def-" in eid else "prop"
-                
+
                 lean_strategy = mgr.strategies.get('lean')
                 lean_model = getattr(lean_strategy, 'model_name', 'goedel:latest') if lean_strategy else 'goedel:latest'
                 lean_code, is_valid = attempt_generation_with_repair(
                     eid, entity_type, tex_content, model=lean_model
                 )
-                
+
                 if lean_code and is_valid:
                     lean_file_path.parent.mkdir(parents=True, exist_ok=True)
                     lean_file_path.write_text(lean_code, encoding='utf-8')
@@ -718,53 +725,57 @@ def main():
                 else:
                     print(f"[Queue] [-] Не удалось догенерировать Lean для {eid}")
                     continue
-                
+
             lean_code = lean_file_path.read_text(encoding='utf-8')
             print(f"  Получен код: {lean_code[:80]}...")
-            
+
             print(f"\n[Queue] Шаг 2: Построение DAG для подтверждения правильности формулировки '{eid}' с использованием зависимых объектов...")
             # Run lean_validator logic directly (which builds DAG using LeanTreeBuilder)
             result = validate_entity(eid, lean_code)
-            
+
             if result["status"] == "success":
                 print(f"[Queue] [OK] Сущность {eid} успешно прошла валидацию!")
                 validated_entities.add(eid)
-                
+
                 # Append to SuccessfulEntities
                 success_file = PROJECT_ROOT / "lean_validator" / "SuccessfulEntities.lean"
                 if not success_file.exists():
                     success_file.write_text("import Mathlib\n\n-- Valid entities generated by Goedel-Formalizer\n\n", encoding='utf-8')
                 with open(success_file, "a", encoding="utf-8") as f:
                     f.write(f"-- Entity: {eid}\n{lean_code}\n\n")
-                    
+
             elif result["status"] == "timeout":
                 print(f"[Queue] [TIMEOUT] Валидация для {eid} превысила время ожидания.")
                 # Could re-queue or skip
             else:
                 print(f"[Queue] [FAIL] Ошибки валидации для {eid}.")
-                
+
                 # Log the Lean errors
                 error_feedback = "\n".join([f"Line {e['line']}: {e['message']}" for e in result.get("errors", [])])
                 from pipeline.export_to_lean import log_to_file
                 log_to_file("lean_errors", error_feedback, entity_id=eid)
-                
+
                 # Check for missing dependencies
                 missing_deps = get_missing_deps_from_lean_error(result["errors"])
                 mathesis_deps = [d for d in missing_deps if any(d.startswith(p) for p in ["obj-", "prop-", "op-", "thm-", "def-"])]
-                
-                if mathesis_deps:
+
+                if mathesis_deps and validation_visits[eid] < MAX_VALIDATION_VISITS:
                     print(f"[Queue] [!] Обнаружены отсутствующие зависимости: {mathesis_deps}")
                     print(f"[Queue] [+] Добавляю отсутствующие зависимости вне очереди (в начало S-Queue).")
-                    
+
                     for dep in mathesis_deps:
                         # Clean prefix to use as natural language term
                         clean_dep = dep.replace('def-', '').replace('op-', '').replace('obj-', '').replace('prop-', '').replace('thm-', '').replace('-', ' ')
                         if clean_dep not in processed_synthesis_terms:
                             synthesis_queue.insert(0, clean_dep)
-                    
+
                     # Re-queue the current entity at the end of the validation queue
                     print(f"[Queue] [*] Сущность {eid} возвращена в конец V-Queue.")
                     validation_queue.append(eid)
+                elif mathesis_deps:
+                    # Лимит повторов исчерпан — прекращаем цикл по этой сущности.
+                    print(f"[Queue] [-] Сущность {eid} исчерпала лимит повторов ({MAX_VALIDATION_VISITS}); зависимости не разрешены: {mathesis_deps}. Помечаю как failed.")
+                    failed_entities.add(eid)
                 else:
                     print(f"[Queue] [-] Семантические ошибки без явных пропущенных зависимостей.")
                     for e in result["errors"][:3]:
@@ -773,18 +784,18 @@ def main():
                     # It would require Lean correction logic. We leave it as failed for now.
 
     print(f"\n[!] Конвейер полностью завершил работу (Очереди пусты).")
-    
+
     # Generate the final PDF with the originally requested canonical entity
     available = get_available_entities()
     matches, _ = resolve_entities(args.query, canonical, available)
-    
+
     root_ids = [m["entity_id"] for m in matches]
-    
+
     # Fallback 1: use entities that passed Lean validation during this run
     if not root_ids and validated_entities:
         print(f"[*] Роутер не нашел точных совпадений, использую успешно валидированные сущности: {validated_entities}")
         root_ids = list(validated_entities)
-    
+
     # Fallback 2: if there are recently synthesized root ids (legacy variable), use them
     elif not root_ids and 'root_generated_ids' in locals() and root_generated_ids:
         print(f"[*] Роутер не нашел точных совпадений, использую синтезированные результаты: {root_generated_ids}")
@@ -804,7 +815,7 @@ def main():
                 continue
             else:
                 cmd.extend([f"--{arg_name.replace('_', '-')}", str(arg_val)])
-                
+
         try:
             subprocess.run(cmd, check=True)
         except subprocess.CalledProcessError as e:

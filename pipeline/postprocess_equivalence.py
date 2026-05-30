@@ -14,16 +14,19 @@ if str(PROJECT_ROOT) not in sys.path:
 
 # Импортируем общую конфигурацию и функции запросов Mathesis
 from pipeline.config import resolve_module_config
-from pipeline.export_to_lean import setup_provider, setup_lean_provider, query_llm
+from pipeline.export_to_lean import setup_lean_provider
+from pipeline.model_manager import ModelManager
 
 class MathesisSemanticMerger:
     def __init__(self, content_dir="content", db_path="mathesis.db", cli_args=None):
         self.content_dir = content_dir
         self.db_path = db_path
-        
+        # Сухой прогон: ничего не удаляем и не меняем в БД, только логируем.
+        self.dry_run = bool(getattr(cli_args, 'dry_run', False))
+
         # Настройка логирования
         self.setup_logging()
-        
+
         # Разрешаем конфигурацию для Lean-валидации (модуль lean)
         self.lean_provider, self.lean_model, self.lean_api_key = resolve_module_config(
             module="lean",
@@ -34,20 +37,20 @@ class MathesisSemanticMerger:
             module_model=getattr(cli_args, 'lean_model', None),
             module_api_key=getattr(cli_args, 'lean_api_key', None)
         )
-        
+
         # Если модель для lean не задана явно в CLI, по умолчанию используем "goedel-prover" с провайдером "ollama"
         has_explicit_lean_model = cli_args and (getattr(cli_args, 'lean_model', None) or getattr(cli_args, 'model', None))
         if not has_explicit_lean_model:
             self.lean_model = "goedel-prover"
             self.lean_provider = "ollama"
 
-        
+
         # Модель для эмбеддингов
         self.embed_model = "nomic-embed-text:latest"
-        
+
         # Допустимые роли для семантического сравнения
         self.valid_roles = ['def', 'prop']
-        
+
         # Инициализируем провайдеры в глобальном окружении Mathesis
         self.logger.info(f"Инициализация Lean-валидатора (Провайдер: {self.lean_provider.upper()}, Модель: {self.lean_model})")
         setup_lean_provider(self.lean_provider, api_key=self.lean_api_key, model=self.lean_model)
@@ -56,22 +59,22 @@ class MathesisSemanticMerger:
         """Настройка двух уровней логирования: лаконичный консольный и детальный в файл"""
         os.makedirs("logs", exist_ok=True)
         log_file = "logs/postprocess_equivalence.log"
-        
+
         # Создаем логгер
         self.logger = logging.getLogger("MathesisSemanticMerger")
         self.logger.setLevel(logging.DEBUG)
-        
+
         # Очищаем старые обработчики, если они есть (например, при повторном импорте)
         if self.logger.hasHandlers():
             self.logger.handlers.clear()
-            
+
         # 1. Детальный лог в файл (DEBUG уровень)
         fh = logging.FileHandler(log_file, encoding='utf-8', mode='w')
         fh.setLevel(logging.DEBUG)
         fh_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
         fh.setFormatter(fh_formatter)
         self.logger.addHandler(fh)
-        
+
         # 2. Лаконичный лог в консоль (INFO уровень)
         sh = logging.StreamHandler()
         sh.setLevel(logging.INFO)
@@ -105,24 +108,24 @@ class MathesisSemanticMerger:
         """Загрузка контента и определение истинных ролей с выделением чистого ID"""
         entities = []
         filepaths = glob.glob(os.path.join(self.content_dir, '**', '*.tex'), recursive=True)
-        
+
         self.logger.info(f"Загрузка и классификация ролей для {len(filepaths)} файлов контента...")
         for filepath in filepaths:
             filename_base = os.path.splitext(os.path.basename(filepath))[0]
-            
+
             # Извлекаем ID из квадратных скобок: "Human Name [entity-id]" -> "entity-id"
             id_match = re.search(r'\[(.*?)\]', filename_base)
             if not id_match:
                 self.logger.warning(f"Файл {filepath} пропущен: отсутствует квадратные скобки ID в названии.")
                 continue
             entity_id = id_match.group(1).strip()
-            
+
             with open(filepath, 'r', encoding='utf-8') as f:
                 content = f.read()
-                
+
             formulation = self.extract_formulation(content)
             true_role = self.get_true_role(entity_id, formulation)
-            
+
             entities.append({
                 "path": filepath,
                 "filename_base": filename_base,
@@ -132,7 +135,7 @@ class MathesisSemanticMerger:
                 "true_role": true_role
             })
             self.logger.debug(f"[{entity_id}] ({filename_base}) классифицирован как роль: {true_role}")
-            
+
         self.logger.info(f"Успешно загружено {len(entities)} семантически значимых сущностей.")
         return entities
 
@@ -158,7 +161,7 @@ class MathesisSemanticMerger:
         validated_path = os.path.join("lean_validator", "Validated", f"{entity_id}.lean")
         if os.path.exists(validated_path):
             return validated_path
-            
+
         # 2. Если не нашли, ищем по точному вхождению ID в квадратных скобках
         pattern = f"*{entity_id}*.lean"
         matches = glob.glob(os.path.join(self.content_dir, '**', pattern), recursive=True)
@@ -174,10 +177,10 @@ class MathesisSemanticMerger:
         # Если это файл эквивалентности, или вспомогательный файл, имя может не соответствовать
         # Но для обычных сущностей оно соответствует:
         target_name = basename.replace('-', '_')
-        
+
         with open(lean_filepath, 'r', encoding='utf-8') as f:
             lean_content = f.read()
-            
+
         # Убираем комментарии и импорты
         lines = []
         for line in lean_content.splitlines():
@@ -185,12 +188,12 @@ class MathesisSemanticMerger:
                 continue
             lines.append(line)
         content_clean = "\n".join(lines).strip()
-        
+
         # Ищем блок, который начинается с объявления нашей target_name
         # Шаблон ищет слово def/theorem/lemma/abbrev/structure/class, за которым идет target_name
         pattern = rf'\b(def|theorem|lemma|abbrev|structure|class)\s+{re.escape(target_name)}\b'
         match = re.search(pattern, content_clean)
-        
+
         if match:
             start_idx = match.start()
             # Нам нужно найти конец этого блока.
@@ -202,7 +205,7 @@ class MathesisSemanticMerger:
                 statement_block = rest[:next_decl.start() + 1].strip()
             else:
                 statement_block = rest.strip()
-                
+
             # Если это теорема/лемма, отрезаем доказательство (после := или := by)
             keyword = match.group(1)
             if keyword in ('theorem', 'lemma'):
@@ -215,11 +218,11 @@ class MathesisSemanticMerger:
                         statement = statement[:-2].strip()
                     return statement
             return statement_block
-            
+
         # Резервный вариант: старая логика
         if re.search(r'\b(def|abbrev|structure|class)\b', content_clean):
             return content_clean
-            
+
         match_proof = re.search(r'((?:theorem|lemma)\s+.*?(?::=|:= by))', content_clean, re.DOTALL)
         if match_proof:
             statement = match_proof.group(1).strip()
@@ -228,7 +231,7 @@ class MathesisSemanticMerger:
             if statement.endswith(':='):
                 statement = statement[:-2].strip()
             return statement
-            
+
         return content_clean
 
     def get_lean_name(self, statement):
@@ -247,18 +250,18 @@ class MathesisSemanticMerger:
         # 1. Поиск .lean файлов
         path1 = self.find_lean_file_by_id(e1['id'])
         path2 = self.find_lean_file_by_id(e2['id'])
-        
+
         # Если хотя бы у одного нет .lean файла, мы не можем провести формальную Lean-верификацию.
         if not path1 or not path2:
             self.logger.warning(f"Не найдены .lean файлы для пары {e1['id']} и {e2['id']}. Формальная проверка невозможна.")
             return False, None
-            
+
         stmt1 = self.extract_lean_statement(path1)
         stmt2 = self.extract_lean_statement(path2)
-        
+
         name1 = self.get_lean_name(stmt1)
         name2 = self.get_lean_name(stmt2)
-        
+
         prompt = f"""You are Goedel-Prover, an expert theorem-proving AI for Lean 4.
 Your objective is to mathematically prove the equivalence of two previously formalized statements.
 
@@ -282,12 +285,12 @@ If the equivalence requires complex intermediate lemmas not present in the conte
 Do not provide conversational text. Output ONLY the valid Lean 4 code block.
 """
         self.logger.debug(f"Запрос Goedel Lean валидации для {e1['id']} <-> {e2['id']}...")
-        
+
         # Подготовка директории и файла для логирования Goedel
         goedel_log_dir = os.path.join("logs", "postprocess_prover")
         os.makedirs(goedel_log_dir, exist_ok=True)
         log_filepath = os.path.join(goedel_log_dir, f"{e1['id']}_vs_{e2['id']}.txt")
-        
+
         try:
             # Делаем запрос через централизованный query_llm Mathesis
             reply = ModelManager.get_instance().query_llm(
@@ -295,11 +298,11 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
                 model=self.lean_model,
                 provider=self.lean_provider
             )
-            
+
             # Логируем успешный запрос и ответ
             with open(log_filepath, 'w', encoding='utf-8') as lf:
                 lf.write(f"=== PROMPT ===\n{prompt}\n\n=== REPLY ===\n{reply}\n")
-            
+
             lean_matches = re.findall(r'```lean(.*?)```', reply, re.DOTALL)
             if lean_matches:
                 best_code = None
@@ -310,11 +313,11 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
                         break
                     elif best_code is None:
                         best_code = code_candidate
-                
+
                 if best_code and "sorry" not in best_code:
                     self.logger.debug(f"Goedel подтвердил эквивалентность {e1['id']} <-> {e2['id']}.")
                     return True, best_code
-                    
+
         except Exception as e:
             try:
                 with open(log_filepath, 'w', encoding='utf-8') as lf:
@@ -322,7 +325,7 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
             except Exception:
                 pass
             self.logger.error(f"Ошибка Lean валидации Goedel: {e}")
-            
+
         self.logger.debug(f"Goedel отклонил эквивалентность {e1['id']} <-> {e2['id']} или произошла ошибка.")
         return False, None
 
@@ -354,36 +357,41 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
                 with open(filepath, 'w', encoding='utf-8') as f:
                     f.write(text)
 
-    def cleanup_database(self, e1_id, e2_id):
-        """Очищает базу данных mathesis_index.db от удаленной сущности e2_id и перенаправляет связи на e1_id."""
+    def cleanup_database(self, e1_id, e2_id) -> bool:
+        """Атомарно перенаправляет связи e2_id -> e1_id и удаляет e2_id из
+        mathesis_index.db. Все изменения в одной транзакции: при сбое — полный
+        откат (не остаётся «полуудалённого» состояния). Возвращает True при успехе.
+        """
         db_path = os.path.join(PROJECT_ROOT, "db/mathesis_index.db")
         if not os.path.exists(db_path):
             self.logger.warning(f"База данных {db_path} не найдена. Пропуск очистки БД.")
-            return
-            
+            return False
+
+        if self.dry_run:
+            self.logger.info(f"[dry-run] БД не меняется: слияние {e2_id} -> {e1_id} пропущено.")
+            return True
+
+        import sqlite3
+        conn = sqlite3.connect(db_path)
         try:
-            import sqlite3
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            
-            # 1. Удаляем e2_id из entities
-            cursor.execute("DELETE FROM entities WHERE entity_id = ?", (e2_id,))
-            
-            # 2. Удаляем e2_id из formulation_sources
-            cursor.execute("DELETE FROM formulation_sources WHERE entity_id = ?", (e2_id,))
-            
-            # 3. Перенаправляем зависимости в entity_dependency
-            cursor.execute("UPDATE OR IGNORE entity_dependency SET source_id = ? WHERE source_id = ?", (e1_id, e2_id))
-            cursor.execute("UPDATE OR IGNORE entity_dependency SET target_id = ? WHERE target_id = ?", (e1_id, e2_id))
-            
-            # 4. Удаляем любые остаточные битые зависимости с e2_id
-            cursor.execute("DELETE FROM entity_dependency WHERE source_id = ? OR target_id = ?", (e2_id, e2_id))
-            
-            conn.commit()
-            conn.close()
+            # `with conn` = одна транзакция: commit при успехе, rollback при исключении.
+            with conn:
+                cursor = conn.cursor()
+                # 1. Сначала перенаправляем зависимости на e1 (до удаления сущности).
+                cursor.execute("UPDATE OR IGNORE entity_dependency SET source_id = ? WHERE source_id = ?", (e1_id, e2_id))
+                cursor.execute("UPDATE OR IGNORE entity_dependency SET target_id = ? WHERE target_id = ?", (e1_id, e2_id))
+                # 2. Удаляем остаточные битые/самоссылающиеся рёбра с e2.
+                cursor.execute("DELETE FROM entity_dependency WHERE source_id = ? OR target_id = ?", (e2_id, e2_id))
+                # 3. Удаляем саму сущность и её источники.
+                cursor.execute("DELETE FROM formulation_sources WHERE entity_id = ?", (e2_id,))
+                cursor.execute("DELETE FROM entities WHERE entity_id = ?", (e2_id,))
             self.logger.info(f"[*] База данных успешно очищена для пары: {e1_id} <-> {e2_id}.")
+            return True
         except Exception as e:
-            self.logger.error(f"Ошибка при очистке базы данных: {e}")
+            self.logger.error(f"Ошибка при очистке базы данных (изменения откатаны): {e}")
+            return False
+        finally:
+            conn.close()
 
     def remove_entity_from_successful_entities(self, entity_id):
         """Удаляет блок кода сущности из SuccessfulEntities.lean."""
@@ -391,15 +399,15 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
         if not os.path.exists(filepath):
             self.logger.warning(f"Файл {filepath} не найден. Пропуск очистки SuccessfulEntities.")
             return
-            
+
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
+
             blocks = content.split("-- Entity: ")
             new_blocks = [blocks[0]]
             removed_count = 0
-            
+
             for block in blocks[1:]:
                 lines = block.splitlines()
                 if not lines:
@@ -411,7 +419,7 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
                     removed_count += 1
                     continue
                 new_blocks.append("-- Entity: " + block)
-                
+
             if removed_count > 0:
                 new_content = "".join(new_blocks)
                 with open(filepath, 'w', encoding='utf-8') as f:
@@ -423,7 +431,7 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
     def actualize_lean_files(self):
         """Сканирует Validated/ и SuccessfulEntities.lean и удаляет сиротские сущности, которых больше нет в content."""
         self.logger.info("Запуск актуализации (garbage collection) Lean файлов...")
-        
+
         # Шаг 1: Загружаем все активные ID из content
         active_ids = set()
         for filepath in glob.glob(os.path.join(self.content_dir, '**', '*.tex'), recursive=True):
@@ -431,16 +439,16 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
             id_match = re.search(r'\[(.*?)\]', filename_base)
             if id_match:
                 active_ids.add(id_match.group(1).strip())
-                
+
         self.logger.info(f"Найдено {len(active_ids)} активных ID сущностей в LaTeX контенте.")
-        
+
         # Шаг 2: Сканируем Validated/ и удаляем сиротские файлы
         validated_dir = os.path.join("lean_validator", "Validated")
         if os.path.exists(validated_dir):
             lean_files = glob.glob(os.path.join(validated_dir, '*.lean'))
             for filepath in lean_files:
                 basename = os.path.splitext(os.path.basename(filepath))[0]
-                
+
                 # Если это файл эквивалентности (equiv_{id1}_{id2}):
                 if basename.startswith("equiv_"):
                     active_ids_underscored = [aid.replace('-', '_') for aid in active_ids]
@@ -459,18 +467,18 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
                             os.remove(filepath)
                         except Exception as e:
                             self.logger.error(f"Не удалось удалить файл {filepath}: {e}")
-                            
+
         # Шаг 3: Удаляем сиротские записи из SuccessfulEntities.lean
         filepath = os.path.join("lean_validator", "SuccessfulEntities.lean")
         if os.path.exists(filepath):
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
                     content = f.read()
-                
+
                 blocks = content.split("-- Entity: ")
                 new_blocks = [blocks[0]]
                 removed_count = 0
-                
+
                 for block in blocks[1:]:
                     lines = block.splitlines()
                     if not lines:
@@ -482,7 +490,7 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
                         removed_count += 1
                         continue
                     new_blocks.append("-- Entity: " + block)
-                    
+
                 if removed_count > 0:
                     new_content = "".join(new_blocks)
                     with open(filepath, 'w', encoding='utf-8') as f:
@@ -509,26 +517,32 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
                 self.logger.info(f"[!] Обнаружены синтаксические дубликаты с одинаковым ID '{entity_id}' (Количество: {len(group)})")
                 for e in group:
                     self.logger.debug(f"  - Путь к файлу: {e['path']}")
-                
+
                 # Выбираем лучшего кандидата: отдаем приоритет файлу с более полной формулировкой (длиннее контент)
                 group_sorted = sorted(group, key=lambda x: len(x['content']), reverse=True)
                 target_entity = group_sorted[0]
                 duplicates_to_delete = group_sorted[1:]
-                
+
                 self.logger.info(f"[*] Сохраняем наиболее полный файл: {target_entity['path']}")
                 unique_entities.append(target_entity)
-                
+
                 # Физически удаляем остальные
                 for dup in duplicates_to_delete:
                     if os.path.exists(dup['path']):
-                        self.logger.info(f"[*] Удаление дубликата: {dup['path']}")
-                        os.remove(dup['path'])
-                        
+                        if self.dry_run:
+                            self.logger.info(f"[dry-run] Удалил бы дубликат: {dup['path']}")
+                        else:
+                            self.logger.info(f"[*] Удаление дубликата: {dup['path']}")
+                            os.remove(dup['path'])
+
                     # Физически удаляем соответствующий Lean файл дубликата
                     dup_lean_path = self.find_lean_file_by_id(dup['id'])
                     if dup_lean_path and os.path.exists(dup_lean_path):
-                        self.logger.info(f"[*] Удаление дублирующего Lean файла: {dup_lean_path}")
-                        os.remove(dup_lean_path)
+                        if self.dry_run:
+                            self.logger.info(f"[dry-run] Удалил бы дублирующий Lean файл: {dup_lean_path}")
+                        else:
+                            self.logger.info(f"[*] Удаление дублирующего Lean файла: {dup_lean_path}")
+                            os.remove(dup_lean_path)
             else:
                 unique_entities.append(group[0])
 
@@ -542,11 +556,11 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
 
         self.logger.info("Построение векторного пространства для оставшихся уникальных сущностей...")
         embeddings = [self.get_embedding(e["formulation"]) for e in entities]
-        
+
         n = len(entities)
         pairs_to_check = []
         similarity_threshold = 0.90  # Строгий порог для точных дубликатов
-        
+
         # Находим пары сущностей с высокой схожестью в одной категории
         for i in range(n):
             for j in range(i + 1, n):
@@ -563,28 +577,39 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
             return
 
         self.logger.info(f"Обнаружено {len(pairs_to_check)} пар-кандидатов с высоким сходством. Запуск Goedel верификации...")
-        
+
         merged_ids = set() # Чтобы не обрабатывать уже удаленные сущности
-        
+
         for e1, e2, sim in pairs_to_check:
             if e1['id'] in merged_ids or e2['id'] in merged_ids:
                 continue
-                
+
             self.logger.info(f"[!] Проверка пары [{e1['id']}] <-> [{e2['id']}] (схожесть: {sim:.4f})...")
             is_equiv, lean_code = self.ask_goedel_for_lean(e1, e2)
-            
+
             if is_equiv:
                 self.logger.info(f"[*] Goedel подтвердил эквивалентность! Запуск слияния {e2['id']} -> {e1['id']}...")
-                
+
+                # СНАЧАЛА атомарно правим БД. Файлы удаляем только после успешного
+                # коммита — иначе сбой БД оставил бы удалённые файлы при живой записи.
+                if not self.cleanup_database(e1['id'], e2['id']):
+                    self.logger.error(f"[-] Очистка БД для {e2['id']} не удалась. Файлы НЕ удаляются, слияние пропущено.")
+                    continue
+
+                if self.dry_run:
+                    self.logger.info(f"[dry-run] Файлы и ссылки для {e2['id']} не трогаются.")
+                    merged_ids.add(e2['id'])
+                    continue
+
                 # Физическое N-to-1 слияние LaTeX
                 if os.path.exists(e2['path']):
                     os.remove(e2['path'])
-                    
+
                 # Физическое удаление Lean файла дубликата
                 e2_lean_path = self.find_lean_file_by_id(e2['id'])
                 if e2_lean_path and os.path.exists(e2_lean_path):
                     os.remove(e2_lean_path)
-                
+
                 # Запись теоремы эквивалентности в Validated
                 clean_equiv_name = f"equiv_{e1['id'].replace('-','_')}_{e2['id'].replace('-','_')}"
                 lean_path = os.path.join("lean_validator", "Validated", f"{clean_equiv_name}.lean")
@@ -592,13 +617,10 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
                 with open(lean_path, 'w', encoding='utf-8') as f:
                     f.write(lean_code)
                 self.logger.info(f"[*] Сгенерирован Lean 4 файл эквивалентности: {lean_path}")
-                
-                # Очистка базы данных
-                self.cleanup_database(e1['id'], e2['id'])
-                
+
                 # Удаление из SuccessfulEntities
                 self.remove_entity_from_successful_entities(e2['id'])
-                
+
                 # Заменяем ссылки в LaTeX
                 self.replace_references([e2['id']], e1['id'])
                 merged_ids.add(e2['id'])
@@ -627,7 +649,8 @@ if __name__ == "__main__":
     parser.add_argument("--lean-provider", type=str, default=None)
     parser.add_argument("--lean-model", type=str, default=None)
     parser.add_argument("--lean-api-key", type=str, default=None)
+    parser.add_argument("--dry-run", action="store_true", help="Не удалять файлы и не менять БД — только показать, что было бы сделано.")
     args = parser.parse_args()
-    
+
     merger = MathesisSemanticMerger(cli_args=args)
     merger.process()
