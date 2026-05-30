@@ -8,6 +8,7 @@ from .incidents import (
 )
 from .orchestrator import Orchestrator
 from .state import Event, NodeRun, RunState, RunStatus
+from .store import load_run, save_incident, save_run_state
 
 __all__ = [
     "Orchestrator",
@@ -20,4 +21,7 @@ __all__ = [
     "PatchPlan",
     "IncidentHandler",
     "ManualReviewHandler",
+    "save_run_state",
+    "save_incident",
+    "load_run",
 ]

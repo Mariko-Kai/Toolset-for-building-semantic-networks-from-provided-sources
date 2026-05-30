@@ -15,7 +15,7 @@
 """
 from __future__ import annotations
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # Допустимые значения (используются и кодом, и в CHECK-ограничениях).
 KINDS = ("def", "prop")
@@ -135,7 +135,45 @@ CREATE TABLE IF NOT EXISTS schema_meta (
 );
 """
 
-SCHEMA_SQL = CANONICAL_SQL + STAGING_SQL + META_SQL
+# --- Оркестрация: прогоны, события, инциденты (ТЗ Этап 5.1) -------------------
+# Персистентный мониторинг агентной системы (см. agentic_orchestrator.md).
+ORCHESTRATION_SQL = """
+CREATE TABLE IF NOT EXISTS run (
+    run_id     TEXT PRIMARY KEY,
+    status     TEXT NOT NULL,
+    created_at TEXT,
+    updated_at TEXT,
+    health     TEXT                 -- JSON-снимок health()
+);
+
+CREATE TABLE IF NOT EXISTS run_event (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id  TEXT NOT NULL,
+    seq     INTEGER,
+    node    TEXT,
+    kind    TEXT,
+    status  TEXT,
+    message TEXT
+);
+
+CREATE TABLE IF NOT EXISTS incident (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id     TEXT,
+    node       TEXT,
+    status     TEXT,
+    severity   TEXT,
+    signals    TEXT,                -- JSON
+    context    TEXT,                -- JSON
+    message    TEXT,
+    resolution TEXT DEFAULT 'open', -- open | confirmed | rejected | applied
+    patch_plan TEXT                 -- JSON
+);
+
+CREATE INDEX IF NOT EXISTS idx_run_event_run ON run_event(run_id);
+CREATE INDEX IF NOT EXISTS idx_incident_run  ON incident(run_id);
+"""
+
+SCHEMA_SQL = CANONICAL_SQL + STAGING_SQL + ORCHESTRATION_SQL + META_SQL
 
 
 def all_table_names() -> list[str]:
@@ -144,5 +182,6 @@ def all_table_names() -> list[str]:
         "entity_fts", "alias", "formulation_sources", "entity_dependency",
         "equivalence", "entities",
         "formulation_raw_cache", "cluster_entity_map", "pending_edges",
+        "run", "run_event", "incident",
         "schema_meta",
     ]

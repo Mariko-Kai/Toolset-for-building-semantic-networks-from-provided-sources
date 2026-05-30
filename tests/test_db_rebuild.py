@@ -48,7 +48,7 @@ def test_rebuild_populates_canonical_db(mini_content, tmp_path):
 
     conn = mdb.connect(str(db_file))
     try:
-        assert mdb.get_schema_version(conn) == 2
+        assert mdb.get_schema_version(conn) == 3
         ids = {e.id for e in repo.list_entities(conn)}
         assert ids == {"def-base", "prop-thm"}
         # Тип корректен
