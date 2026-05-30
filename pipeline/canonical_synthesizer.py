@@ -166,7 +166,7 @@ def prepare_macros_from_deps(deps, mgr):
                 data = json.loads(resp)
                 args = data.get("args", 0)
                 notation = data.get("notation", pascal_name)
-            except:
+            except Exception:
                 args = 0
                 notation = pascal_name
 
@@ -235,9 +235,9 @@ OUTPUT: Only LaTeX. No ```latex blocks. Include the following metadata at the to
     rules += r"""
 
 CRITICAL HEURISTICS & ANTI-PATTERNS TO AVOID:
-1. Types vs. Sets (The \colon vs \in rule): 
-   Never confuse belonging to a fundamental type with belonging to a subset. 
-   - BAD: "x \TermIn \RealNumbers" when declaring a variable. 
+1. Types vs. Sets (The \colon vs \in rule):
+   Never confuse belonging to a fundamental type with belonging to a subset.
+   - BAD: "x \TermIn \RealNumbers" when declaring a variable.
    - GOOD: "x \colon \RealNumbers" (in LaTeX) or "(x : ℝ)" (in Lean). Use "\TermIn" ONLY for subsets, e.g., "x \TermIn \ClosedInterval{a, b}".
 
 2. Analytical vs. Computational Structures (The List rule):
@@ -250,8 +250,8 @@ CRITICAL HEURISTICS & ANTI-PATTERNS TO AVOID:
    If you find yourself writing repetitive logical tautologies (e.g., `x ≠ y → x ≠ y`) or overly complex index bounds, your underlying type choice is wrong. Stop and re-evaluate your data structures.
 
 5. Strict Semantic Identifiers (The Self-Describing ID Rule):
-   When defining a new entity-id, the `id` MUST be globally unambiguous, self-documenting, and resistant to namespace collisions. 
-   
+   When defining a new entity-id, the `id` MUST be globally unambiguous, self-documenting, and resistant to namespace collisions.
+
    Format: <type>-{domain_or_parent}-{concept}
 
 CRITICAL NAMING RULE: The entity-id MUST follow the Mathesis architecture standard:

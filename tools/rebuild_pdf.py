@@ -7,7 +7,6 @@ by their mutual dependencies, rebuilds 'content/master.tex', and
 compiles 'master.pdf' in the project root.
 """
 
-import os
 import re
 import subprocess
 import sys
@@ -18,7 +17,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CONTENT_DIR = PROJECT_ROOT / "content"
 
 def inject_hypertargets():
-    """Scan all entity .tex files and ensure they have a matching \hypertarget anchor."""
+    r"""Scan all entity .tex files and ensure they have a matching \hypertarget anchor."""
     print("1. Scanning content directory for entity files...")
     tex_files = []
     for filepath in CONTENT_DIR.rglob("*.tex"):
@@ -55,7 +54,7 @@ def rebuild_master_tex():
     """Build content/master.tex in topological order of dependencies."""
     print("2. Rebuilding content/master.tex...")
     master_path = CONTENT_DIR / "master.tex"
-    
+
     tex_files = []
     for filepath in CONTENT_DIR.rglob("*.tex"):
         if filepath.name in ("master.tex", "TEMPLATE.tex", "mathesis.sty"):
@@ -64,7 +63,7 @@ def rebuild_master_tex():
 
     nodes = {}
     file_by_id = {}
-    
+
     for filepath in tex_files:
         try:
             with open(filepath, "r", encoding="utf-8") as f:
@@ -73,10 +72,10 @@ def rebuild_master_tex():
             if not id_match:
                 continue
             entity_id = id_match.group(1).strip()
-            
+
             # Find dependencies
             deps = list(set(re.findall(r'\\entityref\{([^{}]+)\}', text)))
-            
+
             # Find abstract macro dependencies
             macro_deps = {
                 r'\mNorm': 'op-norm-abstract',
@@ -91,7 +90,7 @@ def rebuild_master_tex():
             for macro, default_id in macro_deps.items():
                 if macro in text:
                     deps.append(default_id)
-            
+
             deps = list(set(deps))
             nodes[entity_id] = deps
             file_by_id[entity_id] = filepath
@@ -102,7 +101,7 @@ def rebuild_master_tex():
     visited = set()
     temp_visited = set()
     order = []
-    
+
     def visit(node):
         if node in temp_visited:
             return
@@ -115,7 +114,7 @@ def rebuild_master_tex():
             temp_visited.remove(node)
             visited.add(node)
             order.append(node)
-            
+
     for node in nodes:
         visit(node)
 

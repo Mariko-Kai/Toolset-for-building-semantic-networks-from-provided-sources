@@ -1,5 +1,4 @@
 import subprocess
-import sys
 
 command = [
     ".\\.venv\\Scripts\\python.exe",

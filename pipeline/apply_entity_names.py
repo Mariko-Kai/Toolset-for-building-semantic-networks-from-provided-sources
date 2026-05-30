@@ -13,20 +13,20 @@ ENTITY_NAMES = {
     "op-logic-forall": "Квантор всеобщности",
     "op-logic-exists": "Квантор существования",
     "op-logic-exists-unique": "Квантор единственности",
-    
+
     "op-union": "Объединение множеств",
     "op-intersection": "Пересечение множеств",
     "op-difference": "Разность множеств",
     "op-symmetric-difference": "Симметрическая разность",
     "op-complement": "Дополнение множества",
     "op-cartesian-product": "Декартово произведение",
-    
+
     "op-composition": "Композиция функций",
     "op-inverse": "Обратная функция",
     "op-image": "Образ множества",
     "op-preimage": "Прообраз множества",
     "op-restriction": "Сужение функции",
-    
+
     # Objects
     "obj-set": "Множество",
     "obj-empty-set": "Пустое множество",
@@ -34,7 +34,7 @@ ENTITY_NAMES = {
     "obj-function": "Функция",
     "obj-graph": "График функции",
     "obj-natural-numbers": "Натуральные числа",
-    
+
     # Properties
     "prop-subset": "Подмножество",
     "prop-set-equality": "Равенство множеств",
@@ -56,24 +56,24 @@ def fix_file(filepath):
         content = f.read()
 
     new_content = content
-    
+
     # 1. Replace \section{proof} with \subsection*{Доказательство}
     new_content = re.sub(r'\\section\{proof\}', r'\\subsection*{Доказательство}', new_content)
-    
+
     # 2. Replace \section{type} \label{entity:ID} with \section{Name} \label{entity:ID}
     # Matches: \section{word} ...whitespace... \label{entity:ID}
-    
+
     # Regex explanation:
     # \\section\{[a-zA-Z]+\}  -> Matches \section{definition}, \section{property}, etc.
     # \s+                     -> Matches whitespace (newlines) between section and label
     # \\label\{entity:([a-zA-Z0-9-]+)\} -> Matches the label and captures the ID
-    
+
     pattern = r'\\section\{[a-zA-Z]+\}(\s+)\\label\{entity:([a-zA-Z0-9-]+)\}'
-    
+
     def replacement(match):
         spacer = match.group(1)
         entity_id = match.group(2)
-        
+
         if entity_id in ENTITY_NAMES:
             name = ENTITY_NAMES[entity_id]
             return f"\\section{{{name}}}{spacer}\\label{{entity:{entity_id}}}"

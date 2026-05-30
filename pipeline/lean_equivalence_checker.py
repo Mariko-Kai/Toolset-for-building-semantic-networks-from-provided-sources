@@ -18,7 +18,7 @@ class ProverEquivalenceVerifier:
     def __init__(self, content_dir="content", cli_args=None):
         self.content_dir = content_dir
         self.setup_logging()
-        
+
         # Конфигурация для Lean-Prover
         self.prover_provider, self.prover_model, self.prover_api_key = resolve_module_config(
             module="prover",
@@ -29,7 +29,7 @@ class ProverEquivalenceVerifier:
             module_model=getattr(cli_args, 'prover_model', None),
             module_api_key=getattr(cli_args, 'prover_api_key', None)
         )
-        
+
         # Если модель не задана явно в CLI, по умолчанию используем "goedel-prover" с провайдером "ollama"
         has_explicit_model = cli_args and (getattr(cli_args, 'prover_model', None) or getattr(cli_args, 'model', None))
         if not has_explicit_model:
@@ -45,12 +45,12 @@ class ProverEquivalenceVerifier:
         self.logger.setLevel(logging.DEBUG)
         if self.logger.hasHandlers():
             self.logger.handlers.clear()
-            
+
         fh = logging.FileHandler("logs/verify_equivalence.log", encoding='utf-8', mode='a')
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
         self.logger.addHandler(fh)
-        
+
         sh = logging.StreamHandler()
         sh.setLevel(logging.INFO)
         sh.setFormatter(logging.Formatter('[*] %(message)s'))
@@ -83,10 +83,10 @@ class ProverEquivalenceVerifier:
         """Извлекает строгую формулировку конкретной сущности, соответствующей имени файла."""
         basename = os.path.splitext(os.path.basename(lean_filepath))[0]
         target_name = basename.replace('-', '_')
-        
+
         with open(lean_filepath, 'r', encoding='utf-8') as f:
             lean_content = f.read()
-            
+
         # Убираем комментарии и импорты
         lines = []
         for line in lean_content.splitlines():
@@ -94,11 +94,11 @@ class ProverEquivalenceVerifier:
                 continue
             lines.append(line)
         content_clean = "\n".join(lines).strip()
-        
+
         # Ищем блок, который начинается с объявления нашей target_name
         pattern = rf'\b(def|theorem|lemma|abbrev|structure|class)\s+{re.escape(target_name)}\b'
         match = re.search(pattern, content_clean)
-        
+
         if match:
             start_idx = match.start()
             rest = content_clean[start_idx:]
@@ -107,7 +107,7 @@ class ProverEquivalenceVerifier:
                 statement_block = rest[:next_decl.start() + 1].strip()
             else:
                 statement_block = rest.strip()
-                
+
             keyword = match.group(1)
             if keyword in ('theorem', 'lemma'):
                 match_proof = re.search(r'(.*?)(?::=|:= by)', statement_block, re.DOTALL)
@@ -119,11 +119,11 @@ class ProverEquivalenceVerifier:
                         statement = statement[:-2].strip()
                     return statement
             return statement_block
-            
+
         # Резервный вариант: старая логика
         if re.search(r'\b(def|abbrev|structure|class)\b', content_clean):
             return content_clean
-            
+
         match_proof = re.search(r'((?:theorem|lemma)\s+.*?(?::=|:= by))', content_clean, re.DOTALL)
         if match_proof:
             statement = match_proof.group(1).strip()
@@ -132,7 +132,7 @@ class ProverEquivalenceVerifier:
             if statement.endswith(':='):
                 statement = statement[:-2].strip()
             return statement
-            
+
         return content_clean
 
     def get_lean_name(self, statement):
@@ -149,21 +149,20 @@ class ProverEquivalenceVerifier:
     def verify_pair(self, id1, id2):
         """Основной метод проверки пары ID."""
         self.logger.info(f"Запуск формальной проверки: [{id1}] <-> [{id2}]")
-        
+
         path1 = self.find_lean_file_by_id(id1)
         path2 = self.find_lean_file_by_id(id2)
-        
+
         if not path1 or not path2:
             self.logger.error(f"Не найдены .lean файлы для пары {id1} и {id2}.")
             return False, None
 
         stmt1 = self.extract_lean_statement(path1)
         stmt2 = self.extract_lean_statement(path2)
-        
+
         name1 = self.get_lean_name(stmt1)
         name2 = self.get_lean_name(stmt2)
-        operator = self.determine_operator(id1)
-        
+
         prompt = f"""You are Goedel-Prover, an expert theorem-proving AI for Lean 4.
 Your objective is to mathematically prove the equivalence of two previously formalized statements.
 
@@ -195,7 +194,7 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
             log_filepath = os.path.join(goedel_log_dir, f"{id1}_vs_{id2}.txt")
             with open(log_filepath, 'w', encoding='utf-8') as lf:
                 lf.write(f"=== PROMPT ===\n{prompt}\n\n=== REPLY ===\n{reply}\n")
-                
+
             lean_matches = re.findall(r'```lean(.*?)```', reply, re.DOTALL)
             if lean_matches:
                 # Ищем блок кода, который не содержит "sorry"
@@ -207,18 +206,18 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
                         break
                     elif best_code is None:
                         best_code = code_candidate
-                
+
                 if "sorry" not in best_code:
-                    self.logger.info(f"[+] УСПЕХ: Goedel-Prover доказал эквивалентность!")
+                    self.logger.info("[+] УСПЕХ: Goedel-Prover доказал эквивалентность!")
                     return True, best_code
                 else:
-                    self.logger.info(f"[-] ПРОВАЛ: Prover использовал 'sorry'. Эквивалентность не доказана.")
+                    self.logger.info("[-] ПРОВАЛ: Prover использовал 'sorry'. Эквивалентность не доказана.")
                     return False, best_code
             else:
                 self.logger.warning("Не найден блок кода в ответе модели.")
         except Exception as e:
             self.logger.error(f"Ошибка при вызове Prover: {e}")
-            
+
         return False, None
 
 if __name__ == "__main__":

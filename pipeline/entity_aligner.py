@@ -31,40 +31,40 @@ def get_embedding(text):
 def main():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
+
     cursor.execute("SELECT id, raw_text FROM formulation_raw_cache WHERE temp_cluster_id IS NULL")
     rows = cursor.fetchall()
-    
+
     if not rows:
         print("No new formulations to align.")
         return
 
     ids = []
     embeddings = []
-    
+
     print("Generating embeddings via Ollama...")
     for row_id, text in rows:
         emb = get_embedding(text)
         if emb:
             ids.append(row_id)
             embeddings.append(emb)
-            
+
     if not embeddings:
         return
-        
+
     embeddings_np = np.array(embeddings).astype('float32')
     dim = embeddings_np.shape[1]
-    
+
     print("Clustering using FAISS...")
     faiss.normalize_L2(embeddings_np)
     index = faiss.IndexFlatIP(dim)
     index.add(embeddings_np)
-    
+
     D, I = index.search(embeddings_np, k=embeddings_np.shape[0])
-    
+
     clusters = {}
     visited = set()
-    
+
     for i in range(embeddings_np.shape[0]):
         if i in visited:
             continue
@@ -75,13 +75,13 @@ def main():
                 if I[i][j] not in visited:
                     clusters[cluster_id].append(ids[I[i][j]])
                     visited.add(I[i][j])
-                    
+
     print(f"Found {len(clusters)} clusters.")
-    
+
     for cid, member_ids in clusters.items():
         for mid in member_ids:
             cursor.execute("UPDATE formulation_raw_cache SET temp_cluster_id = ? WHERE id = ?", (cid, mid))
-            
+
     conn.commit()
     conn.close()
     print("Entity alignment complete.")

@@ -5,11 +5,9 @@ import json
 import argparse
 import subprocess
 from pathlib import Path
-from dotenv import load_dotenv
 
 import base64
 import urllib.request
-from PIL import Image
 
 # Setup Paths
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -46,12 +44,12 @@ def parse_metadata(latex_content: str) -> dict:
     metadata = {}
     id_match = re.search(r"%\s*entity-id:\s*([^\n]+)", latex_content)
     type_match = re.search(r"%\s*entity-type:\s*([^\n]+)", latex_content)
-    
+
     if id_match:
         metadata["id"] = id_match.group(1).strip()
     if type_match:
         metadata["type"] = type_match.group(1).strip().lower()
-        
+
     return metadata
 
 def save_tex_file(entity_id: str, entity_type: str, content: str) -> Path | None:
@@ -59,30 +57,30 @@ def save_tex_file(entity_id: str, entity_type: str, content: str) -> Path | None
     if not target_dir_name:
         print(f"  [Error] Unknown entity type: {entity_type} for {entity_id}")
         return None
-        
+
     target_dir = CONTENT_DIR / target_dir_name
     target_dir.mkdir(parents=True, exist_ok=True)
-    
+
     file_path = target_dir / f"{entity_id}.tex"
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(content.strip() + "\n")
-    
+
     return file_path
 
 def update_master_tex(entity_id: str, entity_type: str):
     target_dir_name = TYPE_TO_DIR.get(entity_type)
     if not target_dir_name:
         return
-        
+
     input_line = f"\\input{{{target_dir_name}/{entity_id}}}\n"
-    
+
     with open(MASTER_TEX_PATH, "r", encoding="utf-8") as f:
         lines = f.readlines()
-        
+
     # Check if already included
     if any(input_line.strip() in line for line in lines):
         return
-        
+
     # Find the section to insert into
     # Example: \section{Операции (Operations)}
     # We will just append it before the next \section or \end{document}
@@ -93,12 +91,12 @@ def update_master_tex(entity_id: str, entity_type: str):
         "properties": "Свойства",
         "theorems": "Теоремы"
     }
-    
+
     search_term = section_patterns.get(target_dir_name, target_dir_name)
-    
+
     insert_idx = -1
     in_section = False
-    
+
     for i, line in enumerate(lines):
         if "\\chapter{" in line:
             if search_term in line:
@@ -110,7 +108,7 @@ def update_master_tex(entity_id: str, entity_type: str):
         elif "\\end{document}" in line and in_section:
             insert_idx = i - 1
             break
-            
+
     if insert_idx != -1:
         lines.insert(insert_idx, input_line)
         with open(MASTER_TEX_PATH, "w", encoding="utf-8") as f:
@@ -126,7 +124,7 @@ def update_todo_queue() -> set:
         for file in files:
             if file.endswith(".tex") and file not in ["master.tex", "TEMPLATE.tex"]:
                 existing_entities.add(file.replace(".tex", ""))
-                
+
     # 2. Extract all \semantic_macro{ID} from all files
     referenced_entities = set()
     for root, _, files in os.walk(CONTENT_DIR):
@@ -136,13 +134,13 @@ def update_todo_queue() -> set:
                     content = f.read()
                     refs = re.findall(r"\\semantic_macro\{([^}]+)\}", content)
                     referenced_entities.update(refs)
-                    
+
     # 3. Queue = Referenced - Existing
     missing_entities = referenced_entities - existing_entities
-    
+
     with open(TODO_QUEUE_FILE, "w", encoding="utf-8") as f:
         json.dump(list(missing_entities), f, indent=2)
-        
+
     print(f"\nTODO Queue updated: {len(missing_entities)} unresolved entities.")
     return missing_entities
 
@@ -159,12 +157,12 @@ def run_validation():
 def query_ollama_vision(prompt, image_paths, model="llava-phi3:latest"):
     """Sends a request with images to the local Ollama API."""
     url = "http://localhost:11434/api/generate"
-    
+
     encoded_images = []
     for ipath in image_paths:
         with open(ipath, "rb") as img_file:
             encoded_images.append(base64.b64encode(img_file.read()).decode('utf-8'))
-    
+
     data = {
         "model": model,
         "prompt": prompt,
@@ -174,7 +172,7 @@ def query_ollama_vision(prompt, image_paths, model="llava-phi3:latest"):
             "temperature": 0.1
         }
     }
-    
+
     try:
         req = urllib.request.Request(url, json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})
         with urllib.request.urlopen(req, timeout=300) as response:
@@ -190,34 +188,34 @@ def process_images(image_paths: list[Path]):
     # if not api_key:
     #     print("ERROR: GOOGLE_API_KEY environment variable not set.")
     #     sys.exit(1)
-        
+
     # client = genai.Client(api_key=api_key)
     system_prompt = load_system_prompt()
-    
+
     # Ask the specific instruction
     user_instruction = "Extract all mathematical definitions, axioms, and theorems from these pages into strictly formalized LaTeX blocks following the system instructions. Include % entity-id and % entity-type metadata."
-    
+
     full_prompt = system_prompt + "\n\n" + user_instruction
-    
+
     print(f"Sending request to Ollama (llava-phi3) with {len(image_paths)} images...")
     print("=" * 40)
-    
+
     response_text = query_ollama_vision(full_prompt, image_paths)
-    
+
     print("Ollama Response received.")
     print("-" * 40)
     print(response_text)
     print("\n" + "=" * 40)
-    
+
     blocks = extract_latex_blocks(response_text)
-    
+
     print(f"\nReceived {len(blocks)} LaTeX block(s) from Ollama.")
-    
+
     for i, block in enumerate(blocks):
         meta = parse_metadata(block)
         ent_id = meta.get("id")
         ent_type = meta.get("type")
-        
+
         if ent_id and ent_type:
             print(f"Processing entity: {ent_id} ({ent_type})")
             saved_path = save_tex_file(ent_id, ent_type, block)
@@ -236,23 +234,23 @@ def main():
     parser.add_argument("--query", type=str, help="Parse pages containing this specific text query")
     parser.add_argument("--pages", type=str, help="Specific page range (e.g., '10-20')")
     args = parser.parse_args()
-    
+
     book_info = BOOK_REGISTRY.get(args.book)
     if not book_info:
         print(f"Error: Unknown book '{args.book}'")
         sys.exit(1)
-        
+
     pdf_path = BOOKS_DIR / book_info["file"]
     if not pdf_path.exists():
         print(f"Error: PDF not found at {pdf_path}")
         sys.exit(1)
-        
+
     import fitz
     print(f"Opening PDF: {pdf_path.name}")
     doc = fitz.open(str(pdf_path))
     total_pages = len(doc)
     pages_to_render = set()
-    
+
     if args.all:
         print("Mode: Entire Textbook")
         pages_to_render = set(range(1, total_pages + 1))
@@ -267,7 +265,7 @@ def main():
             if query_text in text:
                 pages_to_render.add(i + 1)
                 # optionally add context pages (i, i+1, i+2)
-                pages_to_render.add(min(i + 2, total_pages)) 
+                pages_to_render.add(min(i + 2, total_pages))
     else:
         print("Mode: Fallback (Zorich-1 Chapter 3: Limits)")
         if args.book == "zorich-1":
@@ -280,13 +278,13 @@ def main():
     if not pages_to_render:
         print("No pages matched the criteria.")
         sys.exit(0)
-        
+
     page_list = sorted(list(pages_to_render))
     print(f"Pages chosen for rendering: {page_list}")
-    
+
     generated_images = render_pages(pdf_path, args.book, page_list, dpi=150, split_half=False)
     doc.close()
-    
+
     if generated_images:
         process_images(generated_images)
     else:

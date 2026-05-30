@@ -36,19 +36,19 @@ def load_book_citations():
                     author = parts[0].strip()
                     title = parts[1].strip()
                     citation_str = f"{author}, {title}"
-                    
+
                     # Derive key: e.g. "Apostol, T.M." -> "apostol"
                     key_base = author.split(',')[0].strip().split()[0].lower()
                     if "zorich" in key_base:
                         citations[key_base] = "Зорич В.А., Математический анализ, Том I"
                     else:
                         citations[key_base] = citation_str
-                    
+
                     # Also map full stem to support precise matches
                     citations[name.lower()] = citation_str
     except Exception as e:
         print(f"[Warning] Failed to load citations from Books directory: {e}. Falling back to default list.")
-        
+
     return citations
 
 BOOK_CITATIONS = load_book_citations()
@@ -118,7 +118,7 @@ def humanize_id(eid):
     return eid.replace('-', ' ').title()
 
 def synthesize_entity_details(data, provider, model, api_key, force_refresh=False, nl_cache=None):
-    
+
     if nl_cache is None: nl_cache = {}
     if not force_refresh and data["id"] in nl_cache:
         c = nl_cache[data["id"]]
@@ -200,7 +200,7 @@ Return ONLY the following XML-like blocks:
     try:
         from pipeline.model_manager import ModelManager
         response = ModelManager.get_instance().query_llm(prompt, role="generate")
-        
+
         def extract_tag(tag, text):
             m = re.search(f"<{tag}>(.*?)</{tag}>", text, re.DOTALL)
             return m.group(1).strip() if m else ""
@@ -209,20 +209,20 @@ Return ONLY the following XML-like blocks:
         synth_en_name = extract_tag("name_en", response)
         synth_desc_ru = extract_tag("desc_ru", response)
         synth_desc_en = extract_tag("desc_en", response)
-        
+
         if is_id_or_placeholder(synth_ru_name):
             synth_ru_name = ru_name or humanize_id(data["id"])
         if is_id_or_placeholder(synth_en_name):
             synth_en_name = en_name or humanize_id(data["id"])
-            
+
         synth_ru_name = re.sub(r"\s*\[[a-z0-9\-]+\]", "", synth_ru_name).strip()
         synth_en_name = re.sub(r"\s*\[[a-z0-9\-]+\]", "", synth_en_name).strip()
-        
-        # We do NOT run the bracket-stripping regex on desc_ru and desc_en 
+
+        # We do NOT run the bracket-stripping regex on desc_ru and desc_en
         # because it destroys mathematical closed intervals like [a, b]!
         synth_desc_ru = synth_desc_ru.strip()
         synth_desc_en = synth_desc_en.strip()
-        
+
         # Save to cache
         nl_cache[data["id"]] = {
             "id": data["id"],
@@ -238,54 +238,54 @@ Return ONLY the following XML-like blocks:
         except Exception as e:
             print(f"[Warning] Failed to write to translation cache: {e}")
 
-        
+
         print(f"  [Synth Success] Name RU: {synth_ru_name} | Name EN: {synth_en_name}")
         return synth_ru_name, synth_en_name, synth_desc_ru, synth_desc_en
-        
+
     except Exception as e:
         print(f"  [Synth Failed] Error: {e}. Using robust fallbacks.")
         final_ru_name = ru_name or humanize_id(data["id"])
         final_en_name = en_name or humanize_id(data["id"])
         final_desc_ru = desc_ru or ""
         final_desc_en = ""
-        
+
         final_ru_name = re.sub(r"\s*\[[^\]]+\]", "", final_ru_name).strip()
         final_en_name = re.sub(r"\s*\[[^\]]+\]", "", final_en_name).strip()
-        
+
         return final_ru_name, final_en_name, final_desc_ru, final_desc_en
 
 def parse_canonical(filepath):
     with open(filepath, "r", encoding="utf-8") as f:
         text = f.read()
-    
+
     source_match = re.search(r'% defined-in: (.*)', text)
     source = source_match.group(1).strip() if source_match else "Unknown"
-    
+
     id_match = re.search(r'% entity-id: (.*)', text)
     entity_id = id_match.group(1).strip() if id_match else "unknown"
-    
+
     type_match = re.search(r'% entity-type: (.*)', text)
     entity_type = type_match.group(1).strip() if type_match else "unknown"
 
     module_match = re.search(r'% module: (.*)', text)
     module = module_match.group(1).strip() if module_match else ""
-    
+
     section_match = re.search(r'\\section\{(.*?)\}', text)
     title = section_match.group(1).strip() if section_match else entity_id
-    
+
     formulas = re.findall(r'\\\[(.*?)\\\]', text, re.DOTALL)
-    
+
     from pipeline.latex_utils import extract_dependencies
     deps = extract_dependencies(text)
-            
+
     deps = list(set(deps))
-    
+
     # Extract the full body by removing metadata comments and redundant sections/labels
     body_lines = [line for line in text.split('\n') if not line.strip().startswith('%')]
     full_body = '\n'.join(body_lines).strip()
     full_body = re.sub(r'\\section\{.*?\}', '', full_body)
     full_body = re.sub(r'\\label\{entity:.*?\}', '', full_body)
-    
+
     # Extract description before removing it
     nl_desc = ""
     # Match \textbf{Описание:} ... up to \begin{definition/proposition} or \end{document}
@@ -303,7 +303,7 @@ def parse_canonical(filepath):
         '', full_body, flags=re.DOTALL
     )
     full_body = full_body.strip()
-    
+
     return {
         "id": entity_id,
         "type": entity_type,
@@ -330,13 +330,13 @@ def bfs_collect(root_id, args=None):
     queue = [root_id]
     seen = set()
     no_enrich = getattr(args, 'no_enrich', False) if args else False
-    
+
     while queue:
         eid = queue.pop(0)
         if eid in seen:
             continue
         seen.add(eid)
-        
+
         fpath = find_entity_file(eid)
         if fpath is None:
             if no_enrich:
@@ -345,18 +345,18 @@ def bfs_collect(root_id, args=None):
             print(f"  [MISSING] {eid} — file not found. Triggering Pipeline v2 enrichment...")
             # Преобразуем ID в человеческий запрос (например, 'prop-partial-order' -> 'partial order')
             human_query = eid.split('-', 1)[1].replace('-', ' ') if '-' in eid else eid
-            
+
             # Resolve module configs using passed args (or defaults)
             from pipeline.config import resolve_module_config
             from pipeline.ollama_wrapper import run_enrichment_pipeline
-            
+
             extract_provider = extract_model = extract_api_key = None
             preview_provider = preview_model = preview_api_key = None
             synth_provider = synth_model = synth_api_key = None
             lean_provider = lean_model = lean_api_key = None
             cv_model = "glm-ocr"
             no_validate = False
-            
+
             if args:
                 extract_provider, extract_model, extract_api_key = resolve_module_config(
                     module="extract",
@@ -395,22 +395,22 @@ def bfs_collect(root_id, args=None):
                 traceback.print_exc(file=sys.stdout)
                 print(f"  [SKIP] {eid} — enrichment failed, skipping.")
                 continue
-            
+
             if success:
                 fpath = find_entity_file(eid)
             if fpath is None:
                 print(f"  [SKIP] {eid} — failed to generate or find.")
                 continue
 
-        
+
         data = parse_canonical(fpath)
         visited.append(data)
         print(f"  [BFS] {eid} -> deps: {data['deps']}")
-        
+
         for dep in data['deps']:
             if dep not in seen:
                 queue.append(dep)
-    
+
     return visited
 
 import argparse
@@ -434,7 +434,7 @@ def main():
     parser = argparse.ArgumentParser(description="Dynamic LaTeX Compiler via BFS (Multi-Root)")
     parser.add_argument('--root', type=str, default=None, help='Single root entity ID')
     parser.add_argument('--roots', type=str, default=None, help='Comma-separated root entity IDs')
-    
+
     # Forwarded model configurations
     parser.add_argument("--cv-model", type=str, default="glm-ocr")
     parser.add_argument("--provider", type=str, default=None)
@@ -444,7 +444,7 @@ def main():
     parser.add_argument("--extract-provider", type=str, default=None)
     parser.add_argument("--extract-model",    type=str, default=None)
     parser.add_argument("--extract-api-key",  type=str, default=None)
-    
+
     parser.add_argument("--extract-preview-provider", type=str, default=None)
     parser.add_argument("--extract-preview-model",    type=str, default=None)
     parser.add_argument("--extract-preview-api-key",  type=str, default=None)
@@ -482,7 +482,7 @@ def main():
 
     # Resolve configurations for all modules
     from pipeline.config import resolve_module_config
-    
+
     extract_provider, extract_model, extract_api_key = resolve_module_config(
         module="extract",
         global_provider=args.provider, global_model=args.model, global_api_key=args.api_key,
@@ -535,7 +535,7 @@ def main():
             iter_count += 1
             roots_changed = False
             missing_terms = []
-            
+
             tree_entities = []
             for ent in reversed(entities):
                 eid = ent["id"]
@@ -544,7 +544,7 @@ def main():
                     continue
                 lean_code = lean_path.read_text(encoding='utf-8')
                 tree_entities.append({"id": eid, "lean_code": lean_code})
-                
+
             if tree_entities:
                 result = validate_tree(tree_entities)
                 if result.get("status") != "success":
@@ -552,7 +552,7 @@ def main():
                     error_feedback = "\n".join([f"Line {e['line']}: {e['message']}" for e in result.get("errors", [])])
                     from pipeline.export_to_lean import log_to_file
                     log_to_file("lean_errors", error_feedback, entity_id="tree_validation")
-                    
+
                     missing = get_missing_deps_from_lean_error(result.get("errors", []))
                     mathesis_deps = [d for d in missing if any(d.startswith(p) for p in ["obj-", "prop-", "op-", "thm-", "def-"]) ]
                     for dep in mathesis_deps:
@@ -582,16 +582,16 @@ def main():
 
     # Build and log the final graph structure for this query
     from pipeline.export_to_lean import log_to_file
-    
+
     graph_lines = []
     graph_lines.append("=== FINAL GRAPH STRUCTURE ===")
     graph_lines.append(f"Query Roots: {root_ids}")
     graph_lines.append(f"Total Unique Entities: {len(entities)}\n")
-    
+
     graph_lines.append("Nodes:")
     for ent in entities:
         graph_lines.append(f"  - {ent['id']} (Type: {ent['type']})")
-        
+
     graph_lines.append("\nEdges (Dependencies):")
     for ent in entities:
         if ent.get('deps'):
@@ -599,9 +599,9 @@ def main():
                 graph_lines.append(f"  {ent['id']} -> {dep}")
         else:
             graph_lines.append(f"  {ent['id']} -> (No dependencies)")
-            
+
     graph_content = "\n".join(graph_lines)
-    
+
     # Save log to logs/graphs/ category using the combined roots as the entity_id
     combined_roots = "_".join(root_ids)
     log_to_file("graphs", graph_content, entity_id=combined_roots)
@@ -617,7 +617,7 @@ def main():
             force_refresh=args.force_refresh,
             nl_cache=nl_cache
         )
-        
+
         # Enrich NLP descriptions with hyperlinks for known entities in the cache
         def enrich_text(text):
             if not text: return text
@@ -632,12 +632,12 @@ def main():
                     pattern = r"(?<!\\hyperlink\{)" + re.escape(n_ru) + r"(?![a-zA-Zа-яА-Я])"
                     text = re.sub(pattern, lambda m, eid=eid, n_ru=n_ru: f"\\hyperlink{{{eid}}}{{{n_ru}}}", text)
             return text
-            
+
         desc_ru = enrich_text(desc_ru)
 
-        
+
         title_bilingual = f"{synth_ru} / {synth_en}"
-        
+
         # Resolve book citation base key
         book_key = data["source"].split(",")[0].strip().lower()
         book_key_base = re.sub(r'[-\d]', '', book_key).strip()
@@ -646,7 +646,7 @@ def main():
         if "," in page_info:
             page_info = page_info.split(",", 1)[1].strip() # Clean up formatting for display
         citation_full = f"{citation}, {page_info}"
-        
+
         # Map type to Russian textbook terminology
         TYPE_MAPPING = {
             "object": "Объект",
@@ -658,56 +658,56 @@ def main():
             "corollary": "Следствие",
         }
         type_ru = TYPE_MAPPING.get(data["type"].lower(), data["type"].capitalize())
-        
+
         # Assembly of a highly readable and clean bilingual chapter block
         block = f"\\chapter{{{title_bilingual}}}\\label{{entity:{data['id']}}}\n"
         block += f"\\textbf{{Тип:}} {type_ru} \\hfill \\textbf{{Источник:}} {citation_full}\n\n"
         block += "\\vspace{0.5em}\n\\hrule\n\\vspace{1em}\n\n"
-        
+
         # 1. Russian formulation (first)
         block += "\\section*{Формулировка на русском языке}\n"
         if desc_ru:
             block += f"{desc_ru}\n\n"
         else:
             block += "Формулировка отсутствует.\n\n"
-            
+
         # 2. English formulation (second)
         block += "\\section*{Formulation in English}\n"
         if desc_en:
             block += f"{desc_en}\n\n"
         else:
             block += "Formulation is not available.\n\n"
-            
+
         # 3. Mathematical formulation (third)
         block += "\\section*{Математическая формулировка}\n"
         # Strip internal ID leaks (math env arguments)
         clean_body = data.get("full_body", "")
         clean_body = re.sub(r'\\begin\{(definition|proposition)\}\[[^\]]+\]', r'\\begin{\1}', clean_body)
-        
+
         # The user requested to NOT use breqn and wrap formulas manually in the source.
         # We apply an automatic programmatic heuristic here to guarantee it looks beautiful.
         from pipeline.latex_utils import format_long_formulas
         clean_body = format_long_formulas(clean_body)
-        
+
         block += f"{clean_body}\n\n"
-        
+
         content += block
-    
+
     output_dir = PROJECT_ROOT / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
     result_tex = output_dir / "result.tex"
     with open(result_tex, "w", encoding="utf-8") as f:
         f.write(TEMPLATE % {"content": content})
-    
+
     print(f"Generated {result_tex}")
-    
+
     # Rebuild master.tex at the very end during result formation
     try:
         from pipeline.canonical_synthesizer import rebuild_master_tex
         rebuild_master_tex()
     except Exception as e:
         print(f"[WARN] Failed to rebuild master.tex: {e}")
-    
+
     # Regenerate macros automatically
     print("[main] Regenerating mathesis_macros.sty...")
     try:
@@ -723,7 +723,7 @@ def main():
             shutil.copy(sty_src, sty_dest)
         elif (PROJECT_ROOT / sty).exists():
             shutil.copy(PROJECT_ROOT / sty, sty_dest)
-    
+
     pdflatex_cmd = [
         "pdflatex",
         "-interaction=nonstopmode",
@@ -733,10 +733,10 @@ def main():
 
     print("Compiling result.pdf (pass 1)...")
     subprocess.run(pdflatex_cmd, capture_output=True, text=True, cwd=str(output_dir))
-    
+
     print("Compiling result.pdf (pass 2 for references)...")
     result = subprocess.run(pdflatex_cmd, capture_output=True, text=True, cwd=str(output_dir))
-    
+
     result_pdf = output_dir / "result.pdf"
     if result_pdf.exists():
         print(f"PDF compilation successful! -> {result_pdf}")

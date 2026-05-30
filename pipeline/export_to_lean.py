@@ -6,39 +6,10 @@ Supports two providers: local Ollama and Google Gemini API.
 Falls back to regex-based translation if LLM is unavailable.
 Supports incremental validation (saves validated files individually).
 """
-import sqlite3
 import re
 import os
-import json
-import urllib.request
-import time
 from pathlib import Path
 from collections import defaultdict, deque
-
-try:
-    from google import genai
-    from google.genai import types
-    GEMINI_AVAILABLE = True
-except ImportError:
-    GEMINI_AVAILABLE = False
-
-try:
-    import openai
-    OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
-
-try:
-    from gradio_client import Client as GradioClient
-    GRADIO_AVAILABLE = True
-except ImportError:
-    GRADIO_AVAILABLE = False
-
-try:
-    from llama_cpp import Llama
-    LLAMA_CPP_AVAILABLE = True
-except Exception:
-    LLAMA_CPP_AVAILABLE = False
 
 import datetime
 from pipeline.lean_validator import validate_entity
@@ -49,7 +20,6 @@ def log_to_file(category: str, content: str, entity_id: str = None, attempt: int
     Saves content into a log file in logs/<category>/...
     And also appends to logs/pipeline_realtime.log in real-time with immediate disk flush.
     """
-    import os
     import sys
     try:
         logs_dir = PROJECT_ROOT / "logs" / category
@@ -104,6 +74,68 @@ VALIDATED_DIR = LEAN_DIR / "Validated"
 OUT_FILE = LEAN_DIR / "MathesisGraph.lean"
 SUCCESS_FILE = LEAN_DIR / "SuccessfulEntities.lean"
 
+_SKIP_TEX = {"master.tex", "mathesis.sty", "mathesis_macros.sty", "TEMPLATE.tex"}
+
+
+def get_graph_from_files():
+    """Строит граф сущностей из content/*.tex.
+
+    Возвращает (nodes, edges):
+      nodes: {entity_id: {"path": Path, "type": "def"|"prop", "content": str}}
+      edges: [(source_id, target_id)] — source зависит от target (по macro{id}).
+    (Ранее функция отсутствовала — main() падал с NameError; восстановлено.)
+    """
+    nodes: dict = {}
+    for filepath in CONTENT_DIR.rglob("*.tex"):
+        if filepath.name in _SKIP_TEX:
+            continue
+        content = filepath.read_text(encoding="utf-8")
+        m = re.search(r'%\s*entity-id:\s*(.+)', content)
+        if m:
+            eid = m.group(1).strip()
+        else:
+            fm = re.search(r'\[([^\]]+)\]\.tex$', filepath.name)
+            eid = fm.group(1).strip() if fm else None
+        if not eid or eid in nodes:
+            continue
+        tm = re.search(r'%\s*entity-type:\s*(\w+)', content)
+        etype = tm.group(1).strip().lower() if tm else ""
+        if etype not in ("def", "prop"):
+            etype = "def" if eid.startswith("def") else "prop"
+        nodes[eid] = {"path": filepath, "type": etype, "content": content}
+
+    edges = []
+    for eid, data in nodes.items():
+        for dep in set(re.findall(r'macro\{([^}]+)\}', data["content"])):
+            if dep != eid and dep in nodes:
+                edges.append((eid, dep))
+    return nodes, edges
+
+
+def topological_sort(nodes, edges):
+    """Порядок, в котором зависимости идут РАНЬШЕ зависящих (Kahn).
+    Циклы/остаток добавляются в конец в стабильном порядке."""
+    deps = defaultdict(set)        # eid -> множество зависимостей
+    dependents = defaultdict(set)  # target -> кто от него зависит
+    for src, tgt in edges:
+        deps[src].add(tgt)
+        dependents[tgt].add(src)
+    indeg = {eid: len(deps.get(eid, ())) for eid in nodes}
+    queue = deque(sorted(eid for eid in nodes if indeg[eid] == 0))
+    order = []
+    while queue:
+        n = queue.popleft()
+        order.append(n)
+        for d in sorted(dependents.get(n, ())):
+            indeg[d] -= 1
+            if indeg[d] == 0:
+                queue.append(d)
+    if len(order) < len(nodes):  # цикл — добавляем остаток стабильно
+        for eid in nodes:
+            if eid not in order:
+                order.append(eid)
+    return order
+
 
 
 def setup_provider(provider, api_key=None, model=None):
@@ -157,9 +189,6 @@ def translate_to_lean_via_llm(entity_id, entity_type, tex_content, model="goedel
     Translates LaTeX to Lean 4 using LLM, supporting error feedback for self-correction.
     """
 
-    proof_match = re.search(r'\\begin\{proof\}(.*?)\\end\{proof\}', tex_content, flags=re.DOTALL)
-    informal_proof = proof_match.group(1).strip() if proof_match else ""
-
     tex_clean = re.sub(r'\\begin\{proof\}.*?\\end\{proof\}', '', tex_content, flags=re.DOTALL)
     tex_clean = re.sub(r'^%.*$', '', tex_clean, flags=re.MULTILINE).strip()
     if not tex_clean:
@@ -191,7 +220,7 @@ ADDITIONAL CONSTRAINTS:
 
     local_lemmas_str = ""
     if local_lemmas:
-        local_lemmas_str = f"\n=== Dictionary of Local Lemmas ===\nYou MUST use these previously formalized entities when translating the proof:\n" + "\n".join([f"- {l}" for l in local_lemmas]) + "\n"
+        local_lemmas_str = "\n=== Dictionary of Local Lemmas ===\nYou MUST use these previously formalized entities when translating the proof:\n" + "\n".join([f"- {l}" for l in local_lemmas]) + "\n"
 
     # Detect if we are using the Goedel-Formalizer model
     is_goedel = "goedel" in target_model.lower()
@@ -221,10 +250,10 @@ ADDITIONAL CONSTRAINTS:
 
         if error_feedback and previous_code:
             user_prompt = f"""{system_intro}
-The natural language statement is: 
+The natural language statement is:
 {informal_statement_content}
 
-CRITICAL: The previous Lean 4 attempt produced compiler errors. 
+CRITICAL: The previous Lean 4 attempt produced compiler errors.
 Previous Lean 4 code:
 {previous_code}
 
@@ -235,7 +264,7 @@ Please correct the Lean 4 code so it compiles successfully.
 Think before you provide the lean statement.{prefix_hint}"""
         else:
             user_prompt = f"""{system_intro}
-The natural language statement is: 
+The natural language statement is:
 {informal_statement_content}
 Think before you provide the lean statement.{prefix_hint}"""
     else:
@@ -246,10 +275,10 @@ Your task is to translate mathematical statements into valid Lean 4 declarations
 Textbooks use informal Set Theory (ZFC) and often abuse notation. Your target environment (Lean 4) uses strict Type Theory (Calculus of Inductive Constructions). You must bridge this gap by performing a rigorous semantic translation before generating the final code.
 
 CRITICAL HEURISTICS & ANTI-PATTERNS TO AVOID:
-1. Types vs. Sets (The \\\\colon vs \\\\in rule): 
-   Never confuse belonging to a fundamental type with belonging to a subset. 
-   - BAD: "x \\\\in \\\\mathbb{R}" when declaring a variable. 
-   - GOOD: "x \\\\colon \\\\mathbb{R}" (in LaTeX) or "(x : ℝ)" (in Lean). Use "\\\\in" ONLY for subsets, e.g., "x \\\\in [a, b]".
+1. Types vs. Sets (The \\\\colon vs \\\\in rule):
+   Never confuse belonging to a fundamental type with belonging to a subset.
+   - BAD: "x \\\\in \\\\mathbb{{R}}" when declaring a variable.
+   - GOOD: "x \\\\colon \\\\mathbb{{R}}" (in LaTeX) or "(x : ℝ)" (in Lean). Use "\\\\in" ONLY for subsets, e.g., "x \\\\in [a, b]".
 
 2. Analytical vs. Computational Structures (The List rule):
    Never use computational data structures like `List` or `Array` to represent continuous mathematical concepts (partitions, sequences, covers).
@@ -263,19 +292,19 @@ CRITICAL HEURISTICS & ANTI-PATTERNS TO AVOID:
    If you find yourself writing repetitive logical tautologies (e.g., `x ≠ y → x ≠ y`) or overly complex index bounds, your underlying type choice is wrong. Stop and re-evaluate your data structures.
 
 5. Strict Semantic Identifiers (The Self-Describing ID Rule):
-   When generating \\semantic_macro{{id}}{{text}} or defining a new entity-id, the `id` MUST be globally unambiguous, self-documenting, and resistant to namespace collisions. 
-   
+   When generating \\semantic_macro{{id}}{{text}} or defining a new entity-id, the `id` MUST be globally unambiguous, self-documenting, and resistant to namespace collisions.
+
    NEVER use bare, generic nouns or adjectives. You MUST include the domain or the parent mathematical object in the ID.
-   
-   Format: {type}-{domain_or_parent}-{concept}
-   
+
+   Format: {{type}}-{{domain_or_parent}}-{{concept}}
+
    - BAD: `op-mesh` (Mesh of what? A graph? A 3D model? A partition?)
    - GOOD: `op-partition-mesh` (Clearly states this is the mesh of a partition)
-   
+
    - BAD: `prop-bounded` (Is a function bounded? A set? A sequence?)
    - GOOD: `prop-function-bounded` or `prop-set-bounded`
-   
-   - BAD: `op-addition` 
+
+   - BAD: `op-addition`
    - GOOD: `op-real-addition` or `op-matrix-addition` (Unless using the Late Binding abstract pattern like `op-add-abstract`)
 
    If a concept belongs to a specific mathematical domain, prefix it explicitly to help the Lean 4 translator map it to the correct Mathlib namespace.
@@ -433,11 +462,11 @@ Lean 4 Code:"""
 
     # Forbid 'noncomputable' in generated Lean code per policy
     if 'noncomputable' in response.lower():
-        print(f"  [lean-export] REJECTING: 'noncomputable' used in generated code (forbidden).")
+        print("  [lean-export] REJECTING: 'noncomputable' used in generated code (forbidden).")
         return ""
 
     if '\\' in response and ('\\mathcal' in response or '\\in' in response or '\\mForall' in response):
-        print(f"  [lean-export] LLM output still contains LaTeX. Rejecting.")
+        print("  [lean-export] LLM output still contains LaTeX. Rejecting.")
         return ""
 
     return response.strip()
@@ -698,7 +727,7 @@ def main():
             f.write(f"-- {eid}\n")
             f.write(f"{code}\n\n")
 
-    print(f"\n=== Export complete ===")
+    print("\n=== Export complete ===")
     print(f"  LLM translations (OK): {stats['llm_ok']}")
     print(f"  Regex fallbacks (OK):  {stats['regex_ok']}")
     print(f"  Cached:                {stats['cached']}")

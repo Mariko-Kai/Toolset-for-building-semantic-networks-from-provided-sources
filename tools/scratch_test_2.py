@@ -1,4 +1,5 @@
-import urllib.request, json
+import urllib.request
+import json
 from pipeline.ollama_wrapper import get_available_entities
 import difflib
 import re
@@ -27,12 +28,12 @@ with urllib.request.urlopen(req) as response:
     match = re.search(r'([a-zA-Z0-9\-]+)', entity_id)
     parsed_id = match.group(1) if match else ''
     print('Parsed ID:', parsed_id)
-    
+
     valid_ids = []
     for e in entities:
         m = re.search(r"ID: '([^']+)'", e)
         if m: valid_ids.append(m.group(1))
-        
+
     if parsed_id not in valid_ids and parsed_id != 'UNKNOWN':
         closest = difflib.get_close_matches(parsed_id, valid_ids, n=1, cutoff=0.5)
         if closest:

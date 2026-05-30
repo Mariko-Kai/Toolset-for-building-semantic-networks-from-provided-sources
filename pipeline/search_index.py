@@ -24,7 +24,7 @@ def get_ranked_books(discipline="mathematical_analysis"):
     """Reads registry and returns ordered list of book keys."""
     with open(REGISTRY_FILE, "r", encoding="utf-8") as f:
         registry = yaml.safe_load(f)
-    
+
     books = registry.get("disciplines", {}).get(discipline, {}).get("reading_list", [])
     # Sort by priority
     books.sort(key=lambda x: x.get("priority", 999))
@@ -53,7 +53,7 @@ def translate_term(term: str, model_name: str = "gemini-2.5-flash") -> dict:
         "en_roots": ["analytic", "function"]
     }}
     """
-    
+
     try:
         response = client.models.generate_content(
             model=model_name,
@@ -72,7 +72,7 @@ def translate_term(term: str, model_name: str = "gemini-2.5-flash") -> dict:
 def build_or_load_index(pdf_path: Path, force_rebuild: bool = False):
     """Builds a simple full-text cache for the book to speed up regex searches."""
     cache_key = pdf_path.name
-    
+
     if not force_rebuild and INDEX_FILE.exists():
         with open(INDEX_FILE, "r", encoding="utf-8") as f:
             cache = json.load(f)
@@ -89,7 +89,7 @@ def build_or_load_index(pdf_path: Path, force_rebuild: bool = False):
         text = re.sub(r'\s+', ' ', text)
         pages_text.append(text)
     doc.close()
-    
+
     cache[cache_key] = pages_text
     with open(INDEX_FILE, "w", encoding="utf-8") as f:
         json.dump(cache, f, ensure_ascii=False)
@@ -98,11 +98,11 @@ def build_or_load_index(pdf_path: Path, force_rebuild: bool = False):
 def search_in_book(pdf_path: Path, roots: list[str]) -> list[int]:
     pages_text = build_or_load_index(pdf_path)
     results = []
-    
+
     for i, text in enumerate(pages_text):
         if all(root in text for root in roots):
             results.append(i + 1)
-            
+
     return results
 
 def main():
@@ -110,35 +110,35 @@ def main():
     parser.add_argument("--query", type=str, required=True, help="Term to search for")
     parser.add_argument("--discipline", type=str, default="mathematical_analysis", help="Discipline key from registry")
     parser.add_argument("--model", type=str, default="gemini-2.5-flash", choices=["gemini-2.5-pro", "gemini-2.5-flash", "gemini-1.5-pro", "gemini-1.5-flash"], help="Gemini model to use for query translation")
-    
+
     args = parser.parse_args()
-    
+
     print(f"Translating and analyzing roots for: '{args.query}' (using {args.model})...")
     term_data = translate_term(args.query, args.model)
     print(f"  Russian roots: {term_data.get('ru_roots')}")
     print(f"  English roots: {term_data.get('en_roots')}\n")
-    
+
     ranked_books = get_ranked_books(args.discipline)
     print(f"Searching in ranked order for discipline '{args.discipline}':")
-    
+
     found_pages = {}
-    
+
     for book_id in ranked_books:
         book_info = BOOK_REGISTRY.get(book_id)
         if not book_info or not book_info.get("file"):
             continue
-            
+
         filename = book_info["file"]
         lang = book_info.get("lang", "ru").lower()
         pdf_path = BOOKS_DIR / filename
-        
+
         if not pdf_path.exists():
             print(f"  [MISSING] {filename}")
             continue
-            
+
         print(f"  Checking {filename}...")
         roots = term_data.get("ru_roots") if "ru" in lang else term_data.get("en_roots")
-        
+
         pages = search_in_book(pdf_path, roots)
         if pages:
             print(f"    => Found on pages: {pages}")

@@ -1,7 +1,6 @@
 import math
 import re
 import json
-import urllib.request
 import sys
 import io
 from typing import List, Tuple, Dict, Any, Optional
@@ -16,16 +15,16 @@ DEFAULT_LOCAL_MODEL = "BAAI/bge-reranker-v2-m3"
 
 # --- Tokenization Commentary for Mathematical Texts (LaTeX) ---
 # When processing mathematical textbooks, it is critical to understand how the Tokenizer handles LaTeX:
-# 1. Subword Splitting: Math symbols and commands (e.g., \int, \sum, \alpha, \epsilon) are often 
-#    out-of-vocabulary (OOV) for standard subword tokenizers trained on natural language. 
+# 1. Subword Splitting: Math symbols and commands (e.g., \int, \sum, \alpha, \epsilon) are often
+#    out-of-vocabulary (OOV) for standard subword tokenizers trained on natural language.
 #    They get aggressively split into individual characters or subwords (e.g., '\', 'alpha').
-# 2. Structural Punctuation: Punctuation commonly used in LaTeX (e.g., '_', '^', '{', '}', '\') 
+# 2. Structural Punctuation: Punctuation commonly used in LaTeX (e.g., '_', '^', '{', '}', '\')
 #    are treated as distinct tokens, which introduces massive token overhead.
-# 3. Context Inflation: An equation that looks visually compact (e.g., \int_a^b f(x) dx) might 
+# 3. Context Inflation: An equation that looks visually compact (e.g., \int_a^b f(x) dx) might
 #    consume 2-3x more tokens than an equivalent natural language sentence.
-# 4. Truncation Safety: When feeding pages into a Reranker (Cross-Encoder), we MUST use a very large 
-#    max_length (e.g., 8192 for BGE-M3 or GTE-Multilingual) to avoid truncating vital mathematical 
-#    proofs and definitions. Setting `truncation=True` and `padding=True` ensures that we safely 
+# 4. Truncation Safety: When feeding pages into a Reranker (Cross-Encoder), we MUST use a very large
+#    max_length (e.g., 8192 for BGE-M3 or GTE-Multilingual) to avoid truncating vital mathematical
+#    proofs and definitions. Setting `truncation=True` and `padding=True` ensures that we safely
 #    use the maximum context window without crashing on exceptionally dense LaTeX pages.
 # ------------------------------------------------------------------
 
@@ -61,13 +60,13 @@ class BM25Retriever:
             length = len(tokens)
             self.doc_lengths.append(length)
             total_length += length
-            
+
             freq_dict: Dict[str, int] = {}
             for token in tokens:
                 freq_dict[token] = freq_dict.get(token, 0) + 1
-            
+
             self.doc_freqs.append(freq_dict)
-            
+
             for token in freq_dict.keys():
                 self.df[token] = self.df.get(token, 0) + 1
 
@@ -167,14 +166,14 @@ class CrossEncoderReranker:
         print(f"[Reranker] Running local Hugging Face model inference on {len(documents)} candidates...", flush=True)
         # Cross-Encoders expect input as a list of [query, text] pairs
         pairs = [[query, text] for _, text in documents]
-        
+
         # Max length is typically 8192 for modern mathematical rerankers (e.g., BGE-M3).
         max_len = 8192
         inputs = self.tokenizer(
-            pairs, 
-            padding=True, 
-            truncation=True, 
-            max_length=max_len, 
+            pairs,
+            padding=True,
+            truncation=True,
+            max_length=max_len,
             return_tensors="pt"
         ).to(self.device)
 
@@ -199,11 +198,11 @@ class CrossEncoderReranker:
 
         # Sort descending by score
         results.sort(key=lambda x: x["score"], reverse=True)
-        
+
         print("[Reranker] Local Reranking completed. Top matches:", flush=True)
         for res in results[:3]:
             print(f"  -> Page {res['page_num']}: Score {res['score']:.4f} ('{res['text_snippet'][:50]}...')", flush=True)
-            
+
         return results
 
     def _rerank_rest(self, query: str, documents: List[Tuple[int, str]]) -> List[Dict[str, Any]]:
@@ -286,10 +285,6 @@ class CrossEncoderReranker:
                     return formatted_results
             except Exception as e:
                 # Prefer to continue trying other endpoints on 404 / not found
-                try:
-                    err_code = getattr(e, 'code', None)
-                except Exception:
-                    err_code = None
                 print(f"[Reranker] API Error contacting {url}: {e}", flush=True)
                 last_error = e
                 # If 404, try next candidate; otherwise also try next candidate but log
@@ -304,14 +299,14 @@ class CrossEncoderReranker:
 # --- Query Builder ---
 def build_rerank_query(term: str, entity_type: str) -> str:
     """
-    Stage 3 Helper: Enhances the search query based on the mathematical entity type 
+    Stage 3 Helper: Enhances the search query based on the mathematical entity type
     to provide explicit structural context to the Cross-Encoder.
     """
     entity_type = entity_type.lower().strip()
-    
+
     # Detect if the query term contains Russian (Cyrillic) characters
     is_ru = bool(re.search(r'[\u0400-\u04FF]', term))
-    
+
     if is_ru:
         if entity_type == "definition":
             return f"Определение понятия {term}"
@@ -371,7 +366,7 @@ class HybridSearchPipeline:
         url_parsed = urllib.parse.urlparse(self.api_url)
         host = url_parsed.hostname or "localhost"
         port = url_parsed.port or self.server_port
-        
+
         def is_port_open():
             try:
                 with socket.create_connection((host, port), timeout=0.3):
@@ -386,11 +381,11 @@ class HybridSearchPipeline:
             return
 
         print(f"[HybridSearch] Port {port} is closed. Starting local llama.cpp server for '{self.server_model_path}' on port {port}...", flush=True)
-        
+
         # Configure env variables to avoid Windows console Unicode errors on start
         env = dict(subprocess.os.environ)
         env["PYTHONIOENCODING"] = "utf-8"
-        
+
         cmd = [
             sys.executable,
             "-m", "llama_cpp.server",
@@ -398,7 +393,7 @@ class HybridSearchPipeline:
             "--port", str(port),
             "--embedding", "True"
         ]
-        
+
         try:
             self.server_process = subprocess.Popen(
                 cmd,
@@ -408,20 +403,20 @@ class HybridSearchPipeline:
             )
         except Exception as e:
             raise RuntimeError(f"Failed to start llama.cpp server subprocess: {e}")
-            
+
         # Poll the server until it responds or timeout occurs (20 seconds)
         print("[HybridSearch] Subprocess spawned. Waiting for server to become responsive...", flush=True)
         start_time = time.time()
         timeout = 20.0
         server_ready = False
-        
+
         while time.time() - start_time < timeout:
             elapsed = time.time() - start_time
             print(f"[HybridSearch] Ping port {port}... (elapsed: {elapsed:.1f}s)", flush=True)
             if self.server_process.poll() is not None:
                 # Process terminated early
                 raise RuntimeError(f"llama.cpp server process exited prematurely with code {self.server_process.returncode}.")
-                
+
             if is_port_open():
                 print(f"[HybridSearch] Port {port} responded! Giving FastAPI 1.0s to initialize routes...", flush=True)
                 time.sleep(1.0)
@@ -429,11 +424,11 @@ class HybridSearchPipeline:
                 break
             else:
                 time.sleep(0.5)
-                
+
         if not server_ready:
             self.close()
             raise TimeoutError(f"llama.cpp server did not respond at {self.api_url} within {timeout} seconds.")
-            
+
         print("[HybridSearch] Local llama.cpp server started successfully and is responsive!", flush=True)
 
     def close(self):
@@ -491,11 +486,11 @@ class HybridSearchPipeline:
         # Use raw term for Stage 1 BM25 to ensure broad recall
         print(f"[HybridSearch] Running BM25 scoring for query term '{term}'...", flush=True)
         candidate_pages = self.retriever.search(term, top_k=20)
-        
+
         if not candidate_pages:
             print("[HybridSearch] No candidate pages found in Lexical Retrieval.", flush=True)
             return []
-        
+
         print(f"[HybridSearch] Stage 1 BM25 retrieved {len(candidate_pages)} candidate pages: {[p[0] for p in candidate_pages]}", flush=True)
 
         # Step 3: Query Generation for Semantic Search
@@ -509,14 +504,14 @@ class HybridSearchPipeline:
         # Apply a strict threshold of >= 0.5 probability
         print(f"[HybridSearch] Filtering {len(reranked_results)} scored results using threshold >= 0.5...", flush=True)
         filtered_results = [res for res in reranked_results if res["score"] >= 0.5]
-        
+
         # If thresholding removes everything, fallback to highest absolute scores gracefully
         # if not filtered_results and reranked_results:
         #     print("[HybridSearch] Warning: All results fell below 0.5. Falling back to highest scored candidates.", flush=True)
         #     filtered_results = reranked_results
 
         final_top = filtered_results[:top_k]
-        
+
         print(f"[HybridSearch] Complete! Selected Top-{len(final_top)} pages: {[res['page_num'] for res in final_top]}", flush=True)
         return final_top
 
@@ -524,7 +519,7 @@ class HybridSearchPipeline:
 if __name__ == "__main__":
     # Simple CLI Test Harness
     print("Initializing HybridSearchPipeline in REST API mock mode for testing...")
-    
+
     # We use a mocked 'rest' backend here to avoid downloading the huggingface model during simple testing
     class MockCrossEncoderReranker(CrossEncoderReranker):
         def _rerank_rest(self, query: str, documents: List[Tuple[int, str]]) -> List[Dict[str, Any]]:

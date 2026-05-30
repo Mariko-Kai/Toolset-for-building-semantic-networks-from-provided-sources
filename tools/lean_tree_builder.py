@@ -1,5 +1,4 @@
 import sqlite3
-import os
 import re
 from pathlib import Path
 
@@ -60,11 +59,11 @@ class LeanTreeBuilder:
 
         tex_content = abs_file_path.read_text(encoding='utf-8')
         content_no_proofs = re.sub(r'\\begin\{proof\}.*?\\end\{proof\}', '', tex_content, flags=re.DOTALL)
-        
+
         print(f"[LeanTreeBuilder] Recursively generating Lean code for missing dependency: {entity_id} ...")
         from pipeline.export_to_lean import attempt_generation_with_repair
         lean_code, is_valid = attempt_generation_with_repair(entity_id, entity_type, content_no_proofs)
-        
+
         if lean_code and is_valid:
             validated_path.parent.mkdir(parents=True, exist_ok=True)
             validated_path.write_text(lean_code, encoding='utf-8')
@@ -87,15 +86,15 @@ class LeanTreeBuilder:
                 return
             if v not in visited:
                 visited_currently.add(v)
-                
+
                 # Fetch deps: if it's the root target_id, we inject extra_deps
                 deps = self._get_dependencies_from_db(v)
                 if v == target_id and extra_deps:
                     deps = list(set(deps + extra_deps))
-                    
+
                 for dep in deps:
                     dfs(dep)
-                    
+
                 visited_currently.remove(v)
                 visited.add(v)
                 order.append(v)
@@ -107,30 +106,30 @@ class LeanTreeBuilder:
                 dfs(t)
         else:
             dfs(target_id)
-            
+
         return order
 
     def generate_lean_tree_file(self, target_id: str, output_path: str, target_code: str = None, target_deps: list[str] = None) -> bool:
         compilation_order = self.build_closure_order(target_id, target_deps)
-        
+
         try:
             with open(output_path, 'w', encoding='utf-8') as tree_file:
                 tree_file.write("-- --- MATHESIS AUTOMATICALLY GENERATED LEANTREE ENVIRONMENT ---\n")
-                tree_file.write("import Mathlib\n\n") 
-                
+                tree_file.write("import Mathlib\n\n")
+
                 for entity_id in compilation_order:
                     tree_file.write(f"-- Start of entity: {entity_id}\n")
-                    
+
                     if entity_id == target_id and target_code is not None:
                         code_snippet = target_code
                     else:
                         code_snippet = self._load_or_generate_lean_code(entity_id)
-                    
+
                     clean_code = "\n".join([line for line in code_snippet.splitlines() if not line.strip().startswith("import ")])
-                    
+
                     tree_file.write(clean_code)
                     tree_file.write(f"\n\n-- End of entity: {entity_id}\n\n")
-            
+
             print(f"[LeanTreeBuilder] SUCCESS: Среда компиляции для {target_id} успешно материализована в {output_path}")
             return True
         except Exception as e:

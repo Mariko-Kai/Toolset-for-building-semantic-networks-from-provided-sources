@@ -164,7 +164,7 @@ def main():
         if result_pdf.exists():
             print(f"\n[+] Полный учебник успешно скомпилирован: {result_pdf}")
         else:
-            print(f"\n[-] PDF не создан. Проверьте логи выше.")
+            print("\n[-] PDF не создан. Проверьте логи выше.")
             sys.exit(1)
 
     except subprocess.CalledProcessError as e:

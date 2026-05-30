@@ -1,4 +1,5 @@
-import urllib.request, json
+import urllib.request
+import json
 from pipeline.ollama_wrapper import get_available_entities
 
 entities = get_available_entities()

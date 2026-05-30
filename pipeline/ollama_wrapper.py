@@ -9,11 +9,9 @@ import argparse
 import subprocess
 import os
 import json
-import urllib.request
 import re
 import sys
 import io
-import difflib
 from functools import lru_cache
 from pathlib import Path
 
@@ -81,10 +79,8 @@ def extract_term_ru_en(term: str) -> tuple:
         "integral": ("интеграл", "integral"),
         "limit": ("предел", "limit"),
         "set": ("множество", "set"),
-        "real numbers": ("вещественные числа", "real numbers"),
         "sequence": ("последовательность", "sequence"),
         "series": ("ряд", "series"),
-        "continuous": ("непрерывный", "continuous"),
         "theorem": ("теорема", "theorem"),
         "lemma": ("лемма", "lemma"),
         "axiom": ("аксиома", "axiom"),
@@ -116,7 +112,7 @@ Return STRICTLY a JSON object with no other text or explanation:
     try:
         parsed = json.loads(resp)
         return parsed.get("term_ru", term), parsed.get("term_en", term)
-    except:
+    except Exception:
         return term, term
 
 
@@ -172,7 +168,7 @@ def get_reranker():
             for url in ["http://localhost:8080/rerank", "http://localhost:8080/v1/rerank", "http://localhost:8000/v1/rerank"]:
                 try:
                     req = urllib.request.Request(url, data=b"{}", headers={'Content-Type': 'application/json'})
-                    with urllib.request.urlopen(req, timeout=0.2) as conn:
+                    with urllib.request.urlopen(req, timeout=0.2):
                         pass
                     api_url = url
                     backend = "rest"
@@ -223,7 +219,6 @@ def resolve_entities(query, canonical_term, available_entities):
     import struct
     import json
     import re
-    from pathlib import Path
 
     db_path = PROJECT_ROOT / "db/mathesis_index.db"
     if not db_path.exists():
@@ -336,7 +331,7 @@ CANDIDATE TITLE: "{best_candidate['title']}"
 CANDIDATE DESCRIPTION:
 {desc_text}
 
-Does the USER TERM request the mathematical concept described by this CANDIDATE? 
+Does the USER TERM request the mathematical concept described by this CANDIDATE?
 Answer EXACTLY with valid JSON:
 {{ "is_identical": true, "reason": "short explanation" }} or {{ "is_identical": false, "reason": "why they differ" }}
 """
@@ -373,7 +368,8 @@ Term to translate: "{term}"
         from pipeline.model_manager import ModelManager
         mgr = ModelManager.get_instance()
         resp = mgr.query_llm(prompt, json_mode=True, role="extract")
-        import re, json
+        import re
+        import json
         # Strip markdown JSON wrappers if present
         resp = re.sub(r'^```json\s*', '', resp.strip(), flags=re.MULTILINE)
         resp = re.sub(r'^```\s*$', '', resp.strip(), flags=re.MULTILINE).strip()
@@ -405,7 +401,7 @@ def run_enrichment_pipeline(
     term_ru=None,
 ):
     """Runs the full extraction → alignment → synthesis pipeline. Returns list of generated entity IDs."""
-    print(f"\n[*] === AUTO-ENRICHMENT: Запускаю конвейер обогащения ===")
+    print("\n[*] === AUTO-ENRICHMENT: Запускаю конвейер обогащения ===")
 
     if term_ru:
         term_en = clean_term
@@ -498,7 +494,7 @@ def run_enrichment_pipeline(
             print(f"[-] Не удалось запустить шаг {step_num}: {e}")
             return False, [], {}
 
-    print(f"\n[+] Конвейер обогащения завершен успешно!")
+    print("\n[+] Конвейер обогащения завершен успешно!")
     return True, generated_entities, generated_entities_deps
 
 
@@ -618,7 +614,6 @@ def main():
     root_generated_ids = [] # IDs generated specifically for the initial query term
 
 
-    import sqlite3
     from pipeline.lean_validator import validate_entity
 
     # Dual-queue loop
@@ -762,7 +757,7 @@ def main():
 
                 if mathesis_deps and validation_visits[eid] < MAX_VALIDATION_VISITS:
                     print(f"[Queue] [!] Обнаружены отсутствующие зависимости: {mathesis_deps}")
-                    print(f"[Queue] [+] Добавляю отсутствующие зависимости вне очереди (в начало S-Queue).")
+                    print("[Queue] [+] Добавляю отсутствующие зависимости вне очереди (в начало S-Queue).")
 
                     for dep in mathesis_deps:
                         # Clean prefix to use as natural language term
@@ -778,13 +773,13 @@ def main():
                     print(f"[Queue] [-] Сущность {eid} исчерпала лимит повторов ({MAX_VALIDATION_VISITS}); зависимости не разрешены: {mathesis_deps}. Помечаю как failed.")
                     failed_entities.add(eid)
                 else:
-                    print(f"[Queue] [-] Семантические ошибки без явных пропущенных зависимостей.")
+                    print("[Queue] [-] Семантические ошибки без явных пропущенных зависимостей.")
                     for e in result["errors"][:3]:
                         print(f"    - {e.get('message', '')}")
                     # Without dependencies missing, we don't automatically trigger re-synthesis in this wrapper.
                     # It would require Lean correction logic. We leave it as failed for now.
 
-    print(f"\n[!] Конвейер полностью завершил работу (Очереди пусты).")
+    print("\n[!] Конвейер полностью завершил работу (Очереди пусты).")
 
     # Generate the final PDF with the originally requested canonical entity
     available = get_available_entities()
