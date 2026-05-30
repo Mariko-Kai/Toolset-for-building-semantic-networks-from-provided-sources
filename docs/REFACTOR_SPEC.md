@@ -308,6 +308,23 @@
 - **Риск:** объём. **Снижение:** строгий порядок этапов; каждый этап самодостаточен и оставляет проект в рабочем состоянии.
 
 ## Журнал прогресса
+- **2026-05-30 — Этап 3 завершён + исследование OCR.** Производительность вне ИИ.
+  - **3.1** `pipeline/vector_utils.py` (`cosine_similarity_matrix`/`find_similar_pairs`):
+    дедуп в `postprocess_equivalence` через numpy-матрицу вместо O(n²) питон-косинуса.
+    `update_embeddings`: путь из config, инкрементальность (`--force`), чекпойнты.
+  - **3.2** `rank_by_query` (matmul+argpartition) + `lru_cache` на `normalize_math_term`;
+    `resolve_entities` ранжирует векторизованно; удалён мёртвый питон-`cosine_similarity`.
+  - **3.3** `pipeline/pdf_text.py` — кэш текста страниц по (mtime,size); `ensemble_extractor`
+    извлекает текст один раз (убран дублирующий полный проход и повторное открытие PDF).
+  - **3.4** Выполнено ранее в Этапе 2: индексы в `schema.py` (type/module/FK), `get_used_by`
+    через `DISTINCT` (без питоновского `any()`).
+  - **3.5** `lean_equivalence_checker`: ленивый индекс id→path (один glob вместо glob на пару);
+    `export_to_lean`: один файловый дескриптор на стрим вместо open/close на чанк.
+  - **OCR-исследование** (`docs/howto/ocr_integration.md`): реального OCR нет (`--cv-model`/
+    `--ocr-pages` — заглушки, vision в `model_manager` отсутствует). Внедрение — умеренная
+    задача (≈3–6 дней): рендер изображений уже есть, нужен image-путь в `ModelManager` +
+    роль `cv` + детектор сканов. MVP на Ollama ~1 день.
+  - 69 тестов зелёных (добавлено 15); новый код чист по ruff.
 - **2026-05-30 — Этап 2 завершён.** Консолидация модели данных вокруг оси Lean def/prop.
   - **2.1** `mathesis/schema.py` — единая каноническая схема (надмножество прежней
     плоской): `entities` (kind=type∈{def,prop}+CHECK, lean_decl/lean_code/lean_status,
