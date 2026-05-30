@@ -12,6 +12,17 @@ pipeline/config.py — Централизованная конфигурация
   3. Дефолты из этого файла
 """
 
+import os
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Единый источник истины для пути к канонической БД (ТЗ Этап 2.3).
+# Переопределяется через переменную окружения MATHESIS_DB_PATH (полезно для тестов/CI).
+def get_db_path() -> str:
+    return os.environ.get("MATHESIS_DB_PATH") or str(PROJECT_ROOT / "db" / "mathesis_index.db")
+
+
 PROVIDERS = ["ollama", "gemini", "openai", "groq", "hf", "llama_cpp"]
 
 # Дефолтные модели для каждого провайдера
