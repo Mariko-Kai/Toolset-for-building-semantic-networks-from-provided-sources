@@ -56,20 +56,28 @@ class ProverEquivalenceVerifier:
         sh.setFormatter(logging.Formatter('[*] %(message)s'))
         self.logger.addHandler(sh)
 
+    def _content_lean_map(self):
+        """Ленивый индекс entity_id -> путь к .lean в content/ (один рекурсивный
+        glob вместо glob на каждую пару). Кэшируется на время жизни объекта."""
+        cache = getattr(self, "_content_lean_index", None)
+        if cache is not None:
+            return cache
+        cache = {}
+        for path in glob.glob(os.path.join(self.content_dir, '**', '*.lean'), recursive=True):
+            m = re.search(r'\[([^\]]+)\]', os.path.basename(path))
+            if m:
+                cache.setdefault(m.group(1).strip(), path)
+        self._content_lean_index = cache
+        return cache
+
     def find_lean_file_by_id(self, entity_id):
-        """Ищет .lean файл в lean_validator/Validated или в контенте."""
-        # 1. Сначала ищем в lean_validator/Validated (где хранятся валидированные файлы в формате {entity_id}.lean)
+        """Ищет .lean файл в lean_validator/Validated или в контенте (через кэш)."""
+        # 1. Сначала ищем в lean_validator/Validated ({entity_id}.lean).
         validated_path = os.path.join("lean_validator", "Validated", f"{entity_id}.lean")
         if os.path.exists(validated_path):
             return validated_path
-            
-        # 2. Если не нашли, ищем по точному вхождению ID в квадратных скобках
-        pattern = f"*{entity_id}*.lean"
-        matches = glob.glob(os.path.join(self.content_dir, '**', pattern), recursive=True)
-        for match in matches:
-            if f"[{entity_id}]" in os.path.basename(match):
-                return match
-        return None
+        # 2. Иначе — O(1) поиск по предпостроенному индексу content/.
+        return self._content_lean_map().get(entity_id)
 
     def extract_lean_statement(self, lean_filepath):
         """Извлекает строгую формулировку конкретной сущности, соответствующей имени файла."""

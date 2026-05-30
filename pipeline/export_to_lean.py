@@ -346,43 +346,42 @@ Lean 4 Code:"""
     # Prepare the log prefix
     synth_log_prefix = f"=== SYSTEM PROMPT ===\n{system_prompt}\n\n=== PROMPT ===\n{user_prompt}\n\n=== RESPONSE ===\n"
 
-    # Write header and prompt to real-time log before streaming starts
+    # Open the real-time log ONCE for the whole stream (раньше файл открывался
+    # на каждый чанк — десятки open/close на ответ).
     import sys
     realtime_log = PROJECT_ROOT / "logs" / "pipeline_realtime.log"
     header = f"\n=== [{datetime.datetime.now().isoformat()}] CATEGORY: SYNTHESIS/LEAN | ENTITY: {entity_id} | ATTEMPT: {attempt} ===\n"
+    log_fh = None
     try:
-        with open(realtime_log, "a", encoding="utf-8") as f:
-            f.write(header)
-            f.write(synth_log_prefix)
-            f.flush()
+        realtime_log.parent.mkdir(parents=True, exist_ok=True)
+        log_fh = open(realtime_log, "a", encoding="utf-8")
+        log_fh.write(header)
+        log_fh.write(synth_log_prefix)
+        log_fh.flush()
     except OSError:
-        pass
+        log_fh = None
 
     print(f"  [lean-export] LLM ({target_model}) is reasoning (streaming)...")
 
     def stream_callback(chunk: str):
-        # Print chunk to console
         sys.stdout.write(chunk)
         sys.stdout.flush()
-        # Append chunk to real-time log
-        try:
-            with open(realtime_log, "a", encoding="utf-8") as f:
-                f.write(chunk)
-                f.flush()
-        except OSError:
-            pass
+        if log_fh is not None:
+            try:
+                log_fh.write(chunk)
+                log_fh.flush()  # держим realtime-хвост (tail -f), но без open/close
+            except OSError:
+                pass
 
-    response = mgr.query_llm(user_prompt, model=target_model, system_prompt=system_prompt, role="lean", stream_callback=stream_callback)
-
-    # After generation finishes, print a newline
-    sys.stdout.write("\n")
-    sys.stdout.flush()
     try:
-        with open(realtime_log, "a", encoding="utf-8") as f:
-            f.write("\n" + "="*80 + "\n")
-            f.flush()
-    except OSError:
-        pass
+        response = mgr.query_llm(user_prompt, model=target_model, system_prompt=system_prompt, role="lean", stream_callback=stream_callback)
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+        if log_fh is not None:
+            log_fh.write("\n" + "=" * 80 + "\n")
+    finally:
+        if log_fh is not None:
+            log_fh.close()
 
     # Log to the individual file (skip realtime because we already appended it)
     synth_log = synth_log_prefix + response + "\n"
