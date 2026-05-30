@@ -129,6 +129,30 @@ class OllamaStrategy(ModelStrategy):
             print(f"[OllamaStrategy] Error: {e} (URL: {url})")
             return ""
 
+    def generate_with_images(self, prompt: str, images: list, system_prompt: Optional[str] = None, json_mode: bool = False) -> str:
+        """Мультимодальный запрос к Ollama (vision/OCR): изображения кодируются в
+        base64 и кладутся в поле `images` запроса /api/generate. Требует
+        мультимодальной модели (llava/qwen-vl и т.п.)."""
+        import base64
+        model = self.model_name or "llava:latest"
+        base_url = self._get_base_url()
+        url = f"{base_url}/api/generate"
+        encoded = [base64.b64encode(img).decode("ascii") for img in images]
+        payload = {"model": model, "prompt": prompt, "stream": False, "images": encoded}
+        if system_prompt:
+            payload["system"] = system_prompt
+        if json_mode:
+            payload["format"] = "json"
+        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"),
+                                     headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                return result.get("response", "")
+        except Exception as e:
+            print(f"[OllamaStrategy] Vision error: {e} (URL: {url})")
+            return ""
+
     def get_embedding(self, text: str) -> Optional[List[float]]:
         model = self.model_name or "nomic-embed-text:latest"
         base_url = self._get_base_url()
@@ -479,6 +503,36 @@ class ModelManager:
         if strict:
             raise ModelError(f"query_llm failed after {attempts} attempt(s): {last_err}")
         print(f"[ModelManager] query_llm failed after {attempts} attempt(s): {last_err}")
+        return ""
+
+    def query_vision(self, prompt: str, images: list, *, provider: Optional[str] = None,
+                     model: Optional[str] = None, role: str = "cv", strict: bool = False,
+                     max_retries: Optional[int] = None) -> str:
+        """Мультимодальный (vision/OCR) запрос с ретраями. MVP: поддерживается
+        только Ollama (роль 'cv'); другие провайдеры — позже по тому же интерфейсу."""
+        strategy = self._select_strategy(role, provider, model)
+        if strategy is None or not isinstance(strategy, OllamaStrategy):
+            got = type(strategy).__name__ if strategy else "None"
+            msg = f"query_vision: поддерживается только OllamaStrategy (получено {got})"
+            if strict:
+                raise ModelError(msg)
+            print(f"[ModelManager] {msg}")
+            return ""
+
+        attempts = (MODEL_MAX_RETRIES if max_retries is None else max_retries) + 1
+        last_err: Optional[str] = None
+        for attempt in range(1, attempts + 1):
+            try:
+                result = strategy.generate_with_images(prompt, images)
+                if result and result.strip():
+                    return result
+                last_err = "empty response"
+            except Exception as e:  # noqa: BLE001
+                last_err = str(e)
+            if attempt < attempts:
+                time.sleep(MODEL_RETRY_BASE_DELAY * (2 ** (attempt - 1)))
+        if strict:
+            raise ModelError(f"query_vision failed after {attempts} attempt(s): {last_err}")
         return ""
 
     def get_embedding(self, text: str, provider: Optional[str] = None, model: Optional[str] = None, role: Optional[str] = None, strict: bool = False, max_retries: Optional[int] = None) -> Optional[List[float]]:
