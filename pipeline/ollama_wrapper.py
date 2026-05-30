@@ -873,9 +873,11 @@ def main():
         roots_arg = ",".join(root_ids)
         print(f"\n[*] Сборка финального result.pdf для: {roots_arg}")
         cmd = [sys.executable, str(GENERATE_SCRIPT), "--roots", roots_arg]
-        # Forward all model/provider parameters to maintain configuration in the sub-pipeline
+        # Forward all model/provider parameters to maintain configuration in the sub-pipeline.
+        # Пропускаем аргументы, которых нет у generate_answer.py (иначе exit 2 на argparse).
+        _skip_forward = {"query", "roots", "root", "orchestrated", "ocr_pages"}
         for arg_name, arg_val in vars(args).items():
-            if arg_name in ["query", "roots", "root"]:
+            if arg_name in _skip_forward:
                 continue
             if arg_val is True:
                 cmd.append(f"--{arg_name.replace('_', '-')}")

@@ -19,7 +19,9 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from mathesis.proc import kill_process_tree  # noqa: E402  (импорт после настройки sys.path)
 
-VALIDATION_TIMEOUT = 150  # seconds
+# Таймаут одной REPL-валидации (сек). Холодный старт грузит Mathlib (десятки секунд),
+# поэтому дефолт с запасом; настраивается через env MATHESIS_LEAN_TIMEOUT.
+VALIDATION_TIMEOUT = int(os.environ.get("MATHESIS_LEAN_TIMEOUT", "300"))
 
 def log(msg):
     try:
