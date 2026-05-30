@@ -14,6 +14,7 @@ import re
 import sys
 import io
 import difflib
+from functools import lru_cache
 from pathlib import Path
 
 # Fix Windows console encoding
@@ -186,8 +187,13 @@ def get_reranker():
     return _RERANKER_CACHE if _RERANKER_CACHE is not False else None
 
 
+@lru_cache(maxsize=8192)
 def normalize_math_term(term):
-    """Кастомный стеммер/нормализатор для математических терминов"""
+    """Кастомный стеммер/нормализатор для математических терминов.
+
+    Кэшируется: чистая функция строки, вызывается на каждый заголовок при каждом
+    резолве — кэш убирает повторную нормализацию одних и тех же заголовков.
+    """
     import re
     t = term.lower()
     t = re.sub(r'\b(theorem|thm|prop|proposition|def|definition|lemma|axm|axiom)\b', '', t)
@@ -203,15 +209,6 @@ def normalize_math_term(term):
     return " ".join(sorted(words))
 
 
-
-def cosine_similarity(v1, v2):
-    import math
-    if not v1 or not v2: return 0.0
-    dot = sum(a*b for a,b in zip(v1, v2))
-    norm1 = math.sqrt(sum(a*a for a in v1))
-    norm2 = math.sqrt(sum(b*b for b in v2))
-    if norm1 == 0 or norm2 == 0: return 0.0
-    return dot / (norm1 * norm2)
 
 def resolve_entities(query, canonical_term, available_entities):
     """
@@ -270,21 +267,25 @@ def resolve_entities(query, canonical_term, available_entities):
         try:
             query_emb = mgr.get_embedding(canonical_term, role="embed")
             if query_emb:
+                # Собираем эмбеддинги один раз в матрицу и ранжируем векторизованно
+                # (один matmul + argpartition вместо питоновского косинуса по сущностям).
+                meta = []
+                vecs = []
                 for eid, title, nl_desc, emb_blob, lean_path in rows:
                     if emb_blob:
                         num_floats = len(emb_blob) // 4
-                        emb_vec = struct.unpack(f"{num_floats}f", emb_blob)
-                        sim = cosine_similarity(query_emb, emb_vec)
-                        if sim > 0.65:
-                            emb_candidates.append({"entity_id": eid, "title": title, "nl_desc": nl_desc, "score": sim, "method": "embedding"})
+                        vecs.append(struct.unpack(f"{num_floats}f", emb_blob))
+                        meta.append((eid, title, nl_desc))
+                if vecs:
+                    from pipeline.vector_utils import rank_by_query
+                    for ri, sim in rank_by_query(query_emb, vecs, min_sim=0.65, top_k=15):
+                        eid, title, nl_desc = meta[ri]
+                        emb_candidates.append({"entity_id": eid, "title": title, "nl_desc": nl_desc, "score": sim, "method": "embedding"})
         except Exception as e:
             print(f"[-] Embedding search failed: {e}")
 
         if emb_candidates:
-            # Sort by embedding score and take Top 15
-            emb_candidates.sort(key=lambda x: x["score"], reverse=True)
-            emb_candidates = emb_candidates[:15]
-
+            # rank_by_query уже вернул топ-15 по убыванию.
             reranker = get_reranker()
             if reranker:
                 print(f"[*] Reranking {len(emb_candidates)} candidates for '{canonical_term}'...")

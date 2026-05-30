@@ -6,7 +6,12 @@ import math
 import numpy as np
 import pytest
 
-from pipeline.vector_utils import cosine_similarity_matrix, find_similar_pairs, normalize_rows
+from pipeline.vector_utils import (
+    cosine_similarity_matrix,
+    find_similar_pairs,
+    normalize_rows,
+    rank_by_query,
+)
 
 
 def test_cosine_matrix_matches_manual():
@@ -57,6 +62,25 @@ def test_find_similar_pairs_matches_naive():
 def test_ragged_raises():
     with pytest.raises(ValueError):
         cosine_similarity_matrix([[1.0, 0.0], [1.0]])
+
+
+def test_rank_by_query_orders_and_filters():
+    embs = [[1.0, 0.0], [0.0, 1.0], [0.9, 0.1]]
+    ranked = rank_by_query([1.0, 0.0], embs, min_sim=0.5)
+    # ближе всего idx 0, затем idx 2; idx 1 (ортогональный) отфильтрован
+    assert [i for i, _ in ranked] == [0, 2]
+    assert ranked[0][1] >= ranked[1][1]
+
+
+def test_rank_by_query_top_k():
+    embs = [[1.0, 0.0]] * 10
+    ranked = rank_by_query([1.0, 0.0], embs, min_sim=0.0, top_k=3)
+    assert len(ranked) == 3
+
+
+def test_rank_by_query_dim_mismatch_returns_empty():
+    assert rank_by_query([1.0, 0.0, 0.0], [[1.0, 0.0]], min_sim=0.0) == []
+    assert rank_by_query([1.0, 0.0], [], min_sim=0.0) == []
 
 
 def test_normalize_rows():

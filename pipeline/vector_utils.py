@@ -28,6 +28,33 @@ def cosine_similarity_matrix(embeddings) -> np.ndarray:
     return xn @ xn.T
 
 
+def rank_by_query(query_vec, embeddings, min_sim: float = 0.0, top_k=None) -> list[tuple[int, float]]:
+    """Ранжирует эмбеддинги по косинусной близости к query_vec.
+
+    Возвращает [(idx, sim), ...] по убыванию sim, оставляя только sim>min_sim.
+    Векторизовано (один matmul). При top_k использует argpartition (частичная
+    сортировка) — сублинейно относительно полной сортировки. Возвращает [] при
+    несовпадении размерностей или пустом входе.
+    """
+    n = len(embeddings)
+    if n == 0:
+        return []
+    x = np.asarray(embeddings, dtype=np.float64)
+    q = np.asarray(query_vec, dtype=np.float64)
+    if x.ndim != 2 or q.ndim != 1 or x.shape[1] != q.shape[0]:
+        return []
+    xn = normalize_rows(x)
+    qn = q / (np.linalg.norm(q) or 1.0)
+    sims = xn @ qn
+    idx = np.where(sims > min_sim)[0]
+    if idx.size == 0:
+        return []
+    if top_k is not None and idx.size > top_k:
+        idx = idx[np.argpartition(-sims[idx], top_k)[:top_k]]
+    order = idx[np.argsort(-sims[idx])]
+    return [(int(i), float(sims[i])) for i in order]
+
+
 def find_similar_pairs(embeddings, threshold: float, roles=None) -> list[tuple[int, int, float]]:
     """Возвращает пары (i, j, sim) с i<j и sim>threshold.
 
