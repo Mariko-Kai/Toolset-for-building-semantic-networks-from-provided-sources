@@ -30,6 +30,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from pipeline.model_manager import ModelManager
 from pipeline.config import PROVIDERS, resolve_module_config
+from pipeline import pdf_text
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -256,35 +257,32 @@ def get_section_page_range(toc: list, target_page: int) -> tuple:
 
 def search_fulltext(pdf_path: Path, roots: list, max_pages=None) -> list:
     """Scans all pages for root co-occurrence. Returns list of matching page indices (all matches by default)."""
-    try:
-        doc = fitz.open(pdf_path)
-    except Exception:
+    if not roots:
         return []
 
-    if not roots:
-        doc.close()
+    # Текст страниц извлекается один раз и кэшируется (переиспользуется всеми фазами).
+    page_texts = pdf_text.get_page_texts(pdf_path)
+    if not page_texts:
         return []
 
     scored_results = []
-    last_root = roots[-1]
+    roots_lower = [r.lower() for r in roots]
+    last_root = roots_lower[-1]
 
-    for i in range(len(doc)):
-        text = doc[i].get_text("text").lower().replace('\n', ' ')
-        matched_roots = [r for r in roots if r in text]
-        
+    for i, text in enumerate(page_texts):
+        matched_roots = [r for r in roots_lower if r in text]
+
         if matched_roots:
             score = len(matched_roots)
             # Bonus for full match
-            if score == len(roots):
+            if score == len(roots_lower):
                 score += 5
             # Bonus for the last word (user's priority anchor)
             if last_root in matched_roots:
                 score += 2
-                
+
             scored_results.append((score, i, matched_roots))
 
-    doc.close()
-    
     # Sort by score descending, then by page ascending
     scored_results.sort(key=lambda x: (-x[0], x[1]))
     
@@ -540,18 +538,15 @@ def process_single_book(pdf_path: Path, query: str, entity_type: str, roots: lis
     if preview_model and preview_provider:
         print("  [Preview] Building candidate page set from fitz matches...")
         try:
-            import fitz, random
-            doc = fitz.open(pdf_path)
+            # Переиспользуем кэш текста страниц (без повторного открытия/парсинга PDF).
+            page_texts = pdf_text.get_page_texts(pdf_path)
+            roots_lower = [r.lower() for r in roots]
             scored_pages = []
-            
-            for i in range(len(doc)):
-                text = doc[i].get_text("text").lower().replace('\n', ' ')
-                matched_roots = [r.lower() for r in roots if r.lower() in text]
+
+            for i, text in enumerate(page_texts):
+                matched_roots = [r for r in roots_lower if r in text]
                 if matched_roots:
-                    score = len(matched_roots)
-                    scored_pages.append((score, i))
-            
-            doc.close()
+                    scored_pages.append((len(matched_roots), i))
 
             if scored_pages:
                 # Sort by score descending then page ascending
@@ -560,12 +555,8 @@ def process_single_book(pdf_path: Path, query: str, entity_type: str, roots: lis
                 candidate_pages = [p for s, p in scored_pages]
                 print(f"  [Preview] {len(scored_pages)} pages matched roots; including all {len(candidate_pages)} pages for preview.")
             else:
-                # Fallback: scan all pages
-                doc = fitz.open(pdf_path)
-                total = len(doc)
-                doc.close()
-                candidate_pages = list(range(total))
-                print(f"  [Preview] No root matches; scanning all {total} pages.")
+                candidate_pages = list(range(len(page_texts)))
+                print(f"  [Preview] No root matches; scanning all {len(page_texts)} pages.")
 
             print("  [Preview] Running preview scan on sampled pages...", flush=True)
             try:
