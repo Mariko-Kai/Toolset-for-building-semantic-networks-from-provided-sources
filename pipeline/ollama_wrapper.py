@@ -152,35 +152,86 @@ def extract_keyword(query):
 # ── Multi-Result Entity Resolution ───────────────────────────────────────────
 
 _RERANKER_CACHE = None
+_RERANKER_PIPELINE = None  # держит llama.cpp-сервер живым на время процесса
+
+
+def _resolve_gguf_path(model: str):
+    """Пытается найти GGUF-файл реранкера по имени/пути из конфига.
+    Ищет: как есть; относительно корня; в PROJECT_ROOT/llama; в MATHESIS_LLAMA_DIR."""
+    if not model or not str(model).lower().endswith(".gguf"):
+        return None
+    candidates = [Path(model), PROJECT_ROOT / model, PROJECT_ROOT / "llama" / Path(model).name]
+    extra_dir = os.environ.get("MATHESIS_LLAMA_DIR")
+    if extra_dir:
+        candidates.append(Path(extra_dir) / Path(model).name)
+    for c in candidates:
+        try:
+            if c.is_file():
+                return c
+        except OSError:
+            continue
+    return None
+
 
 def get_reranker():
-    global _RERANKER_CACHE
-    if _RERANKER_CACHE is None:
-        try:
-            from pipeline.hybrid_search import CrossEncoderReranker
-            from pipeline.config import resolve_module_config
-            _, preview_model, _ = resolve_module_config("preview")
+    """Возвращает реранкер для резолва сущностей. Порядок выбора:
+      1) явный REST-URL (env MATHESIS_RERANK_URL) — уже запущенный сервер;
+      2) preview=llama_cpp + найденный .gguf -> автозапуск llama.cpp-сервера (REST);
+      3) проба стандартных портов локального rerank-сервера;
+      4) фолбэк: локальная HF-модель BAAI/bge-reranker-v2-m3.
+    """
+    global _RERANKER_CACHE, _RERANKER_PIPELINE
+    if _RERANKER_CACHE is not None:
+        return _RERANKER_CACHE if _RERANKER_CACHE is not False else None
 
-            backend = "local"
-            model_name = "BAAI/bge-reranker-v2-m3"
-            api_url = None
+    try:
+        from pipeline.config import resolve_module_config
+        from pipeline.hybrid_search import CrossEncoderReranker, HybridSearchPipeline
+        prov, preview_model, _ = resolve_module_config("preview")
 
-            import urllib.request
-            for url in ["http://localhost:8080/rerank", "http://localhost:8080/v1/rerank", "http://localhost:8000/v1/rerank"]:
-                try:
-                    req = urllib.request.Request(url, data=b"{}", headers={'Content-Type': 'application/json'})
-                    with urllib.request.urlopen(req, timeout=0.2):
-                        pass
-                    api_url = url
-                    backend = "rest"
-                    break
-                except Exception:
-                    continue
+        # 1) Явный REST-URL (пользователь уже поднял llama.cpp rerank-сервер).
+        rerank_url = os.environ.get("MATHESIS_RERANK_URL")
+        if rerank_url:
+            print(f"[*] Reranker: REST {rerank_url} (MATHESIS_RERANK_URL)")
+            _RERANKER_CACHE = CrossEncoderReranker(backend="rest", api_url=rerank_url)
+            return _RERANKER_CACHE
 
-            _RERANKER_CACHE = CrossEncoderReranker(backend=backend, model_name=model_name, api_url=api_url)
-        except Exception as e:
-            print(f"[-] Failed to initialize CrossEncoderReranker: {e}")
-            _RERANKER_CACHE = False
+        # 2) Сконфигурирован GGUF на llama_cpp -> поднимаем локальный сервер и реранкаем по REST.
+        if prov == "llama_cpp":
+            gguf = _resolve_gguf_path(preview_model)
+            if gguf:
+                port = int(os.environ.get("MATHESIS_RERANK_PORT", "8080"))
+                print(f"[*] Reranker: llama.cpp GGUF '{gguf.name}' на порту {port}")
+                _RERANKER_PIPELINE = HybridSearchPipeline(
+                    backend="rest", model_name=str(gguf), api_url=f"http://localhost:{port}",
+                    server_model_path=str(gguf), server_port=port,
+                )
+                import atexit
+                atexit.register(_RERANKER_PIPELINE.close)
+                _RERANKER_CACHE = _RERANKER_PIPELINE.reranker
+                return _RERANKER_CACHE
+            elif preview_model:
+                print(f"[!] Reranker: GGUF '{preview_model}' не найден (см. MATHESIS_LLAMA_DIR). Пробую другие варианты.")
+
+        # 3) Проба уже запущенного REST-сервера на стандартных портах.
+        import urllib.request
+        for url in ["http://localhost:8080/rerank", "http://localhost:8080/v1/rerank", "http://localhost:8000/v1/rerank"]:
+            try:
+                req = urllib.request.Request(url, data=b"{}", headers={'Content-Type': 'application/json'})
+                with urllib.request.urlopen(req, timeout=0.3):
+                    pass
+                print(f"[*] Reranker: обнаружен REST-сервер {url}")
+                _RERANKER_CACHE = CrossEncoderReranker(backend="rest", api_url=url)
+                return _RERANKER_CACHE
+            except Exception:
+                continue
+
+        # 4) Фолбэк: локальная HF-модель (требует кэша/сети).
+        print("[*] Reranker: фолбэк на локальную HF-модель BAAI/bge-reranker-v2-m3")
+        _RERANKER_CACHE = CrossEncoderReranker(backend="local", model_name="BAAI/bge-reranker-v2-m3")
+    except Exception as e:
+        print(f"[-] Failed to initialize CrossEncoderReranker: {e}")
+        _RERANKER_CACHE = False
     return _RERANKER_CACHE if _RERANKER_CACHE is not False else None
 
 
