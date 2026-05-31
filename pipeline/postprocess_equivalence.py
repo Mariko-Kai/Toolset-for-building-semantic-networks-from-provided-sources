@@ -143,10 +143,16 @@ class MathesisSemanticMerger:
         try:
             self.logger.debug(f"Запрос эмбеддинга для текста: {text[:100]}...")
             response = ollama.embeddings(model=self.embed_model, prompt=text)
-            return response['embedding']
+            emb = response["embedding"]
+            if not emb:
+                raise ValueError("провайдер вернул пустой эмбеддинг")
+            return emb
         except Exception as e:
+            # НЕ подставляем нулевой вектор: он дал бы косинусное сходство 0 ко всему,
+            # т.е. молча отключил бы дедупликацию ПРЯМО перед удалением файлов
+            # (потеря данных). Лучше громко прервать прогон (ошибки не глотаются).
             self.logger.error(f"Ошибка запроса эмбеддинга: {e}")
-            return [0.0] * 768
+            raise RuntimeError(f"Не удалось получить эмбеддинг (model={self.embed_model}): {e}") from e
 
     def cosine_similarity(self, v1, v2):
         norm1 = np.linalg.norm(v1)
@@ -555,7 +561,14 @@ Do not provide conversational text. Output ONLY the valid Lean 4 code block.
             return
 
         self.logger.info("Построение векторного пространства для оставшихся уникальных сущностей...")
-        embeddings = [self.get_embedding(e["formulation"]) for e in entities]
+        try:
+            embeddings = [self.get_embedding(e["formulation"]) for e in entities]
+        except RuntimeError as e:
+            # Сбой эмбеддинга прерывает дедуп: НИ ОДИН файл не удаляется (иначе на
+            # нулевых векторах дедуп молча отключился бы перед удалением).
+            self.logger.error(f"[-] Семантическая дедупликация прервана из-за сбоя эмбеддинга: {e}. Файлы не тронуты.")
+            self.actualize_lean_files()
+            return
 
         similarity_threshold = 0.90  # Строгий порог для точных дубликатов
 

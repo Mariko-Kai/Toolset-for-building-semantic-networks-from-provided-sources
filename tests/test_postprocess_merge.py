@@ -14,6 +14,23 @@ sys.modules.setdefault("ollama", types.ModuleType("ollama"))
 
 from pipeline import postprocess_equivalence as pe  # noqa: E402
 
+
+def test_get_embedding_raises_instead_of_zero_vector(monkeypatch):
+    """C.2: при сбое эмбеддинга НЕ подставляем нулевой вектор (он дал бы сходство 0
+    ко всему -> молча отключил бы дедуп прямо перед удалением файлов). Падаем громко."""
+    merger = pe.MathesisSemanticMerger.__new__(pe.MathesisSemanticMerger)
+    merger.embed_model = "nomic-embed-text:latest"
+    merger.logger = logging.getLogger("test-merger-embed")
+
+    class _Boom:
+        @staticmethod
+        def embeddings(*a, **k):
+            raise ConnectionError("ollama unavailable")
+
+    monkeypatch.setattr(pe, "ollama", _Boom)
+    with pytest.raises(RuntimeError):
+        merger.get_embedding("any text")
+
 _SCHEMA = """
 CREATE TABLE entities (entity_id TEXT PRIMARY KEY, type TEXT, title TEXT, path TEXT);
 CREATE TABLE formulation_sources (id INTEGER PRIMARY KEY AUTOINCREMENT, entity_id TEXT, source_book TEXT, page_info TEXT);
