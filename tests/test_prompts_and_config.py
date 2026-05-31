@@ -30,15 +30,6 @@ def test_available_prompts_lists_macro_notation():
     assert "macro_notation" in prompts.available_prompts()
 
 
-def test_api_config_cache_and_reload():
-    from pipeline import config
-    a = config._load_api_config()
-    b = config._load_api_config()
-    assert a is b  # lru_cache возвращает тот же объект
-    config.reload_api_config()
-    c = config._load_api_config()
-    assert isinstance(c, dict)
-
 
 def test_resolve_module_config_priority():
     from pipeline.config import resolve_module_config

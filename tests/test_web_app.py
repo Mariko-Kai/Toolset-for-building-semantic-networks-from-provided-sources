@@ -36,8 +36,7 @@ def web_client(tmp_path, monkeypatch):
     conn.close()
 
     import web.app as webapp
-    # Не даём startup писать api_config.json и поднимать публичный Cloudflare-туннель.
-    monkeypatch.setattr(webapp, "load_or_create_api_config", lambda: {})
+    # Не даём startup поднимать публичный Cloudflare-туннель.
     monkeypatch.setattr(webapp, "start_cloudflare_tunnel", lambda: None)
 
     from fastapi.testclient import TestClient

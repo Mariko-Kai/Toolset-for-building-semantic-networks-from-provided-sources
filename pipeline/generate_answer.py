@@ -141,15 +141,10 @@ def synthesize_entity_details(data, provider, model, api_key, force_refresh=Fals
 
     if not provider:
         try:
-            config_path = Path(__file__).resolve().parent.parent / "api_config.json"
-            if config_path.exists():
-                with open(config_path, "r", encoding="utf-8") as f:
-                    cfg = json.load(f)
-                    provider = cfg.get("providers", {}).get("synth", "gemini")
-                    model = cfg.get("models", {}).get("synth", "gemini-2.5-flash-lite")
-                    api_key = cfg.get("api_keys", {}).get(provider, "")
+            from pipeline.config import resolve_module_config
+            provider, model, api_key = resolve_module_config("synth")
         except Exception as e:
-            print(f"[Warning] Failed to load provider settings from api_config.json: {e}")
+            print(f"[Warning] Failed to resolve synthesis configuration: {e}")
             provider = "gemini"
             model = "gemini-2.5-flash-lite"
             api_key = ""

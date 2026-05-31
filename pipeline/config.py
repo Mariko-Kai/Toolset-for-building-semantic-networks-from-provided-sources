@@ -159,26 +159,6 @@ def get_default_provider(module: str) -> str:
     return DEFAULTS.get(module, {}).get("provider", "ollama")
 
 
-@lru_cache(maxsize=1)
-def _load_api_config():
-    """Загружает api_config.json из корня проекта (кэшируется через lru_cache,
-    без прежнего hasattr-хака). Возвращает {} при отсутствии/ошибке."""
-    import json
-    config_path = PROJECT_ROOT / "api_config.json"
-    try:
-        if config_path.exists():
-            with open(config_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-    except Exception:
-        pass
-    return {}
-
-
-def reload_api_config() -> None:
-    """Сбрасывает кэш конфигурации (после правки api_config.json в рантайме)."""
-    _load_api_config.cache_clear()
-
-
 def resolve_module_config(
     module: str,
     global_provider: str | None = None,
@@ -194,40 +174,40 @@ def resolve_module_config(
     Приоритет:
       1. Глобальный аргумент (--provider / --model / --api-key)
       2. Модульный аргумент (--extract-* / --synth-* / --lean-*)
-      3. api_config.json (providers / models / api_keys секции)
+      3. Переменная окружения (MATHESIS_{MODULE}_PROVIDER / MATHESIS_{MODULE}_MODEL / MATHESIS_{MODULE}_API_KEY)
       4. Дефолт из config.py
 
     Returns:
         (provider, model, api_key)
     """
-    # Load api_config.json settings
-    api_cfg = _load_api_config()
-    cfg_provider = api_cfg.get("providers", {}).get(module)
-    cfg_model = api_cfg.get("models", {}).get(module)
-
     # Load env-level overrides
     env_provider = os.environ.get(f"MATHESIS_{module.upper()}_PROVIDER")
     env_model = os.environ.get(f"MATHESIS_{module.upper()}_MODEL")
     env_api_key = os.environ.get(f"MATHESIS_{module.upper()}_API_KEY")
 
-    # 1. Провайдер: CLI global > CLI module > ENV module > api_config.json > hardcoded default
-    provider = global_provider or module_provider or env_provider or cfg_provider or get_default_provider(module)
+    # 1. Провайдер: CLI global > CLI module > ENV module > hardcoded default
+    provider = global_provider or module_provider or env_provider or get_default_provider(module)
 
-    # 2. Модель: CLI global > CLI module > ENV module > api_config.json > default for provider
+    # 2. Модель: CLI global > CLI module > ENV module > default for provider
     if global_model:
         model = global_model
     elif module_model:
         model = module_model
     elif env_model:
         model = env_model
-    elif cfg_model:
-        model = cfg_model
     else:
         model = get_default_model(module, provider)
 
-    # 3. API ключ: CLI global > CLI module > ENV module > api_config.json for resolved provider
-    cfg_api_key = api_cfg.get("api_keys", {}).get(provider)
-    api_key = global_api_key or module_api_key or env_api_key or cfg_api_key
+    # 3. API ключ: CLI global > CLI module > ENV module > ENV provider default
+    env_provider_default_api_key = None
+    if provider == "gemini":
+        env_provider_default_api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    elif provider == "openai":
+        env_provider_default_api_key = os.environ.get("OPENAI_API_KEY")
+    elif provider == "groq":
+        env_provider_default_api_key = os.environ.get("GROQ_API_KEY")
+
+    api_key = global_api_key or module_api_key or env_api_key or env_provider_default_api_key
 
     return provider, model, api_key
 

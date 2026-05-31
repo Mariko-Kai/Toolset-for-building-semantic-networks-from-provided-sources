@@ -41,106 +41,6 @@ class CompilerState:
         self.logs = []
 
 state = CompilerState()
-api_config = None
-
-def load_or_create_api_config():
-    config_path = PROJECT_ROOT / "api_config.json"
-
-    # 1. Fetch defaults from pipeline.config
-    try:
-        from pipeline.config import get_default_provider, get_default_model
-        default_config = {
-            "api_keys": {
-                "gemini": "",
-                "openai": "",
-                "groq": ""
-            },
-            "providers": {
-                "extract": get_default_provider("extract"),
-                "synth": get_default_provider("synth"),
-                "lean": get_default_provider("lean"),
-                "preview": get_default_provider("preview"),
-            },
-            "models": {
-                "extract": get_default_model("extract", get_default_provider("extract")),
-                "synth": get_default_model("synth", get_default_provider("synth")),
-                "lean": get_default_model("lean", get_default_provider("lean")),
-                "preview": get_default_model("preview", get_default_provider("preview")),
-            }
-        }
-    except Exception as e:
-        print(f"[config] Failed to load defaults from pipeline.config: {e}")
-        default_config = {
-            "api_keys": {
-                "gemini": "",
-                "openai": "",
-                "groq": ""
-            },
-            "providers": {
-                "extract": "ollama",
-                "synth": "ollama",
-                "lean": "ollama",
-                "preview": "llama_cpp"
-            },
-            "models": {
-                "extract": "qwen3:8b",
-                "synth": "qwen3:8b",
-                "lean": "qwen3:8b",
-                "preview": "bge-reranker-v2-m3-Q6_K.gguf"
-            }
-        }
-
-    config = None
-    if config_path.exists():
-        try:
-            content = config_path.read_text(encoding='utf-8').strip()
-            if not content:
-                print("[config] api_config.json is empty. Generating default configuration.")
-            else:
-                config = json.loads(content)
-        except Exception as e:
-            print(f"[config] Error reading/parsing api_config.json: {e}. Re-generating standard defaults.")
-
-    if not config:
-        config = default_config
-        try:
-            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding='utf-8')
-            print(f"[config] Created default api_config.json at {config_path}")
-        except Exception as e:
-            print(f"[config] Failed to write default api_config.json: {e}")
-    else:
-        updated = False
-        for sec in ["api_keys", "providers", "models"]:
-            if sec not in config or not isinstance(config[sec], dict):
-                config[sec] = default_config[sec]
-                updated = True
-            else:
-                for k, v in default_config[sec].items():
-                    if k not in config[sec]:
-                        config[sec][k] = v
-                        updated = True
-        if updated:
-            try:
-                config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding='utf-8')
-                print("[config] Updated api_config.json with missing fields.")
-            except Exception as e:
-                print(f"[config] Failed to update api_config.json: {e}")
-
-    keys = config.get("api_keys", {})
-    if keys.get("gemini"):
-        os.environ["GEMINI_API_KEY"] = keys["gemini"]
-        os.environ["GOOGLE_API_KEY"] = keys["gemini"]
-    if keys.get("openai"):
-        os.environ["OPENAI_API_KEY"] = keys["openai"]
-    if keys.get("groq"):
-        os.environ["GROQ_API_KEY"] = keys["groq"]
-
-    print("[config] Active API configuration:")
-    for k, prov in config.get("providers", {}).items():
-        model = config.get("models", {}).get(k, "")
-        print(f"  - Module '{k}': provider = {prov}, model = {model}")
-
-    return config
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -302,9 +202,8 @@ main_loop = None
 
 @app.on_event("startup")
 def startup():
-    global main_loop, api_config
+    global main_loop
     kb.connect()
-    api_config = load_or_create_api_config()
     main_loop = asyncio.get_event_loop()
     # Start Cloudflare Tunnel automatically in a background thread
     tunnel_thread = threading.Thread(target=start_cloudflare_tunnel, daemon=True)
@@ -630,7 +529,6 @@ manager = ConnectionManager()
 
 
 async def run_compilation_async(mode: str, value: str):
-    global api_config
     state.is_compiling = True
     state.cancel_requested = False
     state.mode = mode
@@ -645,55 +543,6 @@ async def run_compilation_async(mode: str, value: str):
     else:
         state.query = value
         cmd = [sys.executable, "-u", str(PROJECT_ROOT / "pipeline" / "enrichment_coordinator.py"), value]
-
-    if api_config:
-        providers = api_config.get("providers", {})
-        models = api_config.get("models", {})
-        keys = api_config.get("api_keys", {})
-
-        # 1. Extract config
-        ext_prov = providers.get("extract")
-        ext_model = models.get("extract")
-        ext_key = keys.get(ext_prov) if ext_prov else None
-        if ext_prov:
-            cmd.extend(["--extract-provider", ext_prov])
-        if ext_model:
-            cmd.extend(["--extract-model", ext_model])
-        if ext_key:
-            cmd.extend(["--extract-api-key", ext_key])
-
-        # 2. Preview config
-        prev_prov = providers.get("preview")
-        prev_model = models.get("preview")
-        prev_key = keys.get(prev_prov) if prev_prov else None
-        if prev_prov:
-            cmd.extend(["--extract-preview-provider", prev_prov])
-        if prev_model:
-            cmd.extend(["--extract-preview-model", prev_model])
-        if prev_key:
-            cmd.extend(["--extract-preview-api-key", prev_key])
-
-        # 3. Synth config
-        synth_prov = providers.get("synth")
-        synth_model = models.get("synth")
-        synth_key = keys.get(synth_prov) if synth_prov else None
-        if synth_prov:
-            cmd.extend(["--synth-provider", synth_prov])
-        if synth_model:
-            cmd.extend(["--synth-model", synth_model])
-        if synth_key:
-            cmd.extend(["--synth-api-key", synth_key])
-
-        # 4. Lean config
-        lean_prov = providers.get("lean")
-        lean_model = models.get("lean")
-        lean_key = keys.get(lean_prov) if lean_prov else None
-        if lean_prov:
-            cmd.extend(["--lean-provider", lean_prov])
-        if lean_model:
-            cmd.extend(["--lean-model", lean_model])
-        if lean_key:
-            cmd.extend(["--lean-api-key", lean_key])
 
     # Broadcast that compilation has started to all connected sessions
     await manager.broadcast({
