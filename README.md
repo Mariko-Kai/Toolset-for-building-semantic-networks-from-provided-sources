@@ -137,7 +137,7 @@ uvicorn web.app:app --reload
 
 ### 4.2. Основной конвейер обогащения
 
-Скрипт [`pipeline/ollama_wrapper.py`](pipeline/ollama_wrapper.py) — главная точка входа. По
+Скрипт [`pipeline/enrichment_coordinator.py`](pipeline/enrichment_coordinator.py) — главная точка входа. По
 запросу на естественном языке он разрешает сущность в базе либо, при её отсутствии, запускает
 полный конвейер обогащения (извлечение → выравнивание → синтез → формализация) с рекурсивным
 разрешением зависимостей.
@@ -149,17 +149,17 @@ uvicorn web.app:app --reload
 
 Базовый запуск (со значениями по умолчанию):
 ```bash
-python pipeline/ollama_wrapper.py "теорема Коши о среднем значении"
+python pipeline/enrichment_coordinator.py "теорема Коши о среднем значении"
 ```
 
 Запуск под управлением оркестратора (с персистентным мониторингом и регистрацией инцидентов):
 ```bash
-python pipeline/ollama_wrapper.py "теорема Коши о среднем значении" --orchestrated
+python pipeline/enrichment_coordinator.py "теорема Коши о среднем значении" --orchestrated
 ```
 
 Пример гибридной маршрутизации:
 ```bash
-python pipeline/ollama_wrapper.py "Определение равномерно непрерывной функции" \
+python pipeline/enrichment_coordinator.py "Определение равномерно непрерывной функции" \
   --cv-model qwen3-vl:4b \
   --extract-preview-provider llama_cpp \
   --extract-preview-model "bge-reranker-v2-m3-Q6_K.gguf" \
@@ -321,6 +321,7 @@ python pipeline/monitor.py --resolve <id> --as confirmed
 | `MATHESIS_ORCHESTRATED` | `1` — исполнять конвейер под оркестратором |
 | `MATHESIS_LLAMA_DIR` | Дополнительный каталог для поиска GGUF-моделей |
 | `MATHESIS_RERANK_GPU_LAYERS` | Число слоёв реранкера на GPU (`-1` — все) |
+| `MATHESIS_RERANK_CTX` | Контекст реранкера = n_batch = n_ubatch (по умолчанию 4096). Меньше → меньше VRAM (буфер ~квадратичен); 8192 даёт ~4.5 ГБ и не влезает в 4 ГБ |
 | `MATHESIS_LEAN_TIMEOUT` | Таймаут одной проверки Lean (только элаборация), секунды (по умолчанию 300) |
 | `MATHESIS_LEAN_WARMUP_TIMEOUT` | Отдельный бюджет на разовый прогрев REPL — загрузку Mathlib в ОЗУ (по умолчанию 600) |
 | `GEMINI_API_KEY`, `OPENAI_API_KEY`, `GROQ_API_KEY` | Ключи облачных провайдеров |
@@ -336,7 +337,7 @@ python pipeline/monitor.py --resolve <id> --as confirmed
 │   ├── templates/           Шаблоны Jinja2
 │   └── static/              Стили и статические ресурсы
 ├── pipeline/                Нейросимволический конвейер
-│   ├── ollama_wrapper.py    Главная оркестрация (очереди синтеза и валидации)
+│   ├── enrichment_coordinator.py Главная оркестрация (очереди синтеза и валидации)
 │   ├── ensemble_extractor.py Извлечение формулировок из PDF
 │   ├── hybrid_search.py     Лексический поиск (BM25) + кросс-энкодерный реранкер
 │   ├── canonical_synthesizer.py Синтез канонического LaTeX и цикл валидации Lean

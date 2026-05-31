@@ -12,7 +12,7 @@
 
 ## 1. Что не так с текущим конвейером
 
-`pipeline/ollama_wrapper.run_enrichment_pipeline` — жёсткая линейная цепочка:
+`pipeline/enrichment_coordinator.run_enrichment_pipeline` — жёсткая линейная цепочка:
 
 ```python
 steps = [("1/3", extract, [...]), ("2/3", align, [...]), ("3/3", synth, [...])]

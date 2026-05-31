@@ -133,7 +133,7 @@ content/
 > Доказательства (`\begin{proof}`) могут содержать текст.
 
 > [!CAUTION]
-> **Semantic Macros Rule.** Хардкод LaTeX-примитивов (например, `\mathbb{R}`, `\sup`, `\in`) **ЗАПРЕЩЕН**. Все сущности, определенные в `defs/` или `props/`, получают автоматически сгенерированный PascalCase макрос в `mathesis_macros.sty` (например, `\RealNumbers`, `\Supremum`, `\ClosedInterval`). LLM обязана использовать эти динамические макросы. Старая нотация `\mType` полностью признана устаревшей и больше не используется.
+> **Semantic Macros Rule.** Хардкод LaTeX-примитивов (например, `\mathbb{R}`, `\sup`, `\in`) **ЗАПРЕЩЕН**. Все сущности, определенные в `defs/` или `props/`, получают автоматически сгенерированный PascalCase макрос в `mathesis_macros.sty` (например, `\RealNumbers`, `\Supremum`, `\ClosedInterval`). LLM обязана использовать эти динамические макросы.
 
 
 ### 2.3 Cross-References: `semantic macros`
@@ -333,30 +333,38 @@ All `\section{definition}` / `\section{statement}` in `content/` use these rules
 ### 7.1 Layer Diagram
 
 ```
-┌────────────────────────────────────────────────────┐
-│              Transport layers                       │
-│  ┌────────┐  ┌──────────┐  ┌────────────────────┐  │
-│  │  Web   │  │   CLI    │  │  Desktop (future)  │  │
-│  │ FastAPI│  │ argparse │  │  Qt / Tauri        │  │
-│  └───┬────┘  └────┬─────┘  └────────┬───────────┘  │
-│      │            │                 │               │
-│      └────────────┴─────────────────┘               │
-│                     │                               │
-├─────────────────────┼───────────────────────────────┤
-│                     ▼                               │
-│           MathesisDB (core.py)                      │
-│           ┌─────────────────┐                       │
-│           │  Facade class   │                       │
-│           └─────┬───────────┘                       │
-│        ┌────────┼────────┬──────────┐               │
-│        ▼        ▼        ▼          ▼               │
-│     db.py   queries.py  validator.py  parser.py     │
-│     (DDL)   (read)      (check)       (tex→model)  │
-│        │        │        │             │            │
-│        └────────┴────────┴─────────────┘            │
-│                     │                               │
-│              SQLite (mathesis_index.db)              │
-└────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Transport Layers                                │
+│    ┌───────────────┐     ┌──────────────────────┐     ┌───────────┐    │
+│    │  Web App UI   │     │  Entity Manager CLI  │     │ Pipeline  │    │
+│    │  (FastAPI)    │     │ (entity_manager.py)  │     │    CLI    │    │
+│    └───────┬───────┘     └──────────┬───────────┘     └─────┬─────┘    │
+│            │                        │                       │          │
+│            ▼                        ▼                       ▼          │
+├────────────────────────────────────────────────────────────────────────┤
+│                       Execution & Skills Layer                         │
+│                    ┌─────────────────────────┐                         │
+│                    │      Skills System      │                         │
+│                    │ (Delete/Rename/Type...) │                         │
+│                    └────────┬────────────┬───┘                         │
+│                             │            │                             │
+│                             ▼            ▼                             │
+├────────────────────────────────────────────────────────────────────────┤
+│                         Core Services Layer                            │
+│           ┌───────────────────────────┐      ┌─────────────────┐       │
+│           │   MathesisDB (core.py)    │      │    Rebuilder    │       │
+│           │   Facade Class            │      │ (rebuild_pdf.py)│       │
+│           └─────┬─────────────────────┘      └────────┬────────┘       │
+│        ┌────────┼────────┬──────────┐                 │                │
+│        ▼        ▼        ▼          ▼                 ▼                │
+│     db.py   repo.py  validator.py models.py       PDF & LaTeX          │
+│     (DDL)   (CRUD)   (check)     (dataclass)        Build              │
+│        │        │        │          │                 │                │
+│        └────────┴────────┴──────────┘                 │                │
+│                     │                                 │                │
+│                     ▼                                 ▼                │
+│            SQLite (mathesis_index.db)            Filesystem (content/) │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 7.2 MathesisDB Public API
@@ -451,6 +459,33 @@ class MathesisDB:
 | GET | `/graph` | Full theorem DAG visualization |
 | GET | `/books` | List of source books |
 | GET | `/books/{key}` | Book detail + all formulations |
+
+### 7.4 Refactoring & Skills System (Deterministic Management)
+
+Для выполнения рутинных, транзакционно-безопасных операций над сущностями (удаление, переименование, изменение типа) внедрена архитектура **детерминированных скиллов (Skills System)**. Она исключает накладные расходы и непредсказуемость LLM-агентов, выполняя операции за миллисекунды со 100% точностью, но автоматически подключая контур оркестратора и логирование инцидентов в случае нарушения целостности графа.
+
+#### Компоненты системы
+1. **Интерфейс Скиллов (`pipeline/skills/base.py`)**:
+   Задаёт единый интерфейс `BaseEntitySkill` с методом `execute(db, entity_id, *args, **kwargs)`.
+2. **Удаление (`pipeline/skills/delete_skill.py`)**:
+   - Выполняет каскадное удаление сущности из SQLite через `db.delete_entity(entity_id)` (автоматически стирая зависимости, FTS-записи, алиасы и источники).
+   - Удаляет физические файлы `.tex` и `.lean` с диска.
+   - Запускает `rebuild_pdf.py` для перестроения `master.tex` и PDF.
+3. **Переименование (`pipeline/skills/rename_skill.py`)**:
+   - Выполняет транзакционное обновление ID во всех связанных таблицах с временным отключением `PRAGMA foreign_keys` (entities, alias, sources, dependency, equivalence, FTS).
+   - Корректирует внутренний мета-тег `% entity-id:` и `\hypertarget` в целевом `.tex` файле.
+   - Производит сквозной поиск и замену вхождения `\entityref{old_id}` на `\entityref{new_id}` во всех файлах `.tex` и `.lean`.
+4. **Смена типа (`pipeline/skills/change_type_skill.py`)**:
+   - Обновляет категорию (`def` $\leftrightarrow$ `prop`) в SQLite.
+   - Физически перемещает `.tex` файлы между директориями `content/defs/` и `content/props/` с обновлением относительного пути в БД.
+   - Корректирует окружения LaTeX (`definition` $\leftrightarrow$ `proposition`) внутри файла.
+   - Автоматически вызывает `RenameEntitySkill` для согласования префиксов ID (например, `def-` $\leftrightarrow$ `prop-`).
+
+#### Обработка нештатных ситуаций и отказоустойчивость (Fail-Safe)
+После каждого выполнения скилла CLI-диспетчер `pipeline/entity_manager.py` запускает `db.validate()`. Если обнаруживается нарушение ссылочной целостности или появление циклической зависимости (например, при Тарьян-валидации SCC):
+- Прогон Refactoring переводится в аварийный статус.
+- В БД регистрируется структурированный `Incident` (`save_incident`).
+- Пользователю выводится пошаговый `PatchPlan` (план устранения) для ручного вмешательства или агентской самопочинки.
 
 ---
 

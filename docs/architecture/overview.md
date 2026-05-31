@@ -45,6 +45,14 @@ graph TB
         F --> N["SQLite (mathesis_index.db)"]
         N --> O["🌐 Web Compiler (FastAPI)"]
     end
+
+    subgraph "Модуль 6: Рефакторинг и детерминированные скиллы"
+        P["CLI Entity Manager"] --> Q["Skills System (Delete/Rename/Type)"]
+        Q --> N
+        Q --> F
+        Q --> J
+        Q --> R["PDF Rebuilder (rebuild_pdf.py)"]
+    end
 ```
 
 ---
