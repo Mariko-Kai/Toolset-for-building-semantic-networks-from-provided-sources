@@ -1,0 +1,43 @@
+% defined-in: zorich (page 214)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - $\alpha, \beta \colon \RealNumbers$
+%    - $x, y \colon \ClosedInterval{\alpha, \beta} \TermTo \RealNumbers$
+%    - $\tau \colon \OpenInterval{\alpha, \beta}$
+% 2. Data Structures: 
+%    - The interval $\ClosedInterval{\alpha, \beta}$ is defined as the set $\{t \in \RealNumbers \mid \alpha \le t \le \beta\}$.
+%    - The derivative is represented by the operator $\DerivativeAtPoint{f(t)}$.
+% 3. Implicit Bounds: 
+%    - The functions $x$ and $y$ are assumed to be continuous on $\ClosedInterval{\alpha, \beta}$ and differentiable on $\OpenInterval{\alpha, \beta}$.
+% ========================
+
+% entity-id: prop-cauchys-mean-value-theorem
+% entity-type: prop
+% macro: \CauchysMeanValueTheorem
+% args: 0
+
+\begin{proposition}[Cauchy's Mean Value Theorem]
+\[
+\TerForall \alpha, \beta \in \RealNumbers \TerForall x, y \in \Function{\ClosedInterval{\alpha, \beta}}{\RealNumbers}
+\]
+\[
+\begin{aligned}
+& (\Continuous{x} \TermConjunction \Continuous{y} \TermConjunction \text{differentiable on } \OpenInterval{\alpha, \beta}) \\
+& \TermImplication \TermExists \tau \in \OpenInterval{\alpha, \beta} \TermMid \DerivativeAtPoint{x(\tau)} \cdot (y(\beta) - y(\alpha)) = \DerivativeAtPoint{y(\tau)} \cdot (x(\beta) - x(\alpha))
+\end{aligned}
+\]
+\[
+\begin{aligned}
+& (\TerForall t \in \OpenInterval{\alpha, \beta} \TermMid \DerivativeAtPoint{x(t)} \neq 0) \\
+& \TermImplication (x(\alpha) \neq x(\beta)) \TermConjunction \left( \frac{y(\beta) - y(\alpha)}{x(\beta) - x(\alpha)} = \frac{\DerivativeAtPoint{y(\tau)}}{\DerivativeAtPoint{x(\tau)}} \right)
+\end{aligned}
+\]
+\end{proposition}
+
+\begin{proof}[RU]
+Рассмотрим вспомогательную функцию $F(t) \TermDefinedAs x(t)(y(\beta) - y(\alpha)) - y(t)(x(\beta) - x(\alpha))$. Данная функция $F$ непрерывна на отрезке $\ClosedInterval{\alpha, \beta}$ и дифференцируема на интервале $\OpenInterval{\alpha, \beta}$. Заметим, что $F(\alpha) = x(\alpha)y(\beta) - x(\alpha)y(\alpha) - y(\alpha)x(\beta) + y(\alpha)x(\alpha) = x(\alpha)y(\beta) - y(\alpha)x(\beta)$ и $F(\beta) = x(\beta)y(\beta) - x(\beta)y(\alpha) - y(\beta)x(\beta) + y(\beta)x(\alpha) = x(\alpha)y(\beta) - y(\alpha)x(\beta)$. Так как $F(\alpha) = F(\beta)$, по теореме Ролля существует точка $\tau \in \OpenInterval{\alpha, \beta}$ такая, что $F'(\tau) = 0$. Вычисляя производную, получаем $x'(\tau)(y(\beta) - y(\alpha)) - y'(\tau)(x(\beta) - x(\alpha)) = 0$, что эквивалентно требуемому равенству. Если $x'(t) \neq 0$ на $\OpenInterval{\alpha, \beta}$, то по теореме Ролля $x(\alpha) \neq x(\beta)$, что позволяет разделить обе части на $x'(\tau)(x(\beta) - x(\alpha))$.
+\end{proof}
+
+\begin{proof}[EN]
+Consider the auxiliary function $F(t) \TermDefinedAs x(t)(y(\beta) - y(\alpha)) - y(t)(x(\beta) - x(\alpha))$. This function $F$ is continuous on $\ClosedInterval{\alpha, \beta}$ and differentiable on $\OpenInterval{\alpha, \beta}$. Note that $F(\alpha) = x(\alpha)y(\beta) - x(\alpha)y(\alpha) - y(\alpha)x(\beta) + y(\alpha)x(\alpha) = x(\alpha)y(\beta) - y(\alpha)x(\beta)$ and $F(\beta) = x(\beta)y(\beta) - x(\beta)y(\alpha) - y(\beta)x(\beta) + y(\beta)x(\alpha) = x(\alpha)y(\beta) - y(\alpha)x(\beta)$. Since $F(\alpha) = F(\beta)$, by Rolle's Theorem, there exists a point $\tau \in \OpenInterval{\alpha, \beta}$ such that $F'(\tau) = 0$. Calculating the derivative, we obtain $x'(\tau)(y(\beta) - y(\alpha)) - y'(\tau)(x(\beta) - x(\alpha)) = 0$, which is equivalent to the required equality. If $x'(t) \neq 0$ on $\OpenInterval{\alpha, \beta}$, then by Rolle's Theorem $x(\alpha) \neq x(\beta)$, which allows dividing both sides by $x'(\tau)(x(\beta) - x(\alpha))$.
+\end{proof}

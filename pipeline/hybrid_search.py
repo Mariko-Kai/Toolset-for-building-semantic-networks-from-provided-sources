@@ -122,9 +122,12 @@ class CrossEncoderReranker:
         self.api_url = api_url
         self.tokenizer = None
         self.model = None
+        self._llm = None
 
         if self.backend == "local":
             self._init_local_model()
+        elif self.backend == "llama_cpp":
+            self._init_llama_cpp()
 
     def _init_local_model(self) -> None:
         """Initializes the local Hugging Face transformers model."""
@@ -144,6 +147,41 @@ class CrossEncoderReranker:
         self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name).to(self.device)
         self.model.eval()
 
+    def _init_llama_cpp(self) -> None:
+        """Загружает GGUF-реранкер in-process через llama-cpp-python (CUDA/CPU).
+
+        Использует RANK-пулинг и низкоуровневый llama_encode (высокоуровневый
+        Llama.embed() сегфолтит на encoder-моделях в 0.3.x). model_name здесь —
+        путь к .gguf. Выгружает слои на GPU (n_gpu_layers=-1)."""
+        try:
+            import llama_cpp  # noqa: F401
+            from llama_cpp import Llama
+        except ImportError as e:
+            raise ImportError(
+                "Для backend='llama_cpp' нужен пакет llama-cpp-python. "
+                "Установка CUDA-сборки: CMAKE_ARGS='-DGGML_CUDA=on' pip install llama-cpp-python."
+            ) from e
+
+        import os
+        if not os.path.isfile(self.model_name):
+            raise FileNotFoundError(f"GGUF-модель реранкера не найдена: {self.model_name}")
+
+        self._llama_cpp = llama_cpp
+        n_gpu_layers = int(os.environ.get("MATHESIS_RERANK_GPU_LAYERS", "-1"))
+        print(f"[Reranker] Загружаю GGUF in-process через llama-cpp-python: "
+              f"'{os.path.basename(self.model_name)}' (n_gpu_layers={n_gpu_layers})...", flush=True)
+        # n_ctx=n_batch=8192 — полный контекст bge-m3 (страница матана влезает целиком).
+        self._llm = Llama(
+            model_path=self.model_name,
+            embedding=True,
+            pooling_type=llama_cpp.LLAMA_POOLING_TYPE_RANK,
+            n_gpu_layers=n_gpu_layers,
+            n_ctx=8192, n_batch=8192, n_ubatch=8192,
+            verbose=False,
+        )
+        gpu = llama_cpp.llama_supports_gpu_offload() and n_gpu_layers != 0
+        print(f"[Reranker] GGUF-реранкер загружен ({'GPU' if gpu else 'CPU'}).", flush=True)
+
     def rerank(self, query: str, documents: List[Tuple[int, str]]) -> List[Dict[str, Any]]:
         """
         Reranks a list of candidate documents against the query.
@@ -156,8 +194,92 @@ class CrossEncoderReranker:
             return self._rerank_local(query, documents)
         elif self.backend == "rest":
             return self._rerank_rest(query, documents)
+        elif self.backend == "llama_cpp":
+            return self._rerank_llama_cpp(query, documents)
         else:
             raise ValueError(f"Unknown backend: {self.backend}")
+
+    def _score_pair_llama_cpp(self, query: str, document: str) -> float:
+        """Возвращает score кросс-энкодера для пары (query, document) после sigmoid.
+
+        Вход собирается ТОЧНО как llama.cpp `format_rerank` (тот же формат, что у
+        серверного /rerank-эндпоинта), т.е. результат идентичен официальному API:
+            [BOS] query [EOS] [SEP] document [EOS]
+        (спецтокены добавляются по флагам словаря add_bos/add_eos/наличию SEP).
+        Скор читаем из llama_get_embeddings_seq (RANK-пулинг → 1 число)."""
+        lc = self._llama_cpp
+        llm = self._llm
+        ctx = llm._ctx.ctx
+
+        bos = llm.token_bos()
+        eos = llm.token_eos()
+        # Флаги словаря (как в format_rerank); безопасные фолбэки, если метод отсутствует.
+        def _flag(name, default):
+            try:
+                return bool(getattr(llm._model, name)())
+            except Exception:
+                return default
+        add_bos = _flag("add_bos_token", bos != -1)
+        add_eos = _flag("add_eos_token", eos != -1)
+        try:
+            sep = llm._model.token_sep()
+        except Exception:
+            sep = -1
+
+        q_toks = llm.tokenize(query.encode("utf-8"), add_bos=False, special=False)
+        d_toks = llm.tokenize(document.encode("utf-8"), add_bos=False, special=False)
+        toks: List[int] = []
+        if add_bos and bos != -1:
+            toks.append(bos)
+        toks += q_toks
+        if add_eos and eos != -1:
+            toks.append(eos)
+        if sep != -1:
+            toks.append(sep)
+        toks += d_toks
+        if add_eos and eos != -1:
+            toks.append(eos)
+        # Запас под спецтокены: не выходим за обучающий контекст (8192).
+        if len(toks) > 8000:
+            toks = toks[:8000]
+
+        batch = lc.llama_batch_init(len(toks), 0, 1)
+        try:
+            batch.n_tokens = len(toks)
+            for i, t in enumerate(toks):
+                batch.token[i] = t
+                batch.pos[i] = i
+                batch.n_seq_id[i] = 1
+                batch.seq_id[i][0] = 0
+                batch.logits[i] = 1
+            # Чистим память контекста между парами (encoder, по одной паре за раз).
+            if hasattr(lc, "llama_get_memory"):
+                mem = lc.llama_get_memory(ctx)
+                if mem:
+                    lc.llama_memory_clear(mem, True)
+            rc = lc.llama_encode(ctx, batch)
+            if rc != 0:
+                return 0.0
+            emb = lc.llama_get_embeddings_seq(ctx, 0)
+            logit = float(emb[0]) if emb else 0.0
+        finally:
+            lc.llama_batch_free(batch)
+
+        # raw logit -> вероятность [0,1]
+        return 1.0 / (1.0 + math.exp(-logit))
+
+    def _rerank_llama_cpp(self, query: str, documents: List[Tuple[int, str]]) -> List[Dict[str, Any]]:
+        """Реранкинг in-process через llama-cpp-python (GGUF)."""
+        print(f"[Reranker] llama-cpp-python: scoring {len(documents)} candidates...", flush=True)
+        results = []
+        for page_num, text in documents:
+            score = self._score_pair_llama_cpp(query, text)
+            results.append({"page_num": page_num, "score": score, "text_snippet": text[:1000]})
+        results.sort(key=lambda x: x["score"], reverse=True)
+        print("[Reranker] llama-cpp-python reranking completed. Top matches:", flush=True)
+        for res in results[:3]:
+            print(f"  -> Page {res['page_num']}: Score {res['score']:.4f} ('{res['text_snippet'][:50]}...')", flush=True)
+        return results
 
     def _rerank_local(self, query: str, documents: List[Tuple[int, str]]) -> List[Dict[str, Any]]:
         """Executes reranking using the local Hugging Face model."""

@@ -326,13 +326,16 @@ def extract_context_window(pdf_path: Path, center_page: int, entity_type: str) -
 
 # ── LLM Parsing ──────────────────────────────────────────────────────────────
 
+MAX_LLM_CHARS = 16000
+
+
 def parse_with_llm(raw_text: str, query: str, entity_type: str, model="llama3.1:8b") -> dict:
     """Uses LLM to extract structured formulation from raw PDF text. MUST return a JSON object including a 'deps' array."""
     prompt = f"""Ты — математический редактор. Извлеки из сырого текста учебника формулировку для термина: "{query}".
 Тип: {entity_type}.
 
 Текст из учебника:
-{raw_text[:6000]}
+{raw_text[:MAX_LLM_CHARS]}
 
 ИНСТРУКЦИИ:
 1. "context": Вводные условия (например: "Пусть f — функция...").
@@ -369,6 +372,25 @@ def parse_with_llm(raw_text: str, query: str, entity_type: str, model="llama3.1:
 
 
 # ── Main Pipeline ────────────────────────────────────────────────────────────
+
+def _resolve_gguf_path(model: str):
+    """Находит .gguf-файл реранкера по имени/пути из конфига.
+    Ищет: как есть; относительно корня; в PROJECT_ROOT/llama; в MATHESIS_LLAMA_DIR."""
+    import os
+    if not model or not str(model).lower().endswith(".gguf"):
+        return None
+    candidates = [Path(model), PROJECT_ROOT / model, PROJECT_ROOT / "llama" / Path(model).name]
+    extra_dir = os.environ.get("MATHESIS_LLAMA_DIR")
+    if extra_dir:
+        candidates.append(Path(extra_dir) / Path(model).name)
+    for c in candidates:
+        try:
+            if c.is_file():
+                return c
+        except OSError:
+            continue
+    return None
+
 
 def preview_scan(pdf_path: Path, query: str, preview_provider: str, preview_model: str, candidate_pages: list | None = None, entity_type: str = "definition") -> list:
     """Scan selected pages using preview LLM or Hybrid Search Cross-Encoder to find candidate pages.
@@ -422,21 +444,22 @@ def preview_scan(pdf_path: Path, query: str, preview_provider: str, preview_mode
                     except Exception:
                         continue
 
-                # If no running server is found, instead of spawning a buggy background server,
-                # we run in-process using PyTorch CPU in-memory! This completely avoids port conflicts,
-                # deadlocks, and FastAPI 404 routing errors.
+                # Нет запущенного REST-сервера: грузим GGUF in-process через
+                # llama-cpp-python (CUDA/CPU). Это работает офлайн (HF_HUB_OFFLINE)
+                # и не требует PyTorch/transformers. Фолбэк на PyTorch — только если
+                # .gguf-файл не найден на диске.
                 if backend == "local":
-                    print("  [Preview] No active local reranker REST server found. Running Cross-Encoder in-process (in-memory PyTorch CPU)...")
-                    if ".gguf" in preview_model.lower() or "/" in preview_model or "\\" in preview_model:
-                        # Map local GGUF path to public model name for PyTorch execution
-                        if "bge-reranker-v2-m3" in preview_model.lower():
-                            model_name = "BAAI/bge-reranker-v2-m3"
-                        elif "gte-multilingual" in preview_model.lower():
+                    gguf = _resolve_gguf_path(preview_model)
+                    if gguf is not None:
+                        print(f"  [Preview] No active REST server. Running GGUF reranker in-process via llama-cpp-python: '{gguf.name}'...")
+                        backend = "llama_cpp"
+                        model_name = str(gguf)
+                    else:
+                        print("  [Preview] GGUF не найден; фолбэк на PyTorch CPU (требует кэш HF-модели).")
+                        if "gte-multilingual" in preview_model.lower():
                             model_name = "Alibaba-NLP/gte-multilingual-reranker-base"
                         else:
                             model_name = "BAAI/bge-reranker-v2-m3"
-                    else:
-                        model_name = preview_model
             else:
                 if not ("/" in preview_model or "\\" in preview_model or ".gguf" in preview_model):
                     model_name = preview_model

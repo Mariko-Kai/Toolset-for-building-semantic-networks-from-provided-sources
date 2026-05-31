@@ -30,8 +30,42 @@ def connect(db_path: str) -> sqlite3.Connection:
     return conn
 
 
+_ENTITIES_MIGRATIONS: dict[str, str] = {
+    "module": "TEXT",
+    "latex": "TEXT",
+    "lean_code": "TEXT",
+    "lean_decl": "TEXT",
+    "lean_status": (
+        "TEXT NOT NULL DEFAULT 'unvalidated' "
+        "CHECK (lean_status IN ('unvalidated','valid','sorry','failed'))"
+    ),
+    "created_at": "TEXT",
+    "updated_at": "TEXT",
+}
+
+
+def _migrate_legacy_entities(conn: sqlite3.Connection) -> None:
+    """Дотягивает «плоскую» legacy-таблицу entities до канона.
+
+    `CREATE TABLE IF NOT EXISTS` не добавляет колонки к уже существующей таблице,
+    поэтому на старых БД (без module/latex/lean_* и т.д.) последующий
+    `CREATE INDEX ... ON entities(module)` падал с `no such column: module`.
+    Идемпотентно добавляем недостающие колонки через ALTER TABLE.
+    """
+    exists = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='entities'"
+    ).fetchone()
+    if not exists:
+        return  # свежая БД — таблицу создаст executescript(SCHEMA_SQL)
+    have = {row[1] for row in conn.execute("PRAGMA table_info(entities)")}
+    for col, decl in _ENTITIES_MIGRATIONS.items():
+        if col not in have:
+            conn.execute(f"ALTER TABLE entities ADD COLUMN {col} {decl}")
+
+
 def init_schema(conn: sqlite3.Connection) -> None:
     """Создаёт все таблицы (если отсутствуют) и фиксирует версию схемы."""
+    _migrate_legacy_entities(conn)
     conn.executescript(SCHEMA_SQL)
     conn.execute(
         "INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('version', ?)",

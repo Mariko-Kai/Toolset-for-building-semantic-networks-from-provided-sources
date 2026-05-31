@@ -196,19 +196,12 @@ def get_reranker():
             _RERANKER_CACHE = CrossEncoderReranker(backend="rest", api_url=rerank_url)
             return _RERANKER_CACHE
 
-        # 2) Сконфигурирован GGUF на llama_cpp -> поднимаем локальный сервер и реранкаем по REST.
+
         if prov == "llama_cpp":
             gguf = _resolve_gguf_path(preview_model)
             if gguf:
-                port = int(os.environ.get("MATHESIS_RERANK_PORT", "8080"))
-                print(f"[*] Reranker: llama.cpp GGUF '{gguf.name}' на порту {port}")
-                _RERANKER_PIPELINE = HybridSearchPipeline(
-                    backend="rest", model_name=str(gguf), api_url=f"http://localhost:{port}",
-                    server_model_path=str(gguf), server_port=port,
-                )
-                import atexit
-                atexit.register(_RERANKER_PIPELINE.close)
-                _RERANKER_CACHE = _RERANKER_PIPELINE.reranker
+                print(f"[*] Reranker: llama-cpp-python GGUF '{gguf.name}' (in-process)")
+                _RERANKER_CACHE = CrossEncoderReranker(backend="llama_cpp", model_name=str(gguf))
                 return _RERANKER_CACHE
             elif preview_model:
                 print(f"[!] Reranker: GGUF '{preview_model}' не найден (см. MATHESIS_LLAMA_DIR). Пробую другие варианты.")

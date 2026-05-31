@@ -50,16 +50,17 @@ def test_explicit_rest_url(fake_hybrid, monkeypatch):
     assert fake_hybrid["reranker"]["api_url"] == "http://host:9000"
 
 
-def test_llama_cpp_gguf_starts_server(fake_hybrid, monkeypatch, tmp_path):
+def test_llama_cpp_gguf_in_process(fake_hybrid, monkeypatch, tmp_path):
+    """GGUF на llama_cpp -> in-process CrossEncoderReranker(backend='llama_cpp').
+    Встроенный llama_cpp.server не имеет /rerank, поэтому REST-сервер не поднимаем."""
     gguf = tmp_path / "bge-reranker-v2-m3-Q6_K.gguf"
     gguf.write_bytes(b"GGUF")
     _patch_preview(monkeypatch, "llama_cpp", str(gguf))
     monkeypatch.delenv("MATHESIS_RERANK_URL", raising=False)
-    monkeypatch.setenv("MATHESIS_RERANK_PORT", "8090")
     ow.get_reranker()
-    assert "pipeline" in fake_hybrid
-    assert fake_hybrid["pipeline"]["server_model_path"] == str(gguf)
-    assert fake_hybrid["pipeline"]["server_port"] == 8090
+    assert "pipeline" not in fake_hybrid
+    assert fake_hybrid["reranker"]["backend"] == "llama_cpp"
+    assert fake_hybrid["reranker"]["model_name"] == str(gguf)
 
 
 def test_fallback_to_local_hf(fake_hybrid, monkeypatch):

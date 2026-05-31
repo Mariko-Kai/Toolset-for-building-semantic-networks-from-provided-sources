@@ -787,3 +787,28 @@ theorem taylor_series_representation (f : ℝ → ℝ) (a : ℝ) (r : ℝ) (hr :
   ∀ x ∈ Set.Ioo (a - r) (a + r), 
     f x = ∑' k : ℕ, (iteratedDeriv k f a / (k.factorial : ℝ)) * (x - a) ^ k := by sorry
 
+-- Entity: def-function-uniformly-continuous
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem def_function_uniformly_continuous : 
+  ∃ f : ℝ → ℝ, UniformContinuousOn f (Set.Icc 0 1) ∧ 
+  ∃ M : ℝ, ∀ x ∈ Set.Icc 0 1, |f x| ≤ M := by sorry
+
+-- Entity: def-infimum
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem def_infimum (s : Set ℝ) : 
+  ∃ (inf : ℝ), inf = sInf s ∧ 
+  (∀ x ∈ s, inf ≤ x) ∧ 
+  (∀ y : ℝ, (∀ x ∈ s, y ≤ x) → inf ≤ y) := by sorry
+
