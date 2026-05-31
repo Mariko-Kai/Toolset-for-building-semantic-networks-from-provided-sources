@@ -1,0 +1,40 @@
+% defined-in: spivak (page 541)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - $a_n \colon \NaturalNumbers \TermTo \RealNumbers$ (Sequence of coefficients)
+%    - $f \colon \RealNumbers \TermTo \RealNumbers$ (Power series function)
+%    - $x \colon \RealNumbers$ (Variable)
+%    - $n, m \colon \NaturalNumbers$ (Indices)
+%    - $\epsilon \colon \RealNumbers$ (Positive real)
+% 2. Data Structures: 
+%    - $\Series{\sum_{n=0}^{\infty} a_n x^n}$ represents the infinite series.
+%    - $\ClosedInterval{0, 1}$ represents the domain of uniform convergence.
+% 3. Implicit Bounds: 
+%    - The series is defined for $x \in \ClosedInterval{0, 1}$.
+%    - The convergence of $\sum a_n$ is assumed as the premise.
+% ========================
+
+% entity-id: prop-abels-theorem-power-series
+% entity-type: prop
+% macro: \AbelsTheoremPowerSeries
+% args: 0
+
+\begin{proposition}[Abel's Theorem]
+\[
+\TerForall a \colon \NaturalNumbers \TermTo \RealNumbers \left( \Series{\sum_{n=0}^{\infty} a_n} \text{ converges} \TermImplication 
+\begin{aligned}
+& \left( \Series{\sum_{n=0}^{\infty} a_n x^n} \text{ converges uniformly on } \ClosedInterval{0, 1} \right) \TermConjunction \\
+& \left( \FunctionLimitAtPoint{f}{1} = \sum_{n=0}^{\infty} a_n \right) \TermConjunction \\
+& \left( \Continuous{f \text{ on } \ClosedInterval{0, 1}} \right)
+\end{aligned}
+\right)
+\]
+\end{proposition}
+
+\begin{proof}[RU]
+Пусть $\Series{\sum_{n=0}^{\infty} a_n}$ сходится. Согласно критерию Коши для рядов, для любого $\epsilon > 0$ существует $N \in \mathbb{N}$ такое, что для всех $m > n > N$ выполняется $\RealAbsoluteValue{\sum_{k=n}^{m} a_k} < \epsilon$. Используя лемму Абеля, для любого $x \in \ClosedInterval{0, 1}$ получаем $\RealAbsoluteValue{\sum_{k=n}^{m} a_k x^k} \leq \RealAbsoluteValue{\sum_{k=n}^{m} a_k} < \epsilon$. Это доказывает равномерную сходимость ряда на $\ClosedInterval{0, 1}$. В силу теоремы о равномерной сходимости, предел функции $f(x)$ при $x \to 1$ равен сумме ряда $\sum_{n=0}^{\infty} a_n$, а сама функция $f$ непрерывна на $\ClosedInterval{0, 1}$.
+\end{proof}
+
+\begin{proof}[EN]
+Suppose $\Series{\sum_{n=0}^{\infty} a_n}$ converges. By the Cauchy criterion for series, for any $\epsilon > 0$, there exists $N \in \mathbb{N}$ such that for all $m > n > N$, $\RealAbsoluteValue{\sum_{k=n}^{m} a_k} < \epsilon$. Applying Abel's Lemma, for any $x \in \ClosedInterval{0, 1}$, we have $\RealAbsoluteValue{\sum_{k=n}^{m} a_k x^k} \leq \RealAbsoluteValue{\sum_{k=n}^{m} a_k} < \epsilon$. This establishes the uniform convergence of the series on $\ClosedInterval{0, 1}$. By the theorem on uniform convergence, the limit of the function $f(x)$ as $x \to 1$ is equal to the sum of the series $\sum_{n=0}^{\infty} a_n$, and the function $f$ is continuous on $\ClosedInterval{0, 1}$.
+\end{proof}

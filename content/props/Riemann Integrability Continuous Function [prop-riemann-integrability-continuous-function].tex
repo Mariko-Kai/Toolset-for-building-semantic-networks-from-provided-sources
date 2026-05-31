@@ -1,0 +1,40 @@
+% defined-in: apostol (page 176), apostol (page 176), apostol (page 176), apostol (page 100), apostol (page 176), spivak (page 285)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - $a, b \colon \mathbb{R}$
+%    - $f \colon \mathbb{R} \to \mathbb{R}$
+%    - $\epsilon \colon \mathbb{R}^+$
+%    - $\delta \colon \mathbb{R}^+$
+%    - $P \colon \text{Partition of } \ClosedInterval{a, b}$
+%    - $n \colon \mathbb{N}$
+% 2. Data Structures: 
+%    - Partition $P$ is represented as a finite sequence of points $\{x_0, x_1, \dots, x_n\}$ such that $a = x_0 < x_1 < \dots < x_n = b$.
+%    - Step functions $s_n, t_n$ are defined piecewise on subintervals $[x_{k-1}, x_k]$.
+% 3. Implicit Bounds: 
+%    - $n \in \mathbb{N}$ where $n \ge 1$.
+%    - $\epsilon > 0$.
+% ========================
+
+% entity-id: prop-riemann-integrability-continuous-function
+% entity-type: prop
+% macro: \RiemannIntegrabilityContinuousFunction
+% args: 0
+% notation: \RiemannIntegrabilityContinuousFunction
+
+\hypertarget{prop-riemann-integrability-continuous-function}{}
+\begin{proposition}[Integrability of Continuous Functions]
+\[
+\TerForall a \colon \RealNumbers, \TerForall b \colon \RealNumbers, \TerForall f \colon \RealNumbers \TermTo \RealNumbers
+\]
+\[
+(a < b \TermConjunction \RealFunctionContinuous{f} \TermIn \ClosedInterval{a, b}) \TermImplication (\RiemannIntegral{f} \TermIn \ClosedInterval{a, b})
+\]
+\end{proposition}
+
+\begin{proof}[RU]
+Так как $f$ непрерывна на $\ClosedInterval{a, b}$, по теореме Кантора $f$ равномерно непрерывна на $\ClosedInterval{a, b}$. Для любого $\epsilon > 0$ существует $\delta > 0$ такое, что для всех $x, y \in \ClosedInterval{a, b}$, если $\RealAbsoluteValue{x - y} < \delta$, то $\RealAbsoluteValue{f(x) - f(y)} < \frac{\epsilon}{b - a}$. Выберем разбиение $P = \{x_0, \dots, x_n\}$ такое, что $\RealAbsoluteValue{x_k - x_{k-1}} < \delta$. Пусть $M_k$ и $m_k$ — супремум и инфимум $f$ на $[x_{k-1}, x_k]$. Тогда $M_k - m_k < \frac{\epsilon}{b - a}$. Разность между верхней и нижней суммами Дарбу удовлетворяет неравенству $\sum_{k=1}^n (M_k - m_k)(x_k - x_{k-1}) < \frac{\epsilon}{b - a} \sum_{k=1}^n (x_k - x_{k-1}) = \epsilon$. Следовательно, $\UpperRiemannIntegral{f} = \LowerRiemannIntegral{f}$, что доказывает интегрируемость $f$.
+\end{proof}
+
+\begin{proof}[EN]
+Since $f$ is continuous on $\ClosedInterval{a, b}$, by Cantor's theorem, $f$ is uniformly continuous on $\ClosedInterval{a, b}$. For any $\epsilon > 0$, there exists $\delta > 0$ such that for all $x, y \in \ClosedInterval{a, b}$, if $\RealAbsoluteValue{x - y} < \delta$, then $\RealAbsoluteValue{f(x) - f(y)} < \frac{\epsilon}{b - a}$. Choose a partition $P = \{x_0, \dots, x_n\}$ such that $\RealAbsoluteValue{x_k - x_{k-1}} < \delta$. Let $M_k$ and $m_k$ be the supremum and infimum of $f$ on $[x_{k-1}, x_k]$. Then $M_k - m_k < \frac{\epsilon}{b - a}$. The difference between the upper and lower Darboux sums satisfies $\sum_{k=1}^n (M_k - m_k)(x_k - x_{k-1}) < \frac{\epsilon}{b - a} \sum_{k=1}^n (x_k - x_{k-1}) = \epsilon$. Thus, $\UpperRiemannIntegral{f} = \LowerRiemannIntegral{f}$, which proves that $f$ is integrable.
+\end{proof}
