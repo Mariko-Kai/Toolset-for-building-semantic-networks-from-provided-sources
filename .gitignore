@@ -63,6 +63,17 @@ api_config.json
 
 # MkDocs generated site
 /site/
+/tools/site/
+
+# Generated PDFs (book renders, results) — source of truth is content/*.tex
+*.pdf
+
+# Stray SQLite DBs (canonical DB is db/mathesis_index.db, matched by *.db above)
+*.sqlite
+
+# Scratch / throwaway scripts under tools/ (the root /scratch/ is already ignored)
+/tools/scratch/
+/tools/scratch_*.py
 
 # Pipeline runtime caches
 pipeline/book_toc_cache.json
