@@ -159,21 +159,9 @@ _RERANKER_PIPELINE = None  # держит llama.cpp-сервер живым на
 
 
 def _resolve_gguf_path(model: str):
-    """Пытается найти GGUF-файл реранкера по имени/пути из конфига.
-    Ищет: как есть; относительно корня; в PROJECT_ROOT/llama; в MATHESIS_LLAMA_DIR."""
-    if not model or not str(model).lower().endswith(".gguf"):
-        return None
-    candidates = [Path(model), PROJECT_ROOT / model, PROJECT_ROOT / "llama" / Path(model).name]
-    extra_dir = os.environ.get("MATHESIS_LLAMA_DIR")
-    if extra_dir:
-        candidates.append(Path(extra_dir) / Path(model).name)
-    for c in candidates:
-        try:
-            if c.is_file():
-                return c
-        except OSError:
-            continue
-    return None
+    """Тонкая обёртка над общим pipeline.config.resolve_gguf_path (dedup C.5)."""
+    from pipeline.config import resolve_gguf_path
+    return resolve_gguf_path(model)
 
 
 def get_reranker():

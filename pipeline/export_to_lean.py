@@ -351,27 +351,6 @@ Mathlib Hints:
 
 Lean 4 Code:"""
 
-        if error_feedback and previous_code:
-            user_prompt = f"""The following Lean 4 code generated for entity '{lean_name}' produced compiler errors.
-Code:
-{previous_code}
-
-Compiler Errors:
-{error_feedback}
-
-Fix the Lean 4 code. Output ONLY the fixed code."""
-        else:
-            user_prompt = f"""Entity Type: {entity_type}
-Name: {lean_name}
-
-LaTeX Source:
-{tex_clean}
-
-Mathlib Hints:
-{mathlib_hints}
-
-Lean 4 Code:"""
-
     # Prepare the log prefix
     synth_log_prefix = f"=== SYSTEM PROMPT ===\n{system_prompt}\n\n=== PROMPT ===\n{user_prompt}\n\n=== RESPONSE ===\n"
 

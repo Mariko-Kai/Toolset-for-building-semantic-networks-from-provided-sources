@@ -67,6 +67,25 @@ def get_subprocess_timeout() -> float:
         return 900.0
 
 
+def resolve_gguf_path(model: str):
+    """Finds the reranker GGUF file by name/path from config. Searches: as-is;
+    relative to PROJECT_ROOT; in PROJECT_ROOT/llama; in $MATHESIS_LLAMA_DIR.
+    Returns a Path or None. (Was duplicated in enrichment_coordinator/ensemble_extractor.)"""
+    if not model or not str(model).lower().endswith(".gguf"):
+        return None
+    candidates = [Path(model), PROJECT_ROOT / model, PROJECT_ROOT / "llama" / Path(model).name]
+    extra_dir = os.environ.get("MATHESIS_LLAMA_DIR")
+    if extra_dir:
+        candidates.append(Path(extra_dir) / Path(model).name)
+    for c in candidates:
+        try:
+            if c.is_file():
+                return c
+        except OSError:
+            continue
+    return None
+
+
 PROVIDERS = ["ollama", "gemini", "openai", "groq", "hf", "llama_cpp"]
 
 # Дефолтные модели для каждого провайдера
