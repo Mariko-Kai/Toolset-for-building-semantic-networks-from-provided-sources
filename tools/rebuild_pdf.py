@@ -143,6 +143,15 @@ def rebuild_master_tex():
 def compile_pdf():
     """Compile content/master.tex to master.pdf using pdflatex."""
     print("3. Compiling PDF using pdflatex...")
+    import shutil
+    sty_src = CONTENT_DIR / "mathesis.sty"
+    macros_src = CONTENT_DIR / "mathesis_macros.sty"
+    sty_dest = PROJECT_ROOT / "mathesis.sty"
+    macros_dest = PROJECT_ROOT / "mathesis_macros.sty"
+
+    shutil.copy2(sty_src, sty_dest)
+    shutil.copy2(macros_src, macros_dest)
+
     cmd = ["pdflatex", "-interaction=nonstopmode", "content/master.tex"]
     try:
         process = subprocess.run(
@@ -152,10 +161,13 @@ def compile_pdf():
             cwd=str(PROJECT_ROOT),
             text=True
         )
+        if sty_dest.exists():
+            sty_dest.unlink()
+        if macros_dest.exists():
+            macros_dest.unlink()
+
         if process.returncode == 0 or (PROJECT_ROOT / "master.pdf").exists():
             print("   Success! Generated master.pdf in the project root.")
-            # Also sync it to content/master.pdf for redundancy
-            import shutil
             shutil.copy2(PROJECT_ROOT / "master.pdf", CONTENT_DIR / "master.pdf")
             print("   Synced master.pdf to content/master.pdf.")
         else:
@@ -163,6 +175,10 @@ def compile_pdf():
             print(process.stdout)
             sys.exit(1)
     except Exception as e:
+        if sty_dest.exists():
+            sty_dest.unlink()
+        if macros_dest.exists():
+            macros_dest.unlink()
         print(f"   [ERROR] Failed to run pdflatex: {e}")
         sys.exit(1)
 

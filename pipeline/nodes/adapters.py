@@ -43,7 +43,8 @@ class SubprocessNode:
                  parse_line: Callable[[str, dict], None] | None = None,
                  deviation_check: Callable[[dict], str | None] | None = None,
                  runner: Callable | None = None,
-                 max_events: int = 30):
+                 max_events: int = 30,
+                 echo: bool = True):
         self.name = name
         self.cmd = cmd
         self.env = env
@@ -52,6 +53,7 @@ class SubprocessNode:
         self.deviation_check = deviation_check
         self._runner = runner or _default_runner
         self.max_events = max_events
+        self.echo = echo
 
     def run(self, ctx: NodeContext) -> NodeResult:
         captured: dict = {}
@@ -60,6 +62,20 @@ class SubprocessNode:
         def on_line(line: str) -> None:
             if line:
                 events.append(line)
+                if self.echo:
+                    import os
+                    if os.environ.get("MATHESIS_STRUCTURED_LOG") == "1":
+                        try:
+                            from pipeline.logging_utils import normalize_pipeline_log_line
+                            norm = normalize_pipeline_log_line(line)
+                            if norm:
+                                print(norm, flush=True)
+                            else:
+                                print(line, flush=True)
+                        except Exception:
+                            print(line, flush=True)
+                    else:
+                        print(line, flush=True)
             if self.parse_line:
                 try:
                     self.parse_line(line, captured)
@@ -118,12 +134,12 @@ def _synth_deviation(out: dict) -> str | None:
 
 def build_enrichment_flow(extract_cmd: list, align_cmd: list, synth_cmd: list,
                           *, env: dict | None = None, runner: Callable | None = None,
-                          synth_timeout: float | None = None) -> list:
+                          synth_timeout: float | None = None, echo: bool = True) -> list:
     """Собирает поток узлов extract → align → synth (замена жёсткого списка steps)."""
     return [
-        SubprocessNode("extract", extract_cmd, env=env, runner=runner),
-        SubprocessNode("align", align_cmd, env=env, runner=runner),
-        SubprocessNode("synth", synth_cmd, env=env, runner=runner,
+        SubprocessNode("extract", extract_cmd, env=env, runner=runner, echo=echo),
+        SubprocessNode("align", align_cmd, env=env, runner=runner, echo=echo),
+        SubprocessNode("synth", synth_cmd, env=env, runner=runner, echo=echo,
                        parse_line=parse_synth_line, deviation_check=_synth_deviation,
                        timeout=synth_timeout),
     ]

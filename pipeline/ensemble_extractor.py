@@ -729,7 +729,7 @@ def main():
     parser.add_argument("--extract-preview-api-key",  type=str, default=None,
                         help="API ключ для предпросмотра")
 
-    # ── Lean-аргументы (для консистентности при запуске через ollama_wrapper) -
+    # ── Lean-аргументы (для консистентности при запуске через enrichment_coordinator) -
     parser.add_argument("--lean-provider", type=str, default=None, choices=PROVIDERS, help="Игнорируется в этом модуле")
     parser.add_argument("--lean-api-key",  type=str, default=None, help="Игнорируется в этом модуле")
     parser.add_argument("--lean-model",    type=str, default=None, help="Игнорируется в этом модуле")

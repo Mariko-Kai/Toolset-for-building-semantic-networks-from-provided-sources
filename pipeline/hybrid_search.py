@@ -3,6 +3,7 @@ import re
 import json
 import sys
 import io
+import time
 from typing import List, Tuple, Dict, Any, Optional
 
 # Fix Windows console encoding
@@ -168,15 +169,20 @@ class CrossEncoderReranker:
 
         self._llama_cpp = llama_cpp
         n_gpu_layers = int(os.environ.get("MATHESIS_RERANK_GPU_LAYERS", "-1"))
+        # Размер контекста (= n_batch = n_ubatch). Для encoder-моделей вся
+        # последовательность кодируется одним ubatch, а вычислительный буфер растёт
+        # ~квадратично от n_ubatch: при 8192 он ~4.5 ГБ и НЕ влезает в 4 ГБ VRAM
+        # (спилловер в shared memory / риск OOM, конкуренция с Ollama). 4096
+        # покрывает страницу матана и даёт буфер ~1 ГБ. Настраивается env.
+        self._n_ctx = int(os.environ.get("MATHESIS_RERANK_CTX", "4096"))
         print(f"[Reranker] Загружаю GGUF in-process через llama-cpp-python: "
-              f"'{os.path.basename(self.model_name)}' (n_gpu_layers={n_gpu_layers})...", flush=True)
-        # n_ctx=n_batch=8192 — полный контекст bge-m3 (страница матана влезает целиком).
+              f"'{os.path.basename(self.model_name)}' (n_gpu_layers={n_gpu_layers}, n_ctx={self._n_ctx})...", flush=True)
         self._llm = Llama(
             model_path=self.model_name,
             embedding=True,
             pooling_type=llama_cpp.LLAMA_POOLING_TYPE_RANK,
             n_gpu_layers=n_gpu_layers,
-            n_ctx=8192, n_batch=8192, n_ubatch=8192,
+            n_ctx=self._n_ctx, n_batch=self._n_ctx, n_ubatch=self._n_ctx,
             verbose=False,
         )
         gpu = llama_cpp.llama_supports_gpu_offload() and n_gpu_layers != 0
@@ -239,9 +245,9 @@ class CrossEncoderReranker:
         toks += d_toks
         if add_eos and eos != -1:
             toks.append(eos)
-        # Запас под спецтокены: не выходим за обучающий контекст (8192).
-        if len(toks) > 8000:
-            toks = toks[:8000]
+        # Не выходим за контекст модели/буфер (n_ctx): длинные страницы усекаем.
+        if len(toks) > self._n_ctx:
+            toks = toks[:self._n_ctx]
 
         batch = lc.llama_batch_init(len(toks), 0, 1)
         try:
@@ -269,14 +275,22 @@ class CrossEncoderReranker:
         return 1.0 / (1.0 + math.exp(-logit))
 
     def _rerank_llama_cpp(self, query: str, documents: List[Tuple[int, str]]) -> List[Dict[str, Any]]:
-        """Реранкинг in-process через llama-cpp-python (GGUF)."""
-        print(f"[Reranker] llama-cpp-python: scoring {len(documents)} candidates...", flush=True)
+        """Реранкинг in-process через llama-cpp-python (GGUF).
+
+        Скоринг идёт по одному документу за раз (на GTX-классе ~0.8 с/документ),
+        поэтому печатаем построчный прогресс — иначе фаза «зависает» без логов и
+        процесс непредставим со стороны."""
+        total = len(documents)
+        print(f"[Reranker] llama-cpp-python: scoring {total} candidates...", flush=True)
         results = []
-        for page_num, text in documents:
+        t0 = time.monotonic()
+        for i, (page_num, text) in enumerate(documents, 1):
             score = self._score_pair_llama_cpp(query, text)
             results.append({"page_num": page_num, "score": score, "text_snippet": text[:1000]})
+            print(f"  [Reranker] {i}/{total} (page {page_num}): score={score:.4f} "
+                  f"[{time.monotonic() - t0:.1f}s]", flush=True)
         results.sort(key=lambda x: x["score"], reverse=True)
-        print("[Reranker] llama-cpp-python reranking completed. Top matches:", flush=True)
+        print(f"[Reranker] llama-cpp-python reranking completed за {time.monotonic() - t0:.1f}s. Top matches:", flush=True)
         for res in results[:3]:
             print(f"  -> Page {res['page_num']}: Score {res['score']:.4f} ('{res['text_snippet'][:50]}...')", flush=True)
         return results

@@ -30,7 +30,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_PYTHON_EXE = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
-WRAPPER = PROJECT_ROOT / "pipeline" / "ollama_wrapper.py"
+WRAPPER = PROJECT_ROOT / "pipeline" / "enrichment_coordinator.py"
 RERANKER_MODEL = PROJECT_ROOT / "llama" / "bge-reranker-v2-m3-Q6_K.gguf"
 OLLAMA_URL = "http://26.122.102.60:11434"
 
@@ -812,7 +812,7 @@ def select_questions(start: int, limit: int | None) -> list[tuple[int, str]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Sequentially run pipeline/ollama_wrapper.py over a broad math analysis object list."
+        description="Sequentially run pipeline/enrichment_coordinator.py over a broad math analysis object list."
     )
     parser.add_argument("--dry-run", action="store_true", help="Print commands without running them.")
     parser.add_argument("--list", action="store_true", help="Print the generated object list and exit.")
@@ -824,7 +824,7 @@ def main() -> int:
         "--python-exe",
         type=Path,
         default=DEFAULT_PYTHON_EXE,
-        help="Python executable used to run pipeline/ollama_wrapper.py.",
+        help="Python executable used to run pipeline/enrichment_coordinator.py.",
     )
     parser.add_argument(
         "--questions-out",

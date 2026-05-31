@@ -825,3 +825,39 @@ theorem prop_cauchys_mean_value_theorem (f : ℝ → ℝ) (a b : ℝ) (hab : a <
   (hf_diff : DifferentiableOn ℝ f (Set.Ioo a b)) :
   ∃ c ∈ Set.Ioo a b, deriv f c = (f b - f a) / (b - a) := by sorry
 
+-- Entity: prop-riemann-integrability-continuous-function
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_riemann_integrability_continuous_function (f : ℝ → ℝ) (a b : ℝ) 
+  (h : ContinuousOn f (Set.Icc a b)) : 
+  IntervalIntegrable f volume a b := by sorry
+
+-- Entity: prop-riemann-integrability-continuous-function
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_riemann_integrability_continuous_function (f : ℝ → ℝ) (a b : ℝ) 
+  (h : ContinuousOn f (Set.Icc a b)) : 
+  IntervalIntegrable f volume a b := by sorry
+
+-- Entity: prop-abels-theorem-power-series
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem prop_abels_power_series (a : ℕ → ℝ) (x : ℝ) : 
+  Summable (fun n => a n * x^n) ↔ 
+  (∃ r > 0, ∀ n, |a n| ≤ M * r^n) := by sorry
+

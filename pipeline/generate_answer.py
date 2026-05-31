@@ -348,7 +348,7 @@ def bfs_collect(root_id, args=None):
 
             # Resolve module configs using passed args (or defaults)
             from pipeline.config import resolve_module_config
-            from pipeline.ollama_wrapper import run_enrichment_pipeline
+            from pipeline.enrichment_coordinator import run_enrichment_pipeline
 
             extract_provider = extract_model = extract_api_key = None
             preview_provider = preview_model = preview_api_key = None
@@ -535,7 +535,7 @@ def main():
         print("[SKIP] Lean validation/enrichment loop skipped (--no-validate or --no-enrich).\n")
     else:
         from pipeline.lean_validator import validate_tree
-        from pipeline.ollama_wrapper import get_missing_deps_from_lean_error, run_enrichment_pipeline
+        from pipeline.enrichment_coordinator import get_missing_deps_from_lean_error, run_enrichment_pipeline
 
         max_iters = 5
         iter_count = 0

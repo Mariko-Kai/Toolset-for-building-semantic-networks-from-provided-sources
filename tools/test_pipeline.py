@@ -1,9 +1,9 @@
 import sys
 from unittest.mock import patch
-from pipeline.ollama_wrapper import main
+from pipeline.enrichment_coordinator import main
 
 def test_run():
-    test_args = ["ollama_wrapper.py", "определение интеграла Римана", "--model", "llama3.1:8b"]
+    test_args = ["enrichment_coordinator.py", "определение интеграла Римана", "--model", "llama3.1:8b"]
     with patch.object(sys, 'argv', test_args):
         main()
 

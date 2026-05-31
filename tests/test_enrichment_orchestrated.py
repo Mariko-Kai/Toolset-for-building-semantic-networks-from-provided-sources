@@ -6,7 +6,7 @@ import types
 
 sys.modules.setdefault("ollama", types.ModuleType("ollama"))
 
-from pipeline import ollama_wrapper as ow  # noqa: E402
+from pipeline import enrichment_coordinator as ow  # noqa: E402
 from pipeline.orchestration import load_run  # noqa: E402
 
 

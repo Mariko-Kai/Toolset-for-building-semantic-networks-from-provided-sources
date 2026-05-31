@@ -644,7 +644,7 @@ async def run_compilation_async(mode: str, value: str):
         cmd = [sys.executable, "-u", str(PROJECT_ROOT / "pipeline" / "generate_full_book.py")]
     else:
         state.query = value
-        cmd = [sys.executable, "-u", str(PROJECT_ROOT / "pipeline" / "ollama_wrapper.py"), value]
+        cmd = [sys.executable, "-u", str(PROJECT_ROOT / "pipeline" / "enrichment_coordinator.py"), value]
 
     if api_config:
         providers = api_config.get("providers", {})

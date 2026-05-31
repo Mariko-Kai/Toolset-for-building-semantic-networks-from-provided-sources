@@ -6,7 +6,7 @@ import types
 
 import pytest
 
-from pipeline import ollama_wrapper as ow
+from pipeline import enrichment_coordinator as ow
 
 
 @pytest.fixture

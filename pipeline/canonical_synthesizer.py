@@ -101,7 +101,7 @@ def prepare_macros_from_deps(deps, mgr):
 
     unique_deps = list({d.strip() for d in deps if d and isinstance(d, str)})
 
-    from pipeline.ollama_wrapper import resolve_entities
+    from pipeline.enrichment_coordinator import resolve_entities
     from pipeline.latex_utils import get_macro_metadata
     import re
     import json
@@ -337,8 +337,90 @@ def enforce_single_entity(latex: str) -> str:
     return latex
 
 def warn_natural_language(latex: str) -> list:
-    """Check proof blocks for natural language (relaxed per user request)."""
-    return []
+    """Checks if definition or proposition blocks contain natural language."""
+    errors = []
+    envs = ['definition', 'proposition', 'theorem', 'lemma', 'property', 'axiom', 'object', 'operation']
+    for env in envs:
+        pattern = rf'\\begin\{{{env}\}}(?:\[.*?\])?(.*?)\\end\{{{env}\}}'
+        for match in re.finditer(pattern, latex, re.DOTALL):
+            block_content = match.group(1)
+            # 1. Search for \text{...}
+            if re.search(r'\\text\s*\{', block_content):
+                errors.append(f"ОШИБКА: Обнаружено использование \\text{{...}} внутри \\begin{{{env}}}. Использование естественного языка в формулировках строго запрещено по правилу Pure Math Absolute Rule.")
+
+            # 2. Clean content to find raw natural language words
+            # Remove \begin{...} and \end{...}
+            clean_content = re.sub(r'\\(begin|end)\{[a-zA-Z*]+\}', ' ', block_content)
+            # Remove \mathrm{...} wrappers so we don't treat predicate names as words
+            clean_content = re.sub(r'\\mathrm\{[a-zA-Z0-9_]+\}', ' ', clean_content)
+            # Remove other LaTeX commands: \abc
+            clean_content = re.sub(r'\\[a-zA-Z]+', ' ', clean_content)
+            # Remove comments
+            clean_content = re.sub(r'%.*$', ' ', clean_content, flags=re.MULTILINE)
+
+            # Find words (both Latin and Cyrillic)
+            words = re.findall(r'[a-zA-Zа-яА-ЯёЁ]{2,}', clean_content)
+            bad_words = [w for w in words if w.lower() not in ('dt', 'dx', 'dy', 'dz', 'dp', 'dq', 'ru', 'en')]
+            if bad_words:
+                errors.append(f"ОШИБКА: Обнаружен текст на естественном языке {bad_words} внутри \\begin{{{env}}}. Разрешены исключительно математические символы.")
+    return errors
+
+def validate_macros_exist(latex: str) -> list:
+    """Checks if all macros used in LaTeX content exist in mathesis_macros.sty or mathesis.sty or are standard LaTeX."""
+    errors = []
+
+    # 1. Get custom macros defined in the project
+    from pipeline.latex_utils import get_macro_to_id_mapping
+    try:
+        custom_macros = set(get_macro_to_id_mapping().keys())
+    except Exception as e:
+        print(f"[synthesizer] [WARN] Could not load custom macros mapping: {e}", flush=True)
+        custom_macros = set()
+
+    # 2. Standard allowed LaTeX macros (plus common packages macros loaded by mathesis.sty)
+    standard_macros = {
+        # Environments and structural
+        "begin", "end", "entityref", "label", "ref", "eqref", "cite", "url", "href", "color", "textcolor",
+        # Layout & Spacing & Alignment
+        "quad", "qquad", "left", "right", "middle", "newline", "linebreak", "dots", "cdots", "vdots", "ddots", "frac", "sqrt", "cfrac", "aligned", "split", "array", "matrix", "pmatrix", "bmatrix",
+        # Math operators & functions
+        "lim", "limit", "sin", "cos", "tan", "cot", "arcsin", "arccos", "arctan", "sinh", "cosh", "tanh", "log", "ln", "exp", "min", "max", "sup", "inf", "det", "dim", "ker", "deg", "arg", "gcd", "hom",
+        # Logic & Connectives
+        "forall", "exists", "neg", "lor", "land", "implies", "impliedby", "iff", "to", "gets", "leftrightarrow", "Leftrightarrow", "Rightarrow", "Leftarrow",
+        # Set theory & Relations
+        "in", "notin", "ni", "subset", "subseteq", "supset", "supseteq", "cap", "cup", "setminus", "emptyset", "mid", "colon", "coloneqq", "eqalign", "times",
+        # Math accents & styles
+        "mathrm", "mathit", "mathbf", "mathsf", "mathtt", "mathcal", "mathbb", "mathfrak", "bar", "tilde", "hat", "vec", "overline", "underline", "prime", "cdot",
+        # Greek letters (lowercase)
+        "alpha", "beta", "gamma", "delta", "epsilon", "varepsilon", "zeta", "eta", "theta", "iota", "kappa", "lambda", "mu", "nu", "xi", "pi", "rho", "sigma", "tau", "upsilon", "phi", "chi", "psi", "omega",
+        # Greek letters (uppercase)
+        "Gamma", "Delta", "Theta", "Lambda", "Xi", "Pi", "Sigma", "Upsilon", "Phi", "Psi", "Omega",
+        # Big operators
+        "sum", "prod", "coprod", "int", "iint", "iiint", "oint", "bigcap", "bigcup", "bigsqcup",
+        # Symbols & delimiters
+        "infty", "partial", "nabla", "le", "ge", "leq", "geq", "neq", "approx", "sim", "cong", "equiv", "div", "pm", "mp", "ast", "star", "dagger", "ddagger", "langle", "rangle", "lvert", "rvert", "lVert", "rVert", "lbrace", "rbrace", "lbrack", "rbrack", "vert", "Vert", "backslash", "text", "Colon"
+    }
+
+    # 3. Add the macro being defined in this file's header (so it doesn't raise an error on itself)
+    macro_match = re.search(r'^%\s*macro:\s*\\([a-zA-Z0-9]+)', latex, re.MULTILINE)
+    if macro_match:
+        standard_macros.add(macro_match.group(1))
+
+    macro_match_any = re.search(r'%\s*macro:\s*\\([a-zA-Z0-9]+)', latex)
+    if macro_match_any:
+        standard_macros.add(macro_match_any.group(1))
+
+    # 4. Find all macros in the text (word characters after a backslash)
+    used_macros = set(re.findall(r'\\([a-zA-Z0-9]+)', latex))
+
+    # 5. Check each used macro
+    all_allowed = custom_macros.union(standard_macros)
+    invalid_macros = sorted(list(used_macros - all_allowed))
+
+    for m in invalid_macros:
+        errors.append(f"ОШИБКА: Использован несуществующий или незарегистрированный макрос \\{m}. Проверьте его написание или зарегистрируйте его. Доступные семантические макросы: {sorted(list(custom_macros))[:10]}... и т.д.")
+
+    return errors
 
 def sanitize_raw_delimiters(latex: str) -> str:
     """Replace raw |...| with \\RealAbsoluteValue{...} inside math blocks."""
@@ -454,8 +536,10 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
             nl_warnings = warn_natural_language(latex_content)
             # Check for forbidden macros (mIff in definitions)
             macro_warnings = check_forbidden_macros(latex_content, entity_type)
+            # Check if all used macros exist in current packages/files
+            nonexistent_macro_warnings = validate_macros_exist(latex_content)
 
-            all_warnings = nl_warnings + macro_warnings
+            all_warnings = nl_warnings + macro_warnings + nonexistent_macro_warnings
             if all_warnings:
                 print(f"[synthesizer] [WARN] Rule violations detected: {all_warnings}")
                 semantic_error_feedback = "\n".join(all_warnings)
@@ -478,7 +562,7 @@ def synthesize_cluster(cluster_id, formulations, sources, page_refs, has_proof=F
             skip_entity = True
         elif processed_entities:
             # Semantic deduplication
-            from pipeline.ollama_wrapper import normalize_math_term
+            from pipeline.enrichment_coordinator import normalize_math_term
             temp_title = temp_eid.replace('def-', '').replace('thm-', '').replace('axm-', '').replace('prop-', '').replace('-', ' ')
             norm_temp = normalize_math_term(temp_title)
 

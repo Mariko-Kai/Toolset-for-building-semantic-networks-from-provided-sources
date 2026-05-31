@@ -1,9 +1,12 @@
 """
-Ollama Wrapper v2 — Multi-Result Routing
-=========================================
-Routes user queries to existing entities or triggers enrichment pipeline.
+Enrichment Coordinator — Multi-Result Routing
+==============================================
+Routes user queries to existing entities or triggers the enrichment pipeline.
 Returns ALL matching entities (not just one).
 Supports reasoning/thinking models (like deepseek-r1) by stripping <think> tags.
+
+Provider-agnostic: LLM access goes through ``pipeline.model_manager`` (Ollama is
+just one of several providers). The historical ``ollama_wrapper.py`` name is retired.
 """
 import argparse
 import subprocess
@@ -186,7 +189,7 @@ def get_reranker():
 
     try:
         from pipeline.config import resolve_module_config
-        from pipeline.hybrid_search import CrossEncoderReranker, HybridSearchPipeline
+        from pipeline.hybrid_search import CrossEncoderReranker
         prov, preview_model, _ = resolve_module_config("preview")
 
         # 1) Явный REST-URL (пользователь уже поднял llama.cpp rerank-сервер).
@@ -480,7 +483,8 @@ def _build_enrichment_commands(
 
 
 def run_enrichment_orchestrated(extract_cmd, align_cmd, synth_cmd, *, env=None,
-                                canonical_term="", run_id=None, runner=None, persist=True):
+                                canonical_term="", run_id=None, runner=None, persist=True,
+                                echo: bool = True):
     """Оркестрируемый путь обогащения: те же шаги, но как узлы под Orchestrator с
     мониторингом и персистенцией RunState. Возвращает (success, entities, deps),
     совместимо с run_enrichment_pipeline. `runner` инъектируется для тестов."""
@@ -492,7 +496,7 @@ def run_enrichment_orchestrated(extract_cmd, align_cmd, synth_cmd, *, env=None,
         slug = re.sub(r'[^\w-]+', '-', (canonical_term or "enrich")).strip('-')[:40] or "enrich"
         run_id = f"enrich-{slug}-{int(time.time())}"
 
-    flow = build_enrichment_flow(extract_cmd, align_cmd, synth_cmd, env=env, runner=runner)
+    flow = build_enrichment_flow(extract_cmd, align_cmd, synth_cmd, env=env, runner=runner, echo=echo)
     ctx = NodeContext(run_id=run_id)
     orch = Orchestrator(flow)
     state = orch.run(ctx, run_id=run_id)
