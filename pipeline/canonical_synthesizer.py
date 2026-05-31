@@ -767,6 +767,16 @@ def main():
     if args.embed_provider:
         mgr.setup_role("embed", args.embed_provider, args.embed_model, args.embed_api_key)
 
+    # Прогреваем Lean REPL в фоне ПАРАЛЛЕЛЬНО синтезу: загрузка Mathlib в ОЗУ
+    # перекрывается с LLM-вызовами, поэтому к моменту самокоррекции Lean REPL уже
+    # тёплый и таймаут проверки не тратится на инициализацию.
+    if not args.no_validate:
+        try:
+            from pipeline.lean_validator import prewarm_repl_async
+            prewarm_repl_async()
+        except Exception:
+            pass
+
     conn = sqlite3.connect(DB_PATH, timeout=10.0)
     cursor = conn.cursor()
 

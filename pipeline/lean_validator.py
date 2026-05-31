@@ -9,6 +9,7 @@ import os
 import queue
 import sys
 import threading
+import time
 from pathlib import Path
 import atexit
 
@@ -19,9 +20,16 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from mathesis.proc import kill_process_tree  # noqa: E402  (импорт после настройки sys.path)
 
-# Таймаут одной REPL-валидации (сек). Холодный старт грузит Mathlib (десятки секунд),
-# поэтому дефолт с запасом; настраивается через env MATHESIS_LEAN_TIMEOUT.
+# Таймаут одной REPL-валидации (сек) — ТОЛЬКО на элаборацию файла, без учёта
+# одноразового развёртывания Mathlib в ОЗУ (см. WARMUP_TIMEOUT). Настраивается
+# через env MATHESIS_LEAN_TIMEOUT.
 VALIDATION_TIMEOUT = int(os.environ.get("MATHESIS_LEAN_TIMEOUT", "300"))
+
+# Отдельный бюджет на ХОЛОДНЫЙ ПРОГРЕВ REPL: первая команда `import Mathlib`
+# десериализует сотни .olean в память (на холодном кеше ФС/HDD — десятки секунд—
+# минуты). Раньше этот прогрев входил в бюджет первой проверки и «съедал» его,
+# из-за чего дешёвые утверждения ложно падали по таймауту. Теперь — отдельно.
+WARMUP_TIMEOUT = int(os.environ.get("MATHESIS_LEAN_WARMUP_TIMEOUT", "600"))
 
 def log(msg):
     try:
@@ -46,14 +54,24 @@ def _get_lake_cmd() -> str:
                 return str(elan_bin_nix)
     return "lake"
 
+# Сериализует доступ к REPL: создание singleton, прогрев и любой запрос идут
+# под одним RLock. Это гарантирует, что фоновый прогрев (prewarm_repl_async)
+# и валидация в основном потоке не пишут в stdin одновременно, а валидация
+# ДОЖИДАЕТСЯ окончания прогрева вместо отправки команды в ещё «холодный» REPL.
+_REPL_LOCK = threading.RLock()
+
+
 class LeanREPL:
     _instance = None
 
     @classmethod
     def get(cls):
-        if cls._instance is None or cls._instance.p.poll() is not None:
-            cls._instance = cls()
-        return cls._instance
+        # Создание и прогрев — под локом: параллельные get() из разных потоков
+        # (фоновый прогрев + основной) не плодят несколько процессов REPL.
+        with _REPL_LOCK:
+            if cls._instance is None or cls._instance.p.poll() is not None:
+                cls._instance = cls()
+            return cls._instance
 
     def __init__(self):
         lake_cmd = _get_lake_cmd()
@@ -79,6 +97,23 @@ class LeanREPL:
         )
         atexit.register(self.shutdown)
         log("Started Lean REPL process.")
+        self.mathlib_env = None  # id прогретого окружения с загруженным Mathlib
+        self._warmup()
+
+    def _warmup(self) -> None:
+        """Разворачивает Mathlib в ОЗУ ОТДЕЛЬНОЙ командой `import Mathlib` с бюджетом
+        WARMUP_TIMEOUT и запоминает id полученного окружения (mathlib_env). Затем
+        validate_file переиспользует это окружение, поэтому проверки не переимпортируют
+        Mathlib заново (десятки секунд каждая) и идут за доли секунды."""
+        log("Прогрев Lean REPL: загружаю Mathlib в ОЗУ...")
+        t0 = time.monotonic()
+        resp = self._request({"cmd": "import Mathlib"}, WARMUP_TIMEOUT)
+        if resp.get("_sentinel"):
+            self._poison()
+            msg = (resp.get("errors") or [{}])[0].get("message", "unknown")
+            raise RuntimeError(f"Прогрев Lean REPL не удался за {WARMUP_TIMEOUT}s: {msg}")
+        self.mathlib_env = resp.get("env")
+        log(f"Mathlib загружен за {time.monotonic() - t0:.1f}s (env={self.mathlib_env}). REPL готов.")
 
     def shutdown(self):
         # Убиваем всё дерево процессов (lake → repl), а не только корневой Popen,
@@ -92,15 +127,17 @@ class LeanREPL:
         type(self)._instance = None
 
     def _read_response(self, result_q: "queue.Queue") -> None:
-        """Читает ответ REPL до полного JSON. Выполняется в отдельном потоке,
-        чтобы основной поток мог наложить таймаут."""
+        """Читает СЫРОЙ JSON-ответ REPL до полного объекта. Выполняется в отдельном
+        потоке, чтобы основной мог наложить таймаут. Разбор — в _parse_repl_response;
+        служебные сбои помечаются ключом `_sentinel` (env-id из сырого ответа нужен
+        для переиспользования прогретого окружения)."""
         buffer = ""
         decoder = json.JSONDecoder()
         try:
             while True:
                 line = self.p.stdout.readline()
                 if not line:
-                    result_q.put({"status": "crashed", "errors": [{"line": 0, "message": "REPL crashed or returned empty response"}]})
+                    result_q.put({"_sentinel": True, "status": "crashed", "errors": [{"line": 0, "message": "REPL crashed or returned empty response"}]})
                     return
 
                 buffer += line
@@ -108,7 +145,7 @@ class LeanREPL:
                 if start_idx != -1:
                     try:
                         resp, _ = decoder.raw_decode(buffer[start_idx:])
-                        result_q.put(self._parse_repl_response(resp))
+                        result_q.put(resp)
                         return
                     except json.JSONDecodeError:
                         # Продолжаем читать строки, пока JSON-объект не станет полным.
@@ -116,31 +153,62 @@ class LeanREPL:
 
                 # Защита от бесконечного цикла при неожиданно большом выводе.
                 if len(buffer) > 5 * 1024 * 1024:  # 5MB limit
-                    result_q.put({"status": "failed", "errors": [{"line": 0, "message": "REPL output too large without valid JSON"}]})
+                    result_q.put({"_sentinel": True, "status": "failed", "errors": [{"line": 0, "message": "REPL output too large without valid JSON"}]})
                     return
         except Exception as e:
-            result_q.put({"status": "crashed", "errors": [{"line": 0, "message": f"Exception reading REPL: {str(e)}"}]})
+            result_q.put({"_sentinel": True, "status": "crashed", "errors": [{"line": 0, "message": f"Exception reading REPL: {str(e)}"}]})
+
+    def _request(self, payload: dict, timeout: int) -> dict:
+        """Отправляет одну команду REPL и ждёт полный JSON-ответ под таймаутом.
+        Доступ к процессу сериализован _REPL_LOCK (один запрос за раз)."""
+        with _REPL_LOCK:
+            req = json.dumps(payload)
+            try:
+                self.p.stdin.write(req + '\n\n')
+                self.p.stdin.flush()
+            except Exception as e:
+                self._poison()
+                return {"_sentinel": True, "status": "crashed", "errors": [{"line": 0, "message": f"REPL stdin write failed: {str(e)}"}]}
+
+            result_q: "queue.Queue" = queue.Queue(maxsize=1)
+            reader = threading.Thread(target=self._read_response, args=(result_q,), daemon=True)
+            reader.start()
+
+            try:
+                return result_q.get(timeout=timeout)
+            except queue.Empty:
+                # REPL завис — убиваем и помечаем непригодным, чтобы следующий вызов
+                # получил свежий инстанс вместо зависшего.
+                self._poison()
+                return {"_sentinel": True, "status": "timeout", "errors": [{"line": 0, "message": f"Lean REPL timed out after {timeout}s"}]}
 
     def validate_file(self, path: str) -> dict:
-        req = json.dumps({"path": path, "allTactics": False})
+        """Проверяет .lean-файл. Если файл импортирует только Mathlib, тело
+        отправляется в УЖЕ ПРОГРЕТОЕ окружение (mathlib_env) — без повторного
+        импорта Mathlib (это давало десятки секунд на каждую проверку). Иначе —
+        полноценная обработка файла со своими импортами (path-режим)."""
         try:
-            self.p.stdin.write(req + '\n\n')
-            self.p.stdin.flush()
+            text = Path(path).read_text(encoding="utf-8")
         except Exception as e:
-            self._poison()
-            return {"status": "crashed", "errors": [{"line": 0, "message": f"REPL stdin write failed: {str(e)}"}]}
+            return {"status": "failed", "errors": [{"line": 0, "message": f"Не удалось прочитать {path}: {e}"}]}
 
-        result_q: "queue.Queue" = queue.Queue(maxsize=1)
-        reader = threading.Thread(target=self._read_response, args=(result_q,), daemon=True)
-        reader.start()
+        import_lines = [ln.strip() for ln in text.splitlines() if ln.strip().startswith("import ")]
+        only_mathlib = bool(import_lines) and all(
+            ln == "import Mathlib" or ln.startswith("import Mathlib.") for ln in import_lines
+        )
 
-        try:
-            return result_q.get(timeout=VALIDATION_TIMEOUT)
-        except queue.Empty:
-            # REPL завис — убиваем и помечаем непригодным, чтобы следующий вызов
-            # получил свежий инстанс вместо зависшего.
-            self._poison()
-            return {"status": "timeout", "errors": [{"line": 0, "message": f"Lean REPL timed out after {VALIDATION_TIMEOUT}s"}]}
+        if self.mathlib_env is not None and only_mathlib:
+            # Импорты заменяем пустыми строками — нумерация строк сохраняется,
+            # значит позиции ошибок в отчёте остаются корректными.
+            body = "\n".join("" if ln.strip().startswith("import ") else ln
+                             for ln in text.splitlines())
+            resp = self._request({"cmd": body, "env": self.mathlib_env}, VALIDATION_TIMEOUT)
+        else:
+            resp = self._request({"path": path, "allTactics": False}, VALIDATION_TIMEOUT)
+
+        if resp.get("_sentinel"):
+            return {"status": resp["status"], "errors": resp.get("errors", [])}
+        return self._parse_repl_response(resp)
 
     def _parse_repl_response(self, resp: dict) -> dict:
         errors = []
@@ -167,6 +235,25 @@ def check_lean_environment() -> bool:
     except Exception as e:
         log(f"Lean environment check failed: {e}")
         return False
+
+
+def prewarm_repl_async() -> "threading.Thread":
+    """Запускает создание и прогрев REPL в фоновом потоке.
+
+    Вызывается на ранней стадии процесса (до/во время LLM-этапов), чтобы загрузка
+    Mathlib в ОЗУ перекрылась с сетевой работой и к моменту первой валидации REPL
+    был уже тёплым. Доступ сериализован _REPL_LOCK: последующий синхронный
+    LeanREPL.get()/validate дождётся окончания прогрева. Ошибки проглатываются —
+    при сбое прогрева валидация лениво пересоздаст REPL обычным путём."""
+    def _bg() -> None:
+        try:
+            LeanREPL.get()
+        except Exception as e:
+            log(f"Фоновый прогрев REPL не удался (повтор лениво при валидации): {e}")
+
+    t = threading.Thread(target=_bg, name="lean-prewarm", daemon=True)
+    t.start()
+    return t
 
 def validate_semantics_with_lean(lean_file_path: str) -> dict:
     lean_file = Path(lean_file_path)

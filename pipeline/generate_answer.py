@@ -514,6 +514,15 @@ def main():
     mgr.setup_role("embed",   embed_provider,   embed_model,   embed_api_key)
     print(f"[*] Embed role: provider={embed_provider}, model={embed_model}, host={embed_api_key or 'localhost:11434'}")
 
+    # Прогреваем Lean REPL в фоне, пока идёт BFS-сборка графа и дообогащение:
+    # Mathlib разворачивается в ОЗУ параллельно, и validate_tree не ждёт старта.
+    if not (args.no_validate or args.no_enrich):
+        try:
+            from pipeline.lean_validator import prewarm_repl_async
+            prewarm_repl_async()
+        except Exception:
+            pass
+
     print(f"=== DYNAMIC COMPILER: Сборка графа для {root_ids} (Multi-Root BFS) ===\n")
 
     entities = multi_root_bfs_collect(root_ids, args)

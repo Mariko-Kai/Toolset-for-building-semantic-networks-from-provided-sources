@@ -54,3 +54,41 @@ mathesis_index.db-wal
 # API Configuration / secrets
 api_config.json
 .env
+
+# Tool caches (generated, must not be committed)
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.tox/
+
+# MkDocs generated site
+/site/
+
+# Pipeline runtime caches
+pipeline/book_toc_cache.json
+
+# LaTeX build artefacts
+*.log
+*.aux
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+
+# DB WAL / SHM (already listed but unified here)
+*.db-shm
+*.db-wal
+
+# Backup files created during DB migration
+*.db.bak
+
+# Lean temporary validation files
+lean_validator/Temp*.lean
+lean_validator/TempTreeValidation.lean
+lean_validator/TempValidation.lean
+
+# Build scripts (machine-specific CUDA build)
+build_llama_cuda.bat

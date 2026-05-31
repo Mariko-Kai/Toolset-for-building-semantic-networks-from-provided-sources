@@ -716,6 +716,16 @@ def main():
     # Step 1: Extract clean keyword
     keyword, canonical = extract_keyword(args.query)
 
+    # Прогреваем Lean REPL в фоне на самой ранней стадии: пока идут извлечение и
+    # синтез (подпроцессы + сетевые LLM-вызовы, десятки секунд), Mathlib успевает
+    # развернуться в ОЗУ, и очередь валидации не ждёт холодного старта REPL.
+    if not getattr(args, "no_validate", False):
+        try:
+            from pipeline.lean_validator import prewarm_repl_async
+            prewarm_repl_async()
+        except Exception:
+            pass
+
     # Queues for recursive resolution
     synthesis_queue = [canonical]
     validation_queue = []
