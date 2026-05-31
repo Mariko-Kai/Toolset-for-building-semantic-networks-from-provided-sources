@@ -18,21 +18,42 @@ from pipeline.nodes.base import NodeContext, NodeResult, NodeStatus
 
 
 def _default_runner(cmd, env, on_line: Callable[[str], None], timeout: Optional[float]) -> int:
-    """Поток stdout построчно; при сбое/таймауте убивает дерево процессов."""
+    """Поток stdout построчно; при сбое/таймауте убивает дерево процессов.
+
+    Таймаут реализован сторожевым таймером (а не `wait(timeout=)`): блокирующий
+    `readline()` зависшего-но-молчащего ребёнка не прерывается ожиданием `wait`,
+    поэтому по таймауту мы убиваем дерево процессов — stdout закрывается, цикл
+    завершается, и мы поднимаем `TimeoutExpired`."""
+    import threading
+
     from mathesis.proc import kill_process_tree
     proc = subprocess.Popen(
         cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         text=True, encoding="utf-8", errors="replace",
     )
+    timed_out = {"v": False}
+    timer = None
+    if timeout:
+        def _on_timeout():
+            timed_out["v"] = True
+            kill_process_tree(proc)
+        timer = threading.Timer(timeout, _on_timeout)
+        timer.daemon = True
+        timer.start()
     try:
         if proc.stdout is not None:
             for line in iter(proc.stdout.readline, ""):
                 on_line(line.rstrip("\n"))
-        proc.wait(timeout=timeout)
-        return proc.returncode
+        proc.wait()
     except Exception:
         kill_process_tree(proc)
         raise
+    finally:
+        if timer is not None:
+            timer.cancel()
+    if timed_out["v"]:
+        raise subprocess.TimeoutExpired(cmd, timeout)
+    return proc.returncode
 
 
 class SubprocessNode:
@@ -134,12 +155,16 @@ def _synth_deviation(out: dict) -> str | None:
 
 def build_enrichment_flow(extract_cmd: list, align_cmd: list, synth_cmd: list,
                           *, env: dict | None = None, runner: Callable | None = None,
-                          synth_timeout: float | None = None, echo: bool = True) -> list:
-    """Собирает поток узлов extract → align → synth (замена жёсткого списка steps)."""
+                          synth_timeout: float | None = None, step_timeout: float | None = None,
+                          echo: bool = True) -> list:
+    """Собирает поток узлов extract → align → synth (замена жёсткого списка steps).
+
+    `step_timeout` ограничивает каждый шаг (в т.ч. extract/align — раньше они шли
+    без таймаута); `synth_timeout` при наличии переопределяет его для шага синтеза."""
     return [
-        SubprocessNode("extract", extract_cmd, env=env, runner=runner, echo=echo),
-        SubprocessNode("align", align_cmd, env=env, runner=runner, echo=echo),
+        SubprocessNode("extract", extract_cmd, env=env, runner=runner, echo=echo, timeout=step_timeout),
+        SubprocessNode("align", align_cmd, env=env, runner=runner, echo=echo, timeout=step_timeout),
         SubprocessNode("synth", synth_cmd, env=env, runner=runner, echo=echo,
                        parse_line=parse_synth_line, deviation_check=_synth_deviation,
-                       timeout=synth_timeout),
+                       timeout=synth_timeout or step_timeout),
     ]

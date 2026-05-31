@@ -496,7 +496,9 @@ def run_enrichment_orchestrated(extract_cmd, align_cmd, synth_cmd, *, env=None,
         slug = re.sub(r'[^\w-]+', '-', (canonical_term or "enrich")).strip('-')[:40] or "enrich"
         run_id = f"enrich-{slug}-{int(time.time())}"
 
-    flow = build_enrichment_flow(extract_cmd, align_cmd, synth_cmd, env=env, runner=runner, echo=echo)
+    from pipeline.config import get_subprocess_timeout
+    flow = build_enrichment_flow(extract_cmd, align_cmd, synth_cmd, env=env, runner=runner,
+                                 echo=echo, step_timeout=get_subprocess_timeout())
     ctx = NodeContext(run_id=run_id)
     orch = Orchestrator(flow)
     state = orch.run(ctx, run_id=run_id)
@@ -584,33 +586,33 @@ def run_enrichment_pipeline(
     generated_entities = []
     generated_entities_deps = {}
 
+    # Каждый шаг идёт через общий ограниченный таймаутом runner (сторожевой таймер
+    # убивает дерево процессов), а разбор stdout — через тот же parse_synth_line,
+    # что и оркестрируемый путь (без дублирующего инлайн-парсинга магических строк).
+    from pipeline.config import get_subprocess_timeout
+    from pipeline.nodes.adapters import _default_runner, parse_synth_line
+    step_timeout = get_subprocess_timeout()
+
     for step_num, step_name, cmd in steps:
         print(f"\n[{step_num}] {step_name}...")
+        captured: dict = {}
+
+        def on_line(line: str, _sn=step_num, _cap=captured) -> None:
+            print(line, flush=True)
+            if _sn == "3/3":
+                parse_synth_line(line, _cap)
+
         try:
-            process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8')
-            for line in iter(process.stdout.readline, ''):
-                print(line, end='', flush=True)
-                if step_num == "3/3":
-                    if "[synthesizer] Parsed: entity_id=" in line:
-                        match = re.search(r'entity_id=([^,\s,]+)', line)
-                        if match:
-                            generated_entities.append(match.group(1).strip())
-                    if "[synthesizer] ParsedDeps:" in line:
-                        try:
-                            payload = json.loads(line.split("ParsedDeps: ", 1)[1])
-                            eid = payload.get("entity_id")
-                            deps = payload.get("deps", [])
-                            if eid:
-                                generated_entities_deps[eid] = deps
-                        except Exception:
-                            pass
-            process.wait()
-            if process.returncode != 0:
-                print(f"[-] Ошибка на шаге {step_num} (код: {process.returncode})")
-                return False, [], {}
+            rc = _default_runner(cmd, env, on_line, step_timeout)
         except Exception as e:
-            print(f"[-] Не удалось запустить шаг {step_num}: {e}")
+            print(f"[-] Не удалось выполнить шаг {step_num}: {e}")
             return False, [], {}
+        if rc != 0:
+            print(f"[-] Ошибка на шаге {step_num} (код: {rc})")
+            return False, [], {}
+        if step_num == "3/3":
+            generated_entities = captured.get("entities", [])
+            generated_entities_deps = captured.get("deps", {})
 
     print("\n[+] Конвейер обогащения завершен успешно!")
     return True, generated_entities, generated_entities_deps
@@ -944,8 +946,11 @@ def main():
             else:
                 cmd.extend([f"--{arg_name.replace('_', '-')}", str(arg_val)])
 
+        from pipeline.config import get_subprocess_timeout
         try:
-            subprocess.run(cmd, check=True)
+            subprocess.run(cmd, check=True, timeout=get_subprocess_timeout())
+        except subprocess.TimeoutExpired as e:
+            print(f"[-] Генерация PDF превысила таймаут и была прервана: {e}")
         except subprocess.CalledProcessError as e:
             print(f"[-] Ошибка генерации: {e}")
     else:

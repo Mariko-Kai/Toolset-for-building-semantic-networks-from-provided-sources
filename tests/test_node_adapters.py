@@ -89,3 +89,22 @@ def test_orchestrated_flow_pauses_on_synth_deviation():
     assert state.status == RunStatus.PAUSED.value
     assert len(orch.incidents) == 1
     assert orch.incidents[0].node == "synth"
+
+
+def test_default_runner_times_out_and_kills_hung_child():
+    """Сторожевой таймер прерывает зависший-но-молчащий подпроцесс: блокирующий
+    readline() не спасает wait(timeout=), поэтому дерево процессов убивается, а
+    runner поднимает TimeoutExpired за ~таймаут, а не за всё время сна ребёнка."""
+    import subprocess
+    import sys
+    import time
+
+    import pytest
+
+    from pipeline.nodes.adapters import _default_runner
+
+    cmd = [sys.executable, "-c", "import time; time.sleep(30)"]
+    t0 = time.monotonic()
+    with pytest.raises(subprocess.TimeoutExpired):
+        _default_runner(cmd, None, lambda line: None, 1.0)
+    assert time.monotonic() - t0 < 15  # вернулись по таймауту, не дождавшись 30с сна

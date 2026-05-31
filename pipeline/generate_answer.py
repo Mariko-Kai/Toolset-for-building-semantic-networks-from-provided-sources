@@ -740,18 +740,26 @@ def main():
         str(result_tex),
     ]
 
-    print("Compiling result.pdf (pass 1)...")
-    subprocess.run(pdflatex_cmd, capture_output=True, text=True, cwd=str(output_dir))
+    from pipeline.config import get_subprocess_timeout
+    timeout_s = get_subprocess_timeout()
+    result = None
+    try:
+        print("Compiling result.pdf (pass 1)...")
+        subprocess.run(pdflatex_cmd, capture_output=True, text=True, cwd=str(output_dir), timeout=timeout_s)
 
-    print("Compiling result.pdf (pass 2 for references)...")
-    result = subprocess.run(pdflatex_cmd, capture_output=True, text=True, cwd=str(output_dir))
+        print("Compiling result.pdf (pass 2 for references)...")
+        result = subprocess.run(pdflatex_cmd, capture_output=True, text=True, cwd=str(output_dir), timeout=timeout_s)
+    except subprocess.TimeoutExpired as e:
+        print(f"[!] pdflatex exceeded the {timeout_s:.0f}s timeout and was terminated: {e}")
 
     result_pdf = output_dir / "result.pdf"
     if result_pdf.exists():
         print(f"PDF compilation successful! -> {result_pdf}")
-    else:
+    elif result is not None:
         print("PDF compilation issue. Last 500 chars of log:")
         print(result.stdout[-500:])
+    else:
+        print("PDF compilation aborted (timeout) — no PDF produced.")
 
 if __name__ == "__main__":
     main()

@@ -56,6 +56,17 @@ def get_db_path() -> str:
     return os.environ.get("MATHESIS_DB_PATH") or str(PROJECT_ROOT / "db" / "mathesis_index.db")
 
 
+def get_subprocess_timeout() -> float:
+    """Wall-clock ceiling (seconds) for external subprocess steps — pdflatex, the
+    enrichment extract/align/synth children, and the final book build. No external
+    call may hang forever (ТЗ: «границы и таймауты на всё внешнее»).
+    Override via MATHESIS_SUBPROCESS_TIMEOUT (default 900s)."""
+    try:
+        return float(os.environ.get("MATHESIS_SUBPROCESS_TIMEOUT", "900"))
+    except (TypeError, ValueError):
+        return 900.0
+
+
 PROVIDERS = ["ollama", "gemini", "openai", "groq", "hf", "llama_cpp"]
 
 # Дефолтные модели для каждого провайдера
