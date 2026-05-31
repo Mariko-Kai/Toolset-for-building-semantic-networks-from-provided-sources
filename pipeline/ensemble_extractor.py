@@ -26,12 +26,12 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from pipeline.model_manager import ModelManager
-from pipeline.config import PROVIDERS, resolve_module_config
+from pipeline.config import PROVIDERS, resolve_module_config, get_db_path
 from pipeline import pdf_text
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = PROJECT_ROOT / "db/mathesis_index.db"
+DB_PATH = Path(get_db_path())  # единый путь к БД из конфига (env MATHESIS_DB_PATH)
 BOOKS_DIR = PROJECT_ROOT / "Books"
 TOC_CACHE_PATH = PROJECT_ROOT / "pipeline" / "book_toc_cache.json"
 

@@ -12,11 +12,13 @@ if sys.platform == 'win32':
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = PROJECT_ROOT / "db/mathesis_index.db"
 
 # Ensure project root is on path for ModelManager import
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+from pipeline.config import get_db_path
+DB_PATH = Path(get_db_path())  # единый путь к БД из конфига (env MATHESIS_DB_PATH)
 
 from pipeline.model_manager import ModelManager
 

@@ -29,8 +29,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from pipeline.config import get_db_path
 GENERATE_SCRIPT = PROJECT_ROOT / "pipeline" / "generate_answer.py"
-DB_PATH = PROJECT_ROOT / "db/mathesis_index.db"
+DB_PATH = Path(get_db_path())  # единый путь к БД из конфига (env MATHESIS_DB_PATH)
 OUTPUT_DIR = PROJECT_ROOT / "output"
 
 

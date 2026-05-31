@@ -13,6 +13,7 @@ from collections import defaultdict, deque
 
 import datetime
 from pipeline.lean_validator import validate_entity
+from pipeline.config import get_db_path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 def log_to_file(category: str, content: str, entity_id: str = None, attempt: int = None, skip_realtime: bool = False):
@@ -67,7 +68,7 @@ def log_to_file(category: str, content: str, entity_id: str = None, attempt: int
         print(f"  [logging-error] Failed to write log to category {category}: {e}")
         sys.stdout.flush()
 
-DB_PATH = PROJECT_ROOT / "db/mathesis_index.db"
+DB_PATH = Path(get_db_path())  # единый путь к БД из конфига (env MATHESIS_DB_PATH)
 CONTENT_DIR = PROJECT_ROOT / "content"
 LEAN_DIR = PROJECT_ROOT / "lean_validator"
 VALIDATED_DIR = LEAN_DIR / "Validated"

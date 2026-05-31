@@ -28,7 +28,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from pipeline.config import PROVIDERS, resolve_module_config
+from pipeline.config import PROVIDERS, resolve_module_config, get_db_path
 from pipeline.model_manager import ModelManager
 from pipeline.export_to_lean import setup_provider
 
@@ -256,7 +256,7 @@ def resolve_entities(query, canonical_term, available_entities):
     import json
     import re
 
-    db_path = PROJECT_ROOT / "db/mathesis_index.db"
+    db_path = Path(get_db_path())
     if not db_path.exists():
         return [], canonical_term
 
@@ -786,7 +786,7 @@ def main():
                 # Immediate handling of generated deps: enqueue raw dep strings for synthesis and record pending edges
                 if generated_deps:
                     import sqlite3 as _sqlite3
-                    db_path = PROJECT_ROOT / "db/mathesis_index.db"
+                    db_path = get_db_path()
                     conn2 = _sqlite3.connect(db_path)
                     cur2 = conn2.cursor()
                     cur2.execute("CREATE TABLE IF NOT EXISTS pending_edges (source_id TEXT, raw_dep TEXT, status TEXT DEFAULT 'pending')")
