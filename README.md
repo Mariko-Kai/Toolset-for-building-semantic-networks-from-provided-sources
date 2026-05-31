@@ -1,49 +1,38 @@
-# Mathesis — нейросимволический конвейер формализации математического знания
+# Mathesis — Neuro-Symbolic Mathematical Knowledge Formalization Pipeline
 
-## 1. Назначение проекта
+## 1. Project Purpose
 
-**Mathesis** — программный комплекс для автоматизированного извлечения, канонизации и
-формальной верификации математического знания, изложенного в учебной литературе.
-Система решает три взаимосвязанные задачи:
+**Mathesis** is a software pipeline for automated extraction, canonization, and formal verification of mathematical knowledge found in educational textbooks. The system solves three interconnected problems:
 
-1. **Извлечение.** Из корпуса учебников (PDF) выделяются формулировки математических
-   объектов — определений и утверждений — с сохранением провенанса (источник, страница).
-2. **Канонизация.** Извлечённые формулировки кластеризуются, дедуплицируются и
-   синтезируются в строгую каноническую запись на LaTeX, образуя единую базу знаний.
-3. **Формализация.** Каждое утверждение транслируется в код Lean 4 и проверяется
-   компилятором при поддержке библиотеки Mathlib, что обеспечивает математическую строгость.
+1. **Extraction:** Formulations of mathematical entities (definitions and propositions) are extracted from a corpus of textbooks (PDFs), preserving provenance (source, page).
+2. **Canonization:** Extracted formulations are clustered, deduplicated, and synthesized into a strict canonical LaTeX format, building a unified knowledge graph.
+3. **Formalization:** Each proposition is translated into Lean 4 code and verified by the compiler backed by the Mathlib library, ensuring mathematical soundness.
 
-Результатом работы является **типизированный граф зависимостей**, в котором каждое
-утверждение прослеживается до фундаментальных аксиом (система Цермело — Френкеля, ZFC).
-Ось знания строго бинарна и зеркальна системе типов Lean: каждая сущность есть либо
-определение (`def`), либо утверждение (`prop`); аксиомы не выделяются в отдельный вид, а
-представляются как `prop` с признаком `lean_decl = 'axiom'`.
+The pipeline outputs a **typed dependency graph** where every theorem or proposition is traced back to foundational axioms (Zermelo-Fraenkel set theory, ZFC). The knowledge axis is strictly binary and mirrors Lean's type system: every entity is either a definition (`def`) or a proposition (`prop`). Axioms are represented as `prop` with the metadata `lean_decl = 'axiom'`.
 
-Архитектура является **нейросимвольной**: порождающие модели (LLM) отвечают за извлечение и
-трансляцию текста, тогда как символический слой (SQLite-граф и компилятор Lean) гарантирует
-непротиворечивость и верифицируемость результата.
+The architecture is **neuro-symbolic**: generative models (LLMs) extract and translate text, while the symbolic layer (SQLite graph and the Lean compiler) guarantees consistency and formal correctness.
 
 ---
 
-## 2. Системные требования
+## 2. System Requirements
 
-| Компонент | Назначение | Обязательность |
+| Component | Purpose | Requirement |
 |---|---|---|
-| Python ≥ 3.10 | Среда исполнения | Обязательно |
-| Базовые зависимости (`requirements.txt`) | Веб-интерфейс и ядро БД | Обязательно |
-| AI/ML-расширение (`.[ai]`) | Извлечение из PDF, эмбеддинги, провайдеры LLM | Для конвейера |
-| Дистрибутив LaTeX (TeX Live / MiKTeX) | Компиляция PDF-документов | Для генерации PDF |
-| Среда Lean 4 (`elan` / `lake`) + Mathlib | Формальная верификация | Для Lean-валидации |
-| Ollama и/или ключи облачных провайдеров | Доступ к языковым моделям | Для конвейера |
-| `llama-cpp-python` (сборка с CUDA) | Кросс-энкодерный реранкер страниц | Опционально (есть фолбэк) |
+| Python ≥ 3.10 | Runtime environment | Mandatory |
+| Core Dependencies (`requirements.txt`) | Web interface & database core | Mandatory |
+| AI/ML Expansion (`.[ai]`) | PDF extraction, embeddings, LLM providers | Mandatory for pipeline |
+| LaTeX Distribution (TeX Live / MiKTeX) | PDF document compilation | For PDF generation |
+| Lean 4 (`elan` / `lake`) + Mathlib | Formal verification | For Lean validation |
+| Ollama / Cloud API Keys | LLM access | Mandatory for pipeline |
+| `llama-cpp-python` (built with CUDA) | Cross-encoder page reranker | Optional (has lexical fallback) |
 
-Поддерживаемые провайдеры моделей: `ollama`, `gemini`, `openai`, `groq`, `hf`, `llama_cpp`.
+Supported model providers: `ollama`, `gemini`, `openai`, `groq`, `hf`, `llama_cpp`.
 
 ---
 
-## 3. Установка и конфигурация
+## 3. Installation & Configuration
 
-### 3.1. Виртуальное окружение
+### 3.1. Virtual Environment
 
 **Windows (PowerShell):**
 ```powershell
@@ -57,109 +46,95 @@ python -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3.2. Установка зависимостей
+### 3.2. Installing Dependencies
 
-Минимальная установка (веб-интерфейс и работа с готовой базой знаний):
+Minimal installation (web interface and read-only database catalog):
 ```bash
 pip install -r requirements.txt
 ```
 
-Полная установка, необходимая для конвейера извлечения (PDF, эмбеддинги, провайдеры LLM):
+Full installation (PDF extraction, embeddings, and LLM orchestration):
 ```bash
 pip install -e .[ai]
 ```
 
-Инструменты разработки (тесты, линтер, проверка типов):
+Development tools (testing, linting, type-checking):
 ```bash
 pip install -e .[dev]
 ```
 
-### 3.3. Конфигурация провайдеров и ключей
+### 3.3. Provider & Key Configuration
 
-Ключи API задаются одним из двух способов; значения переменных окружения имеют приоритет
-и не перезаписываются:
+API keys and default settings can be configured using environment variables or a configuration JSON. The environment variables in `.env` take absolute priority and will not be overwritten.
 
-1. Файл `.env` в корне проекта (загружается автоматически при импорте `pipeline.config`):
+1. **`.env` File** (loaded automatically when importing `pipeline.config`):
    ```dotenv
-   GEMINI_API_KEY=...
-   OPENAI_API_KEY=...
-   GROQ_API_KEY=...
+   GEMINI_API_KEY=your_gemini_key
+   OPENAI_API_KEY=your_openai_key
+   GROQ_API_KEY=your_groq_key
    ```
-2. Файл `api_config.json` в корне проекта (создаётся и поддерживается веб-приложением;
-   содержит секции `api_keys`, `providers`, `models` с разбивкой по модулям).
+2. **`api_config.json` File** (managed by the web application; contains `api_keys`, `providers`, and `models` partitioned by modules).
 
-Конфигурация модуля разрешается по убыванию приоритета: глобальный аргумент командной
-строки → модульный аргумент → `api_config.json` → значение по умолчанию из
-[`pipeline/config.py`](pipeline/config.py).
+The system resolves configurations using the following **strict descending priority**:
+$$\text{CLI Global} \longrightarrow \text{CLI Module} \longrightarrow \text{Environment Variable Module} \longrightarrow \text{api\_config.json} \longrightarrow \text{config.py Defaults}$$
 
-### 3.4. Инициализация базы данных
+### 3.4. Database Initialization
 
-База знаний хранится в `db/mathesis_index.db` (путь переопределяется переменной
-`MATHESIS_DB_PATH`). Создание пустой канонической схемы:
+The canonical knowledge database is stored at `db/mathesis_index.db` (can be overridden with `MATHESIS_DB_PATH`). Initialize an empty schema with:
 ```bash
 python pipeline/init_db.py
 ```
 
-Схема версионируется (`SCHEMA_VERSION = 3`). При открытии существующей базы выполняется
-**идемпотентная миграция**: недостающие столбцы устаревшей «плоской» таблицы `entities`
-добавляются автоматически, что обеспечивает совместимость со старыми базами.
+The database schema is version-controlled (`SCHEMA_VERSION = 3`). When opening an older database, an **idempotent migration** runs automatically, adding missing columns to the flat `entities` table to guarantee backward compatibility.
 
 ---
 
-## 4. Запуск модулей
+## 4. Running Modules
 
-Ниже перечислены точки входа, сгруппированные по функциональному назначению. Все скрипты
-запускаются из корневой директории проекта.
+All commands should be executed from the project root directory.
 
-### 4.1. Веб-интерфейс
+### 4.1. Web Interface
 
-Интерактивный каталог сущностей, компилятор PDF и панель мониторинга конвейера:
+An interactive catalog of mathematical entities, LaTeX PDF compiler, and run monitoring dashboard:
 ```bash
 uvicorn web.app:app --reload
 ```
-После запуска интерфейс доступен по адресу `http://127.0.0.1:8000`.
+Once started, the catalog is available at `http://127.0.0.1:8000`.
 
-Основные маршруты:
+Key routes:
 
-| Маршрут | Назначение |
+| Route | Purpose |
 |---|---|
-| `GET /` | Главная страница: выбор сущностей и компиляция PDF |
-| `GET /catalog` | Каталог сущностей, сгруппированных по виду (определения, утверждения) |
-| `GET /entity/{id}` | Детальная карточка сущности с рендерингом формул (KaTeX) |
-| `GET /monitor` | Панель мониторинга: недавние прогоны и открытые инциденты |
-| `GET /monitor/{run_id}` | Хронология событий конкретного прогона |
-| `GET /api/runs`, `GET /api/runs/{run_id}` | Программный доступ к прогонам (JSON) |
-| `POST /api/incidents/{id}/resolve` | Разрешение инцидента (`confirmed` / `rejected` / `applied`) |
-| `WebSocket /ws/compiler` | Синхронизация статуса компиляции и поиска в реальном времени |
+| `GET /` | Homepage: select entities and compile LaTeX PDF |
+| `GET /catalog` | Catalog of entities grouped by kind (definitions, propositions) |
+| `GET /entity/{id}` | Detailed entity card with formula rendering via KaTeX |
+| `GET /monitor` | Pipeline monitor: recent runs and active incidents |
+| `GET /monitor/{run_id}` | Detailed event timeline for a specific pipeline run |
+| `GET /api/runs`, `GET /api/runs/{run_id}` | Programmatic access to run states (JSON) |
+| `POST /api/incidents/{id}/resolve` | Resolve a pipeline incident (`confirmed` / `rejected` / `applied`) |
+| `WebSocket /ws/compiler` | Real-time compilation and search status synchronization |
 
-При наличии `tools/cloudflared.exe` приложение автоматически поднимает публичный туннель
-для удалённой демонстрации.
+If `tools/cloudflared.exe` is present in the workspace, the web app automatically establishes a secure public tunnel for remote demonstration.
 
-### 4.2. Основной конвейер обогащения
+### 4.2. Main Enrichment Coordinator
 
-Скрипт [`pipeline/enrichment_coordinator.py`](pipeline/enrichment_coordinator.py) — главная точка входа. По
-запросу на естественном языке он разрешает сущность в базе либо, при её отсутствии, запускает
-полный конвейер обогащения (извлечение → выравнивание → синтез → формализация) с рекурсивным
-разрешением зависимостей.
+The [`pipeline/enrichment_coordinator.py`](pipeline/enrichment_coordinator.py) script is the main entry point. Given a natural language query, it checks if the entity exists in the database. If not, it executes the entire enrichment pipeline (extraction → alignment → synthesis → formalization) with recursive dependency resolution.
 
-Конвейер поддерживает **раздельную маршрутизацию моделей по модулям**: для каждого этапа
-независимо задаются провайдер (`--*-provider`), модель (`--*-model`) и ключ (`--*-api-key`).
-Это позволяет сочетать мощные облачные модели для синтеза и экономичные локальные — для
-рутинных операций.
+The coordinator supports **independent module-level model routing**: provider (`--*-provider`), model (`--*-model`), and API key (`--*-api-key`) can be configured separately for each stage. This allows using advanced cloud models for synthesis and fast local models for extraction or embedding.
 
-Базовый запуск (со значениями по умолчанию):
+Basic run (using defaults):
 ```bash
-python pipeline/enrichment_coordinator.py "теорема Коши о среднем значении"
+python pipeline/enrichment_coordinator.py "Cauchys mean value theorem"
 ```
 
-Запуск под управлением оркестратора (с персистентным мониторингом и регистрацией инцидентов):
+Orchestrated run (with persistent run tracking and incident reporting):
 ```bash
-python pipeline/enrichment_coordinator.py "теорема Коши о среднем значении" --orchestrated
+python pipeline/enrichment_coordinator.py "Cauchys mean value theorem" --orchestrated
 ```
 
-Пример гибридной маршрутизации:
+Hybrid routing example:
 ```bash
-python pipeline/enrichment_coordinator.py "Определение равномерно непрерывной функции" \
+python pipeline/enrichment_coordinator.py "Definition of uniformly continuous function" \
   --cv-model qwen3-vl:4b \
   --extract-preview-provider llama_cpp \
   --extract-preview-model "bge-reranker-v2-m3-Q6_K.gguf" \
@@ -169,223 +144,206 @@ python pipeline/enrichment_coordinator.py "Определение равноме
   --embed-provider   ollama   --embed-model   "nomic-embed-text:latest"
 ```
 
-Логические модули и соответствующие префиксы аргументов:
+Logical modules and CLI option prefixes:
 
-| Префикс | Модуль | Назначение |
+| Prefix | Module | Purpose |
 |---|---|---|
-| `--provider/--model/--api-key` | Глобальный | Применяется ко всем модулям по умолчанию |
-| `--extract-*` | Извлечение | Чтение PDF и выделение сырых формулировок |
-| `--extract-preview-*` | Предфильтр | Быстрый отбор релевантных страниц (реранкер или лёгкая LLM) |
-| `--synth-*` | Синтез | Трансляция в канонический LaTeX, дедупликация, слияние источников |
-| `--lean-*` | Формализация | Генерация и проверка кода Lean 4 |
-| `--embed-*` | Эмбеддинги | Векторное разрешение сущностей и зависимостей |
-| `--cv-model` | Зрение/OCR | Распознавание формул в изображениях страниц |
+| `--provider/--model/--api-key` | Global | Default fallback for all modules |
+| `--extract-*` | Extraction | PDF text reading and raw formulation parsing |
+| `--extract-preview-*` | Preview | Rapid page pre-filtering (reranking or lightweight LLM) |
+| `--synth-*` | Synthesis | Canonical LaTeX drafting, deduplication, and source merging |
+| `--lean-*` | Formalization | Lean 4 theorem formulation and verification |
+| `--embed-*` | Embeddings | Vector-based entity mapping and dependency resolution |
+| `--cv-model` | Vision/OCR | Multimodal LaTeX formula extraction from PDF pages |
 
-Управляющие флаги:
+Control flags:
 
-* `--orchestrated` — исполнение под оркестратором с сохранением состояния прогона
-  (эквивалентно `MATHESIS_ORCHESTRATED=1`).
-* `--no-validate` — пропуск компиляции Lean (ускоряет построение графа LaTeX при отладке).
-* `--force-refresh` — принудительная переочистка кэша формулировок и повторная обработка.
-* `--ocr-pages '{"book": "zorich", "pages": [212, 214]}'` — обработка только заданных
-  страниц в обход поиска.
+* `--orchestrated` — executes under the agentic orchestrator, persisting run history (equivalent to setting `MATHESIS_ORCHESTRATED=1`).
+* `--no-validate` — skips Lean compilation (useful for rapid LaTeX catalog debugging).
+* `--force-refresh` — clears the cache and forces fresh extraction.
+* `--ocr-pages '{"book": "zorich", "pages": [212, 214]}'` — bypasses search and processes only the specified pages.
 
-### 4.3. Реранкер страниц (llama-cpp-python, GGUF)
+### 4.3. Cross-Encoder Page Reranker (llama-cpp-python, GGUF)
 
-Этап предфильтра по умолчанию использует кросс-энкодерный реранкер
-`bge-reranker-v2-m3`, исполняемый **внутри процесса** через `llama-cpp-python` (с выгрузкой
-слоёв на GPU). Реранкер ранжирует страницы-кандидаты и существенно повышает точность отбора по
-сравнению с лексическим поиском. GGUF-модель разыскивается в каталоге `llama/` либо по пути из
-переменной `MATHESIS_LLAMA_DIR`.
+The preview stage defaults to an **in-process** `bge-reranker-v2-m3` cross-encoder model via `llama-cpp-python` (with GPU layer offloading). The reranker sorts matching candidate pages, drastically improving accuracy compared to simple lexical search. The GGUF model is automatically loaded from the `llama/` folder or the path in `MATHESIS_LLAMA_DIR`.
 
-Готовые колёса `llama-cpp-python` с поддержкой CUDA устарели и не содержат механизма
-реранкинга, поэтому пакет собирается из исходного кода. Воспроизводимая сборка под
-CUDA приведена в [`build_llama_cuda.bat`](build_llama_cuda.bat); в общем виде:
+To build `llama-cpp-python` with CUDA and reranker support, execute:
 ```bash
 pip install ninja
 CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=75" pip install --no-cache-dir llama-cpp-python
 ```
-Параметр `CMAKE_CUDA_ARCHITECTURES` задаётся по вычислительной способности GPU (75 — Turing).
-Доля слоёв на GPU регулируется переменной `MATHESIS_RERANK_GPU_LAYERS` (по умолчанию `-1` —
-все слои). При отсутствии GGUF-модели или пакета система прозрачно переходит к лексическому
-поиску.
+*(Specify `CMAKE_CUDA_ARCHITECTURES` matching your GPU compute capability, e.g. 75 for Turing).*
 
-### 4.4. Отдельные стадии конвейера
+The number of layers offloaded to the GPU can be customized via `MATHESIS_RERANK_GPU_LAYERS` (defaults to `-1` for all layers). If the package or model is missing, the system gracefully falls back to basic lexical BM25 search.
 
-Стадии могут запускаться независимо для отладки или повторной обработки:
+### 4.4. Running Specific Pipeline Stages
+
+For debugging or targeted re-processing, stages can be run independently:
 
 ```bash
-# Извлечение формулировок из всех PDF в Books/ (аргумент в формате 'ru|en')
-python pipeline/ensemble_extractor.py "теорема коши о среднем значении|cauchys mean value theorem"
+# Extract raw formulations from all PDFs in Books/ (ru|en query format)
+python pipeline/ensemble_extractor.py "cauchys mean value theorem"
 
-# Кластеризация извлечённых формулировок по семантической близости
+# Align and cluster extracted raw formulations semantically
 python pipeline/entity_aligner.py
 
-# Синтез канонической записи и формализация для целевого термина
+# Synthesize LaTeX and validate Lean for a specific term
 python pipeline/canonical_synthesizer.py --canonical-term "cauchys mean value theorem"
 ```
 
-### 4.5. Генерация документов (PDF)
+### 4.5. LaTeX PDF Compilation
 
-Компиляция требует установленного дистрибутива LaTeX.
+Compilation requires a working local LaTeX installation.
 
 ```bash
-# Документ для заданных корневых сущностей (с включением всех зависимостей)
+# Compile PDF for a specific root entity (automatically resolves and appends dependencies)
 python pipeline/generate_answer.py --roots "prop-cauchys-mean-value-theorem"
-#   результат: output/result.pdf
+# Output path: output/result.pdf
 
-# Полная книга по всем сущностям графа
+# Compile a full mathematical textbook containing all database entities
 python pipeline/generate_full_book.py
-#   результат: output/full_book.pdf
+# Output path: output/full_book.pdf
 ```
-Флаг `--no-enrich` отключает дообогащение недостающих зависимостей, `--no-validate` —
-проверку Lean.
+Use `--no-enrich` to skip auto-synthesis of missing dependencies, and `--no-validate` to skip Lean validation.
 
-### 4.6. Формальная верификация (Lean 4)
+### 4.6. Lean 4 Formal Verification
 
-Требуется установленная цепочка инструментов Lean (`elan`/`lake`) и собранный проект
-`lean_validator/` с зависимостями Mathlib и `repl`. REPL запускается персистентно:
-Mathlib один раз разворачивается в ОЗУ (прогрев под бюджетом `MATHESIS_LEAN_WARMUP_TIMEOUT`,
-по умолчанию 600 с), после чего каждая проверка переиспользует прогретое окружение и
-занимает доли секунды. Прогрев запускается в фоне на ранней стадии конвейера (параллельно
-с извлечением/синтезом), поэтому к моменту валидации REPL уже тёплый. Бюджет одной проверки
-(`MATHESIS_LEAN_TIMEOUT`, по умолчанию 300 с) расходуется только на элаборацию и не включает
-загрузку Mathlib.
+Requires a working Lean toolchain (`elan`/`lake`) and a pre-built `lean_validator` project containing Mathlib and `repl`. The REPL runs persistently in the background: Mathlib is loaded into RAM once (prewarmed under a `MATHESIS_LEAN_WARMUP_TIMEOUT` budget, default 600s), enabling individual validation requests to compile in milliseconds. Prewarming executes asynchronously during the early extraction phases. The individual elaboration timeout (`MATHESIS_LEAN_TIMEOUT`, default 300s) applies strictly to the target declaration.
 
 ```bash
-# Трансляция графа в Lean 4 (инкрементально; --force — заново для всех сущностей)
+# Translate the database graph to Lean 4 (--force rebuilds all validated files)
 python pipeline/export_to_lean.py --lean-provider ollama --lean-model goedel:latest
 
-# Проверка отдельного файла .lean
+# Validate a specific standalone .lean file
 python pipeline/lean_validator.py lean_validator/Validated/prop-cauchys-mean-value-theorem.lean
 
-# Проверка математической эквивалентности двух сущностей
+# Check formal mathematical equivalence between two database definitions
 python pipeline/lean_equivalence_checker.py prop-rolle prop-rolle-dup
 ```
 
-### 4.7. Сопровождение базы знаний
+### 4.7. Database & Graph Maintenance
 
 ```bash
-# Пересборка канонической БД из content/*.tex без вычисления эмбеддингов (быстро)
+# Rebuild canonical SQLite index from content/*.tex without calculating embeddings (fast)
 python pipeline/reseed_db.py
 
-# Актуализация БД после ручного редактирования .tex в content/
+# Actualize SQLite database entries after manual edits to .tex files in content/
 python pipeline/actualize_db.py
 
-# Пересчёт векторных представлений сущностей (--force — для всех)
+# Recalculate vector embeddings for entities (--force updates all)
 python pipeline/update_embeddings.py
 
-# Семантическое слияние дубликатов с проверкой эквивалентности в Lean
-python pipeline/postprocess_equivalence.py        # добавьте --dry-run для предпросмотра
+# Perform semantic deduplication and merge equivalent entities verified by Lean
+python pipeline/postprocess_equivalence.py   # use --dry-run for dry execution
 
-# Генерация макросов LaTeX (mathesis_macros.sty) из метаданных content/
+# Generate project LaTeX macros (mathesis_macros.sty) from entity headers in content/
 python pipeline/generate_macros.py
 
-# Поиск термина по ранжированному корпусу учебников
-python pipeline/search_index.py --query "равномерная непрерывность"
+# Search terms in the ranked textbook corpus
+python pipeline/search_index.py --query "uniform continuity"
 ```
 
-### 4.8. Мониторинг прогонов из командной строки
+### 4.8. CLI Run Monitoring
 
 ```bash
-python pipeline/monitor.py                       # список недавних прогонов
-python pipeline/monitor.py <run_id>              # детальная хронология прогона
-python pipeline/monitor.py --incidents           # открытые инциденты
+python pipeline/monitor.py                       # Lists recent orchestrator runs
+python pipeline/monitor.py <run_id>              # Details event log for a run
+python pipeline/monitor.py --incidents           # Lists active incidents
 python pipeline/monitor.py --resolve <id> --as confirmed
 ```
 
 ---
 
-## 5. Конфигурация моделей по умолчанию
+## 5. Default Model Configuration
 
-Провайдеры и модели по умолчанию для каждого модуля (см. [`pipeline/config.py`](pipeline/config.py)):
+Default providers and models configured in [`pipeline/config.py`](pipeline/config.py):
 
-| Модуль | Провайдер по умолчанию | Модель по умолчанию |
+| Module | Default Provider | Default Model | Configurable Environment Override |
+|---|---|---|---|
+| `extract` | `ollama` | `qwen3:8b` | `MATHESIS_EXTRACT_MODEL` |
+| `preview` | `llama_cpp` | `bge-reranker-v2-m3-Q6_K.gguf` | `MATHESIS_PREVIEW_MODEL` |
+| `synth` | `ollama` | `qwen3:8b` | `MATHESIS_SYNTH_MODEL` |
+| `lean` | `ollama` | `goedel:latest` | `MATHESIS_LEAN_MODEL` |
+| `embed` | `ollama` | `nomic-embed-text:latest` | `MATHESIS_EMBED_MODEL` |
+
+### Provider-Specific Defaults
+* **Ollama (local):** Falls back to `"deepseek-r1:7b"` as the main model if not explicitly specified.
+* **Gemini (cloud):** `gemini-2.5-flash`
+* **OpenAI (cloud):** `gpt-4o-mini`
+* **Groq (cloud):** `llama-3.3-70b-versatile`
+
+---
+
+## 6. Environment Variables
+
+All settings can be placed in your local `.env` file:
+
+| Variable | Description | Default |
 |---|---|---|
-| `extract` | `ollama` | `qwen3:8b` |
-| `preview` | `llama_cpp` | `bge-reranker-v2-m3-Q6_K.gguf` |
-| `synth` | `ollama` | `qwen3:8b` |
-| `lean` | `ollama` | `goedel:latest` |
-| `embed` | `ollama` | `nomic-embed-text:latest` |
-
-Базовые модели облачных провайдеров: `gemini → gemini-2.5-flash`, `openai → gpt-4o-mini`,
-`groq → llama-3.3-70b-versatile`.
-
----
-
-## 6. Переменные окружения
-
-| Переменная | Назначение |
-|---|---|
-| `MATHESIS_DB_PATH` | Путь к файлу канонической базы (по умолчанию `db/mathesis_index.db`) |
-| `MATHESIS_ORCHESTRATED` | `1` — исполнять конвейер под оркестратором |
-| `MATHESIS_LLAMA_DIR` | Дополнительный каталог для поиска GGUF-моделей |
-| `MATHESIS_RERANK_GPU_LAYERS` | Число слоёв реранкера на GPU (`-1` — все) |
-| `MATHESIS_RERANK_CTX` | Контекст реранкера = n_batch = n_ubatch (по умолчанию 4096). Меньше → меньше VRAM (буфер ~квадратичен); 8192 даёт ~4.5 ГБ и не влезает в 4 ГБ |
-| `MATHESIS_LEAN_TIMEOUT` | Таймаут одной проверки Lean (только элаборация), секунды (по умолчанию 300) |
-| `MATHESIS_LEAN_WARMUP_TIMEOUT` | Отдельный бюджет на разовый прогрев REPL — загрузку Mathlib в ОЗУ (по умолчанию 600) |
-| `GEMINI_API_KEY`, `OPENAI_API_KEY`, `GROQ_API_KEY` | Ключи облачных провайдеров |
+| `MATHESIS_DB_PATH` | Path to the canonical SQLite database index | `db/mathesis_index.db` |
+| `MATHESIS_ORCHESTRATED` | Run the coordinator under agentic orchestrator tracking | `0` (disabled) |
+| `MATHESIS_LLAMA_DIR` | Directory containing GGUF reranker models | Project `llama/` folder |
+| `MATHESIS_RERANK_GPU_LAYERS` | GPU layers offloaded to CUDA for reranking | `-1` (all layers) |
+| `MATHESIS_LEAN_TIMEOUT` | Timeout budget for individual Lean elaboration (seconds) | `300` |
+| `MATHESIS_LEAN_WARMUP_TIMEOUT` | Timeout budget for loading Mathlib into REPL RAM (seconds) | `600` |
+| `MATHESIS_OLLAMA_MODEL` | Default model for local Ollama strategies | `deepseek-r1:7b` |
+| `MATHESIS_GEMINI_MODEL` | Default model for Gemini strategies | `gemini-2.5-flash` |
+| `MATHESIS_OPENAI_MODEL` | Default model for OpenAI strategies | `gpt-4o-mini` |
+| `MATHESIS_GROQ_MODEL` | Default model for Groq strategies | `llama-3.3-70b-versatile` |
+| `GEMINI_API_KEY` | API Key for Google Gemini | (None) |
+| `OPENAI_API_KEY` | API Key for OpenAI | (None) |
+| `GROQ_API_KEY` | API Key for Groq | (None) |
 
 ---
 
-## 7. Структура проекта
+## 7. Project Structure
 
 ```
 .
-├── web/                     Веб-приложение FastAPI (каталог, компилятор, мониторинг)
-│   ├── app.py               Точка входа приложения и маршруты
-│   ├── templates/           Шаблоны Jinja2
-│   └── static/              Стили и статические ресурсы
-├── pipeline/                Нейросимволический конвейер
-│   ├── enrichment_coordinator.py Главная оркестрация (очереди синтеза и валидации)
-│   ├── ensemble_extractor.py Извлечение формулировок из PDF
-│   ├── hybrid_search.py     Лексический поиск (BM25) + кросс-энкодерный реранкер
-│   ├── canonical_synthesizer.py Синтез канонического LaTeX и цикл валидации Lean
-│   ├── export_to_lean.py    Трансляция графа в Lean 4
-│   ├── orchestration/       Оркестратор, состояние прогона, инциденты, персистенция
-│   └── nodes/               Узлы конвейера (адаптеры подпроцессов, OCR)
-├── mathesis/                Ядро системы (API доступа к канонической БД)
-│   ├── schema.py            Каноническая DDL (SCHEMA_VERSION = 3)
-│   ├── db.py                Подключение, инициализация и миграция схемы
-│   ├── repo.py / core.py    Слой репозитория и фасад MathesisDB
-│   └── models.py            Типизированные модели сущностей и зависимостей
-├── content/                 Исходный математический контент (LaTeX)
-├── Books/                   Корпус учебников (PDF) для извлечения
-├── llama/                   Локальные GGUF-модели (реранкер, прувер)
-├── lean_validator/          Проект Lean 4 (Mathlib, REPL) и валидированные файлы
-├── db/                      Файл канонической базы знаний SQLite
-├── output/                  Скомпилированные PDF-документы
-├── docs/                    Техническая документация
-└── tests/                   Набор тестов (pytest)
+├── web/                     FastAPI Web Application (catalog, compiler, monitor)
+│   ├── app.py               App entry point and route endpoints
+│   ├── templates/           Jinja2 templates
+│   └── static/              Styles and static assets
+├── pipeline/                Neuro-symbolic execution pipeline
+│   ├── enrichment_coordinator.py Main orchestration entry point
+│   ├── ensemble_extractor.py    PDF text raw parser
+│   ├── hybrid_search.py         BM25 + llama-cpp-python Cross-Encoder reranking
+│   ├── canonical_synthesizer.py LaTeX compiler and Lean 4 loop validation
+│   ├── export_to_lean.py        Translates content graph to Lean 4 code
+│   ├── orchestration/           Incidents, run logger, and run state persistency
+│   └── nodes/                   Process adapters (OCR, subprocesses)
+├── mathesis/                Core Database access layer (Facade API)
+│   ├── schema.py            Canonical SQLite DDL
+│   ├── db.py                Connection, schema init, and migrations
+│   ├── repo.py / core.py    Repository patterns and Facade class
+│   └── models.py            Typed structures for entities and relations
+├── content/                 LaTeX mathematical knowledge files
+├── Books/                   Corpus of textbooks (PDFs) for extraction
+├── llama/                   Local GGUF files (reranker, offline agents)
+├── lean_validator/          Lean 4 verification project (Mathlib, repl)
+├── db/                      Active SQLite index storage folder
+├── output/                  Target output directory for compiled PDFs
+├── docs/                    Technical architecture and developer guides
+└── tests/                   Pytest suite folder
 ```
-
-Каноническая схема включает таблицы `entities` (вид `def`/`prop`), `alias` (мультиязычные
-синонимы), `formulation_sources` (провенанс), `entity_dependency` (типизированный граф с
-ролями `uses`, `generalizes`, `instance_of`, `proof_uses`, `component`), `equivalence`
-(симметричные эквивалентности), полнотекстовый индекс `entity_fts`, а также таблицы
-оркестрации `run` / `run_event` / `incident` для персистентного мониторинга.
 
 ---
 
-## 8. Тестирование
+## 8. Testing
 
+Run the test suites using `pytest`:
 ```bash
-pytest                       # полный набор тестов
-pytest -k reranker           # выборочный запуск по подстроке
+pytest
 ```
-
-Тесты используют изолированную базу (через `MATHESIS_DB_PATH`) и не затрагивают рабочие
-данные.
+Tests are isolated from active workspace assets and use a separate test database configured by `MATHESIS_DB_PATH`.
 
 ---
 
-## 9. Дополнительная документация
+## 9. Developer Guides
 
-Подробные руководства размещены в каталоге `docs/`:
+Detailed technical guidelines are available in `docs/`:
 
-* [Развёртывание](docs/howto/deployment.md) — пошаговая инструкция по установке.
-* [Архитектура системы](docs/architecture/design.md) — принципы проектирования и
-  классификации сущностей.
-* [Оркестратор](docs/architecture/agentic_orchestrator.md) — модель прогонов, инцидентов и
-  человеко-ориентированного разрешения аномалий.
-* [Стандарты кода](docs/devguide/structure.md) — конвенции разработки.
+* [System Deployment](docs/howto/deployment.md) — Step-by-step setup manual.
+* [Architecture Design](docs/architecture/design.md) — Entities classification and graph rules.
+* [Agentic Orchestrator](docs/architecture/agentic_orchestrator.md) — Run tracking, incidents logging, and human-in-the-loop resolutions.
+* [Code Conventions](docs/devguide/structure.md) — Formatting and programming guidelines.
