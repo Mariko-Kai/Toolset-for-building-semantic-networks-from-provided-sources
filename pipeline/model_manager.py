@@ -82,7 +82,7 @@ class OllamaStrategy(ModelStrategy):
         return "http://localhost:11434"
 
     def generate_content(self, prompt: str, system_prompt: Optional[str] = None, json_mode: bool = False, stream_callback=None) -> str:
-        model = self.model_name or "qwen2.5:14b"
+        model = self.model_name or "deepseek-r1:7b"
         base_url = self._get_base_url()
         url = f"{base_url}/api/generate"
         payload = {

@@ -90,12 +90,12 @@ PROVIDERS = ["ollama", "gemini", "openai", "groq", "hf", "llama_cpp"]
 
 # Дефолтные модели для каждого провайдера
 _MODELS = {
-    "ollama": "qwen3:8b",
-    "gemini": "gemini-2.5-flash",
-    "openai": "gpt-4o-mini",
-    "groq":   "llama-3.3-70b-versatile",
-    "hf":     "Qwen/Qwen2.5-Coder-Artifacts",
-    "llama_cpp": "bge-reranker-v2-m3-Q6_K.gguf",
+    "ollama": os.environ.get("MATHESIS_OLLAMA_MODEL") or os.environ.get("MATHESIS_DEFAULT_OLLAMA_MODEL") or "qwen3:8b",
+    "gemini": os.environ.get("MATHESIS_GEMINI_MODEL") or os.environ.get("MATHESIS_DEFAULT_GEMINI_MODEL") or "gemini-2.5-flash",
+    "openai": os.environ.get("MATHESIS_OPENAI_MODEL") or os.environ.get("MATHESIS_DEFAULT_OPENAI_MODEL") or "gpt-4o-mini",
+    "groq":   os.environ.get("MATHESIS_GROQ_MODEL") or os.environ.get("MATHESIS_DEFAULT_GROQ_MODEL") or "llama-3.3-70b-versatile",
+    "hf":     os.environ.get("MATHESIS_HF_MODEL") or "Qwen/Qwen2.5-Coder-Artifacts",
+    "llama_cpp": os.environ.get("MATHESIS_LLAMA_CPP_MODEL") or "bge-reranker-v2-m3-Q6_K.gguf",
 }
 
 # Переопределения модели по умолчанию для конкретных модулей и провайдеров
@@ -205,22 +205,29 @@ def resolve_module_config(
     cfg_provider = api_cfg.get("providers", {}).get(module)
     cfg_model = api_cfg.get("models", {}).get(module)
 
-    # 1. Провайдер: CLI global > CLI module > api_config.json > hardcoded default
-    provider = global_provider or module_provider or cfg_provider or get_default_provider(module)
+    # Load env-level overrides
+    env_provider = os.environ.get(f"MATHESIS_{module.upper()}_PROVIDER")
+    env_model = os.environ.get(f"MATHESIS_{module.upper()}_MODEL")
+    env_api_key = os.environ.get(f"MATHESIS_{module.upper()}_API_KEY")
 
-    # 2. Модель: CLI global > CLI module > api_config.json > default for provider
+    # 1. Провайдер: CLI global > CLI module > ENV module > api_config.json > hardcoded default
+    provider = global_provider or module_provider or env_provider or cfg_provider or get_default_provider(module)
+
+    # 2. Модель: CLI global > CLI module > ENV module > api_config.json > default for provider
     if global_model:
         model = global_model
     elif module_model:
         model = module_model
+    elif env_model:
+        model = env_model
     elif cfg_model:
         model = cfg_model
     else:
         model = get_default_model(module, provider)
 
-    # 3. API ключ: CLI global > CLI module > api_config.json for resolved provider
+    # 3. API ключ: CLI global > CLI module > ENV module > api_config.json for resolved provider
     cfg_api_key = api_cfg.get("api_keys", {}).get(provider)
-    api_key = global_api_key or module_api_key or cfg_api_key
+    api_key = global_api_key or module_api_key or env_api_key or cfg_api_key
 
     return provider, model, api_key
 

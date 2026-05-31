@@ -846,10 +846,39 @@ def main():
     # Initialize LLM providers via ModelManager
     mgr = ModelManager.get_instance()
     mgr.setup_role("synth", provider, model, api_key)
-    if args.lean_provider:
-        mgr.setup_role("lean", args.lean_provider, args.lean_model, args.lean_api_key)
-    if args.embed_provider:
-        mgr.setup_role("embed", args.embed_provider, args.embed_model, args.embed_api_key)
+
+    # Resolve and setup lean role
+    lean_provider, lean_model, lean_api_key = resolve_module_config(
+        module="lean",
+        global_provider=args.provider,
+        global_model=args.model,
+        global_api_key=args.api_key,
+        module_provider=args.lean_provider,
+        module_model=args.lean_model,
+        module_api_key=args.lean_api_key,
+    )
+    mgr.setup_role("lean", lean_provider, lean_model, lean_api_key)
+
+    # Resolve and setup extract role
+    extract_provider, extract_model, extract_api_key = resolve_module_config(
+        module="extract",
+        global_provider=args.provider,
+        global_model=args.model,
+        global_api_key=args.api_key,
+    )
+    mgr.setup_role("extract", extract_provider, extract_model, extract_api_key)
+
+    # Resolve and setup embed role
+    embed_provider, embed_model, embed_api_key = resolve_module_config(
+        module="embed",
+        global_provider=args.provider,
+        global_model=args.model,
+        global_api_key=args.api_key,
+        module_provider=args.embed_provider,
+        module_model=args.embed_model,
+        module_api_key=args.embed_api_key,
+    )
+    mgr.setup_role("embed", embed_provider, embed_model, embed_api_key)
 
     # Прогреваем Lean REPL в фоне ПАРАЛЛЕЛЬНО синтезу: загрузка Mathlib в ОЗУ
     # перекрывается с LLM-вызовами, поэтому к моменту самокоррекции Lean REPL уже
@@ -901,7 +930,7 @@ def main():
     for cid, data in clusters.items():
         synthesized_tex, valid_lean_code, semantic_map = synthesize_cluster(
             cid, data['texts'], data['sources'], data['page_refs'],
-            has_proof=data['has_proof'], model=args.model,
+            has_proof=data['has_proof'], model=extract_model,
             skip_validation=args.no_validate, canonical_term=args.canonical_term,
             processed_entities=processed_entities, deps=data.get('deps', [])
         )

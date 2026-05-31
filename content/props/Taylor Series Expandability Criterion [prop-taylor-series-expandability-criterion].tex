@@ -1,0 +1,40 @@
+% defined-in: apostol (page 458), apostol (page 413), apostol (page 457)
+% === SEMANTIC MAPPING ===
+% 1. Variables & Types: 
+%    - $f : \RealNumbers \TermTo \RealNumbers$ (Function)
+%    - $a : \RealNumbers$ (Point of expansion)
+%    - $x : \RealNumbers$ (Variable in the interval)
+%    - $n : \NaturalNumbers$ (Degree of Taylor polynomial)
+%    - $E_n(x) : \RealNumbers$ (Error term)
+% 2. Data Structures: 
+%    - Taylor polynomial: $\sum_{k=0}^{n} \frac{f^{(k)}(a)}{k!} (x - a)^k$
+%    - Taylor series: $\sum_{k=0}^{\infty} \frac{f^{(k)}(a)}{k!} (x - a)^k$
+% 3. Implicit Bounds: 
+%    - $f$ is infinitely differentiable in an open interval $I$ containing $a$.
+%    - $n \in \mathbb{N}$ is the index of the partial sum.
+% ========================
+
+% entity-id: prop-taylor-series-expandability-criterion
+% entity-type: prop
+% macro: \TaylorSeriesExpandabilityCriterion
+% args: 0
+
+\begin{proposition}[Taylor Series Expandability Criterion]
+\[
+\TerForall f \colon \RealNumbers \TermTo \RealNumbers, \TerForall a \colon \RealNumbers, \TerForall x \colon \RealNumbers
+\]
+\[
+\left( f(x) = \sum_{k=0}^{\infty} \frac{f^{(k)}(a)}{k!} (x - a)^k \right) \TermEquivalence \left( \LimitNumericalSequence_{n \to \infty} E_n(x) = 0 \right)
+\]
+\[
+\text{where } E_n(x) \TermDefinedAs f(x) - \sum_{k=0}^{n} \frac{f^{(k)}(a)}{k!} (x - a)^k
+\]
+\end{proposition}
+
+\begin{proof}[RU]
+Пусть $f$ бесконечно дифференцируема в окрестности точки $a$. По определению, ряд Тейлора сходится к $f(x)$, если последовательность частичных сумм $S_n(x) = \sum_{k=0}^{n} \frac{f^{(k)}(a)}{k!} (x - a)^k$ стремится к $f(x)$ при $n \to \infty$. Так как $E_n(x) = f(x) - S_n(x)$, условие $\lim_{n \to \infty} S_n(x) = f(x)$ эквивалентно $\lim_{n \to \infty} E_n(x) = 0$. Остаточный член в интегральной форме $E_n(x) = \frac{1}{n!} \int_{a}^{x} (x - t)^n f^{(n+1)}(t) dt$ предоставляет необходимое и достаточное условие для сходимости ряда к функции.
+\end{proof}
+
+\begin{proof}[EN]
+Let $f$ be infinitely differentiable in a neighborhood of $a$. By definition, the Taylor series converges to $f(x)$ if the sequence of partial sums $S_n(x) = \sum_{k=0}^{n} \frac{f^{(k)}(a)}{k!} (x - a)^k$ tends to $f(x)$ as $n \to \infty$. Since $E_n(x) = f(x) - S_n(x)$, the condition $\lim_{n \to \infty} S_n(x) = f(x)$ is equivalent to $\lim_{n \to \infty} E_n(x) = 0$. The remainder term in integral form $E_n(x) = \frac{1}{n!} \int_{a}^{x} (x - t)^n f^{(n+1)}(t) dt$ provides the necessary and sufficient condition for the series to converge to the function.
+\end{proof}

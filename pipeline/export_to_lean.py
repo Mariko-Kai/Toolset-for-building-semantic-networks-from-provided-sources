@@ -13,7 +13,7 @@ from collections import defaultdict, deque
 
 import datetime
 from pipeline.lean_validator import validate_entity
-from pipeline.config import get_db_path
+from pipeline.config import get_db_path, resolve_module_config
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 def log_to_file(category: str, content: str, entity_id: str = None, attempt: int = None, skip_realtime: bool = False):
@@ -616,9 +616,24 @@ def main():
         else: args.lean_model = "qwen3:8b"
 
     # Initialize LLM providers
-    setup_provider(args.provider, api_key=args.api_key, model=args.model)
-    if args.lean_provider:
-        setup_lean_provider(args.lean_provider, api_key=args.lean_api_key, model=args.lean_model)
+    main_provider, main_model, main_api_key = resolve_module_config(
+        module="synth",
+        global_provider=args.provider,
+        global_model=args.model,
+        global_api_key=args.api_key,
+    )
+    setup_provider(main_provider, api_key=main_api_key, model=main_model)
+
+    lean_provider, lean_model, lean_api_key = resolve_module_config(
+        module="lean",
+        global_provider=args.provider,
+        global_model=args.model,
+        global_api_key=args.api_key,
+        module_provider=args.lean_provider,
+        module_model=args.lean_model,
+        module_api_key=args.lean_api_key,
+    )
+    setup_lean_provider(lean_provider, api_key=lean_api_key, model=lean_model)
 
 
 
